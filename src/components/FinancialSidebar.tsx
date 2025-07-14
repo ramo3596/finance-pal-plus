@@ -6,15 +6,8 @@ import {
   TrendingUp,
   BarChart3,
   Calendar,
-  CreditCard,
   Target,
-  Coins,
-  ShoppingCart,
-  Shield,
-  PiggyBank,
-  ArrowLeftRight,
   Users,
-  MoreHorizontal
 } from "lucide-react"
 
 import {
@@ -36,16 +29,8 @@ const menuItems = [
   { title: "Inversiones", url: "/investments", icon: TrendingUp },
   { title: "Estadística", url: "/statistics", icon: BarChart3 },
   { title: "Pagos programados", url: "/scheduled-payments", icon: Calendar },
-  { title: "Presupuestos", url: "/budgets", icon: CreditCard },
   { title: "Deudas", url: "/debts", icon: Target },
-  { title: "Objetivos", url: "/goals", icon: Coins },
-  { title: "Monedero para tu negocio", url: "/business-wallet", icon: PiggyBank },
-  { title: "Listas de compra", url: "/shopping-lists", icon: ShoppingCart },
-  { title: "Garantías", url: "/warranties", icon: Shield },
-  { title: "Tarjetas de fidelización", url: "/loyalty-cards", icon: CreditCard },
-  { title: "Tipo de cambio", url: "/exchange-rates", icon: ArrowLeftRight },
   { title: "Compartir en grupo", url: "/group-sharing", icon: Users },
-  { title: "Otros", url: "/others", icon: MoreHorizontal },
 ]
 
 export function FinancialSidebar() {
@@ -81,20 +66,6 @@ export function FinancialSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Plan activo section at bottom */}
-        <div className="mt-auto p-4 border-t border-sidebar-border">
-          <div className="flex items-center justify-between">
-            {open && (
-              <div>
-                <p className="text-sm font-medium text-sidebar-foreground">Plan activo</p>
-                <p className="text-xs text-sidebar-foreground/70">Licencia de por vida</p>
-              </div>
-            )}
-            <div className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium">
-              Premium
-            </div>
-          </div>
-        </div>
       </SidebarContent>
     </Sidebar>
   )
