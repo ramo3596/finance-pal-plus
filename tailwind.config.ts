@@ -61,6 +61,32 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Financial category colors
+				expense: {
+					red: 'hsl(var(--expense-red))',
+					orange: 'hsl(var(--expense-orange))',
+					blue: 'hsl(var(--expense-blue))',
+					green: 'hsl(var(--expense-green))',
+					purple: 'hsl(var(--expense-purple))',
+					yellow: 'hsl(var(--expense-yellow))',
+					pink: 'hsl(var(--expense-pink))',
+					cyan: 'hsl(var(--expense-cyan))'
+				},
+				success: {
+					DEFAULT: 'hsl(var(--success))',
+					foreground: 'hsl(var(--success-foreground))'
+				},
+				warning: {
+					DEFAULT: 'hsl(var(--warning))',
+					foreground: 'hsl(var(--warning-foreground))'
+				},
+				chart: {
+					'1': 'hsl(var(--chart-1))',
+					'2': 'hsl(var(--chart-2))',
+					'3': 'hsl(var(--chart-3))',
+					'4': 'hsl(var(--chart-4))',
+					'5': 'hsl(var(--chart-5))'
 				}
 			},
 			borderRadius: {
