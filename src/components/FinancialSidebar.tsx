@@ -8,6 +8,7 @@ import {
   Calendar,
   Target,
   Users,
+  Settings,
 } from "lucide-react"
 
 import {
@@ -31,6 +32,7 @@ const menuItems = [
   { title: "Pagos programados", url: "/scheduled-payments", icon: Calendar },
   { title: "Deudas", url: "/debts", icon: Target },
   { title: "Compartir en grupo", url: "/group-sharing", icon: Users },
+  { title: "Configuración", url: "/settings", icon: Settings },
 ]
 
 export function FinancialSidebar() {
