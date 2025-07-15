@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,6 +13,7 @@ import {
   PiggyBank,
   Building2
 } from "lucide-react"
+import { AddTransaction } from "./AddTransaction"
 
 // Mock data - this would come from Supabase in the real app
 const mockAccounts = [
@@ -35,6 +37,7 @@ const mockExpenses = [
 ]
 
 export function Dashboard() {
+  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false)
   const totalBalance = mockAccounts.reduce((sum, account) => sum + account.balance, 0)
   const totalExpenses = mockExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
@@ -46,7 +49,10 @@ export function Dashboard() {
           <h1 className="text-3xl font-bold text-foreground">Panel Financiero</h1>
           <p className="text-muted-foreground">Gestiona tus finanzas personales</p>
         </div>
-        <Button className="bg-primary hover:bg-primary/90">
+        <Button 
+          className="bg-primary hover:bg-primary/90"
+          onClick={() => setIsAddTransactionOpen(true)}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Nueva Transacción
         </Button>
@@ -196,6 +202,12 @@ export function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add Transaction Modal */}
+      <AddTransaction 
+        open={isAddTransactionOpen} 
+        onOpenChange={setIsAddTransactionOpen} 
+      />
     </div>
   )
 }
