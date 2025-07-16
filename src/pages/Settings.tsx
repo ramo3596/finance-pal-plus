@@ -43,19 +43,83 @@ export default function Settings() {
   const [categories, setCategories] = useState([
     { 
       id: 1, 
-      name: "Alimentación", 
+      name: "Alimentos y Bebidas", 
       color: "#f59e0b", 
       icon: "🍕", 
       nature: "Necesitar",
-      subcategories: ["Supermercado", "Restaurantes"] 
+      subcategories: ["Bar, café", "Comestibles", "Restaurante, comida rápida"] 
     },
     { 
       id: 2, 
+      name: "Compras", 
+      color: "#ec4899", 
+      icon: "🛍️", 
+      nature: "Deseos",
+      subcategories: ["Bebés, niños", "Casa y jardín", "Electrónica, accesorios", "Farmacia, droguería", "Joyas, accesorios", "Mascotas, animales", "Papelería, herramientas", "Regalos", "Ropa y calzado", "Salud y belleza", "Tiempo libre"] 
+    },
+    { 
+      id: 3, 
+      name: "Vivienda", 
+      color: "#8b5cf6", 
+      icon: "🏠", 
+      nature: "Deber",
+      subcategories: ["Energía, utilitarios", "Hipoteca", "Mantenimiento, reparaciones", "Renta", "Seguro de propiedad", "Servicios"] 
+    },
+    { 
+      id: 4, 
       name: "Transporte", 
       color: "#ef4444", 
+      icon: "🚌", 
+      nature: "Necesitar",
+      subcategories: ["Larga distancia", "Taxi", "Transporte público", "Viajes de negocio"] 
+    },
+    { 
+      id: 5, 
+      name: "Vehículos", 
+      color: "#06b6d4", 
       icon: "🚗", 
       nature: "Necesitar",
-      subcategories: ["Combustible", "Mantenimiento"] 
+      subcategories: ["Alquiler (de vehículos)", "Combustible", "Estacionamiento", "Mantenimiento de vehículos", "Seguro de vehículos"] 
+    },
+    { 
+      id: 6, 
+      name: "Vida y entretenimiento", 
+      color: "#84cc16", 
+      icon: "🎭", 
+      nature: "Deseos",
+      subcategories: ["Alcohol, cigarrillos", "Bienestar, belleza", "Caridad, regalos", "Cuidado de la salud, médico", "Cultura, eventos deportivos", "Deporte, fitness", "Educación, desarrollo", "Eventos cotidianos", "Libros, audio, suscripciones", "Lotería, juegos de azar", "Pasatiempos", "TV, transmisiones", "Vacaciones, viajes, hoteles"] 
+    },
+    { 
+      id: 7, 
+      name: "Comunicaciones, PC", 
+      color: "#f97316", 
+      icon: "💻", 
+      nature: "Necesitar",
+      subcategories: ["Internet", "Servicios Mantenimiento", "Software, aplicaciones, juegos", "Juegos", "Plataformas", "Software", "Teléfono, teléfono móvil"] 
+    },
+    { 
+      id: 8, 
+      name: "Gastos financieros", 
+      color: "#dc2626", 
+      icon: "💳", 
+      nature: "Deber",
+      subcategories: ["Asignación familiar", "Impuestos", "Multas", "Préstamos, Intereses", "Banco", "Comisión", "Seguros", "Servicios"] 
+    },
+    { 
+      id: 9, 
+      name: "Inversiones", 
+      color: "#059669", 
+      icon: "📈", 
+      nature: "Deseos",
+      subcategories: ["Ahorros", "Bienes raíces", "Colecciones", "Inversiones financieras", "Vehículos, propiedades"] 
+    },
+    { 
+      id: 10, 
+      name: "Ingreso", 
+      color: "#10b981", 
+      icon: "💰", 
+      nature: "Deseos",
+      subcategories: ["Asignación familiar", "Cheques, cupones", "Cuotas y subsidios", "Ingresos por alquiler", "Intereses, dividendos", "Lotería, juegos de azar", "Préstamos, alquileres", "Reembolsos (impuestos, compras)", "Salarios, facturas", "Comisión", "Facturas", "Servicios", "Venta", "Mercadería", "Streaming"] 
     },
   ]);
 
