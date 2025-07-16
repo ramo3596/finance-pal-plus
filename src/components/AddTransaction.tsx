@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ExpenseTab } from "./ExpenseTab";
+import { IncomeTab } from "./IncomeTab";
+import { TransferTab } from "./TransferTab";
 interface AddTransactionProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -18,6 +21,7 @@ export function AddTransaction({
   const [transactionType, setTransactionType] = useState<"expense" | "income" | "transfer">("expense");
   const [amount, setAmount] = useState("0");
   const [selectedAccount, setSelectedAccount] = useState("");
+  const [toAccount, setToAccount] = useState(""); // For transfers
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedTags, setSelectedTags] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -37,6 +41,7 @@ export function AddTransaction({
       type: transactionType,
       amount: parseFloat(amount),
       account: selectedAccount,
+      toAccount: toAccount,
       category: selectedCategory,
       tags: selectedTags,
       date,
@@ -53,6 +58,7 @@ export function AddTransaction({
       // Reset form for new transaction
       setAmount("0");
       setSelectedAccount("");
+      setToAccount("");
       setSelectedCategory("");
       setSelectedTags("");
       setBeneficiary("");
@@ -98,15 +104,32 @@ export function AddTransaction({
             </TabsList>
 
             <TabsContent value="expense" className="space-y-4 mt-4">
-              <TransactionDetails amount={amount} setAmount={setAmount} selectedAccount={selectedAccount} setSelectedAccount={setSelectedAccount} type="expense" />
+              <ExpenseTab 
+                amount={amount} 
+                setAmount={setAmount} 
+                selectedAccount={selectedAccount} 
+                setSelectedAccount={setSelectedAccount} 
+              />
             </TabsContent>
 
             <TabsContent value="income" className="space-y-4 mt-4">
-              <TransactionDetails amount={amount} setAmount={setAmount} selectedAccount={selectedAccount} setSelectedAccount={setSelectedAccount} type="income" />
+              <IncomeTab 
+                amount={amount} 
+                setAmount={setAmount} 
+                selectedAccount={selectedAccount} 
+                setSelectedAccount={setSelectedAccount} 
+              />
             </TabsContent>
 
             <TabsContent value="transfer" className="space-y-4 mt-4">
-              <TransactionDetails amount={amount} setAmount={setAmount} selectedAccount={selectedAccount} setSelectedAccount={setSelectedAccount} type="transfer" />
+              <TransferTab 
+                amount={amount} 
+                setAmount={setAmount} 
+                selectedAccount={selectedAccount} 
+                setSelectedAccount={setSelectedAccount}
+                toAccount={toAccount}
+                setToAccount={setToAccount}
+              />
             </TabsContent>
           </Tabs>
 
@@ -245,68 +268,4 @@ export function AddTransaction({
         </div>
       </DialogContent>
     </Dialog>;
-}
-interface TransactionDetailsProps {
-  amount: string;
-  setAmount: (amount: string) => void;
-  selectedAccount: string;
-  setSelectedAccount: (account: string) => void;
-  type: "expense" | "income" | "transfer";
-}
-function TransactionDetails({
-  amount,
-  setAmount,
-  selectedAccount,
-  setSelectedAccount,
-  type
-}: TransactionDetailsProps) {
-  return <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <Label htmlFor="account">Cuenta</Label>
-        <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-          <SelectTrigger>
-            <div className="flex items-center space-x-2">
-              <Wallet className="h-4 w-4" />
-              <SelectValue placeholder="Seleccionar cuenta" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="cash">
-              <div className="flex items-center space-x-2">
-                <Banknote className="h-4 w-4" />
-                <span>Efectivo</span>
-              </div>
-            </SelectItem>
-            <SelectItem value="main">
-              <div className="flex items-center space-x-2">
-                <Wallet className="h-4 w-4" />
-                <span>Cuenta Principal</span>
-              </div>
-            </SelectItem>
-            <SelectItem value="savings">
-              <div className="flex items-center space-x-2">
-                <Wallet className="h-4 w-4" />
-                <span>Ahorros</span>
-              </div>
-            </SelectItem>
-            <SelectItem value="credit">
-              <div className="flex items-center space-x-2">
-                <CreditCard className="h-4 w-4" />
-                <span>Tarjeta de Crédito</span>
-              </div>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="amount">Importe</Label>
-        <div className="relative">
-          <Input id="amount" type="number" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} className="text-right text-lg font-semibold" />
-          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-            $
-          </span>
-        </div>
-      </div>
-    </div>;
 }
