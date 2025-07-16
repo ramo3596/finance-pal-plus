@@ -183,7 +183,7 @@ export function AddTransaction({
           {/* Additional Information */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="beneficiary">Pagador</Label>
+              <Label htmlFor="beneficiary">Beneficiario</Label>
               <Input id="beneficiary" placeholder="Nombre del beneficiario" value={beneficiary} onChange={e => setBeneficiary(e.target.value)} />
             </div>
 
