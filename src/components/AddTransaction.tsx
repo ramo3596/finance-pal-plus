@@ -183,8 +183,15 @@ export function AddTransaction({
           {/* Additional Information */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="beneficiary">Pagador</Label>
-              <Input id="beneficiary" placeholder="Nombre del beneficiario" value={beneficiary} onChange={e => setBeneficiary(e.target.value)} />
+              <Label htmlFor="beneficiary">
+                {transactionType === "expense" ? "Beneficiario" : transactionType === "income" ? "Pagador" : "Beneficiario"}
+              </Label>
+              <Input 
+                id="beneficiary" 
+                placeholder={transactionType === "expense" ? "Nombre del beneficiario" : transactionType === "income" ? "Nombre del pagador" : "Nombre del beneficiario"} 
+                value={beneficiary} 
+                onChange={e => setBeneficiary(e.target.value)} 
+              />
             </div>
 
             <div className="space-y-2">
