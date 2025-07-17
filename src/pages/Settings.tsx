@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,8 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -18,150 +17,53 @@ import {
   FileText, 
   Filter, 
   Bell,
-  Plus,
-  Edit,
   Trash2,
   Upload,
   Save,
-  MapPin,
-  AlertCircle
+  Loader2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useSettings } from "@/hooks/useSettings";
+
+// Import dialogs
+import { AddAccountDialog } from "@/components/settings/AddAccountDialog";
+import { EditAccountDialog } from "@/components/settings/EditAccountDialog";
+import { AddCategoryDialog } from "@/components/settings/AddCategoryDialog";
+import { EditCategoryDialog } from "@/components/settings/EditCategoryDialog";
+import { AddTagDialog } from "@/components/settings/AddTagDialog";
+import { EditTagDialog } from "@/components/settings/EditTagDialog";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
-
-  // Mock data - in a real app, this would come from your backend
-  const [accounts, setAccounts] = useState([
-    { id: 1, name: "Cuenta Principal", color: "#3b82f6", icon: "💳" },
-    { id: 2, name: "Ahorros", color: "#10b981", icon: "💰" },
-  ]);
-
-  const [categories, setCategories] = useState([
-    { 
-      id: 1, 
-      name: "Alimentos y Bebidas", 
-      color: "#f59e0b", 
-      icon: "🍕", 
-      nature: "Necesitar",
-      subcategories: ["Bar, café", "Comestibles", "Restaurante, comida rápida"] 
-    },
-    { 
-      id: 2, 
-      name: "Compras", 
-      color: "#ec4899", 
-      icon: "🛍️", 
-      nature: "Deseos",
-      subcategories: ["Bebés, niños", "Casa y jardín", "Electrónica, accesorios", "Farmacia, droguería", "Joyas, accesorios", "Mascotas, animales", "Papelería, herramientas", "Regalos", "Ropa y calzado", "Salud y belleza", "Tiempo libre"] 
-    },
-    { 
-      id: 3, 
-      name: "Vivienda", 
-      color: "#8b5cf6", 
-      icon: "🏠", 
-      nature: "Deber",
-      subcategories: ["Energía, utilitarios", "Hipoteca", "Mantenimiento, reparaciones", "Renta", "Seguro de propiedad", "Servicios"] 
-    },
-    { 
-      id: 4, 
-      name: "Transporte", 
-      color: "#ef4444", 
-      icon: "🚌", 
-      nature: "Necesitar",
-      subcategories: ["Larga distancia", "Taxi", "Transporte público", "Viajes de negocio"] 
-    },
-    { 
-      id: 5, 
-      name: "Vehículos", 
-      color: "#06b6d4", 
-      icon: "🚗", 
-      nature: "Necesitar",
-      subcategories: ["Alquiler (de vehículos)", "Combustible", "Estacionamiento", "Mantenimiento de vehículos", "Seguro de vehículos"] 
-    },
-    { 
-      id: 6, 
-      name: "Vida y entretenimiento", 
-      color: "#84cc16", 
-      icon: "🎭", 
-      nature: "Deseos",
-      subcategories: ["Alcohol, cigarrillos", "Bienestar, belleza", "Caridad, regalos", "Cuidado de la salud, médico", "Cultura, eventos deportivos", "Deporte, fitness", "Educación, desarrollo", "Eventos cotidianos", "Libros, audio, suscripciones", "Lotería, juegos de azar", "Pasatiempos", "TV, transmisiones", "Vacaciones, viajes, hoteles"] 
-    },
-    { 
-      id: 7, 
-      name: "Comunicaciones, PC", 
-      color: "#f97316", 
-      icon: "💻", 
-      nature: "Necesitar",
-      subcategories: ["Internet", "Servicios Mantenimiento", "Software, aplicaciones, juegos", "Juegos", "Plataformas", "Software", "Teléfono, teléfono móvil"] 
-    },
-    { 
-      id: 8, 
-      name: "Gastos financieros", 
-      color: "#dc2626", 
-      icon: "💳", 
-      nature: "Deber",
-      subcategories: ["Asignación familiar", "Impuestos", "Multas", "Préstamos, Intereses", "Banco", "Comisión", "Seguros", "Servicios"] 
-    },
-    { 
-      id: 9, 
-      name: "Inversiones", 
-      color: "#059669", 
-      icon: "📈", 
-      nature: "Deseos",
-      subcategories: ["Ahorros", "Bienes raíces", "Colecciones", "Inversiones financieras", "Vehículos, propiedades"] 
-    },
-    { 
-      id: 10, 
-      name: "Ingreso", 
-      color: "#10b981", 
-      icon: "💰", 
-      nature: "Deseos",
-      subcategories: ["Asignación familiar", "Cheques, cupones", "Cuotas y subsidios", "Ingresos por alquiler", "Intereses, dividendos", "Lotería, juegos de azar", "Préstamos, alquileres", "Reembolsos (impuestos, compras)", "Salarios, facturas", "Comisión", "Facturas", "Servicios", "Venta", "Mercadería", "Streaming"] 
-    },
-  ]);
-
-  const [tags, setTags] = useState([
-    { id: 1, name: "Urgente", color: "#ef4444" },
-    { id: 2, name: "Trabajo", color: "#3b82f6" },
-  ]);
-
-  const [templates, setTemplates] = useState([
-    {
-      id: 1,
-      name: "Café matutino",
-      amount: 5.00,
-      account: "Cuenta Principal",
-      category: "Alimentación",
-      paymentMethod: "Dinero en efectivo",
-      tags: ["Trabajo"],
-      type: "Gastos",
-      beneficiary: "Café Central",
-      note: "Café diario"
-    }
-  ]);
-
-  const [filters, setFilters] = useState([
-    {
-      id: 1,
-      name: "Gastos del mes",
-      type: "Gastos",
-      categories: ["Alimentación", "Transporte"],
-      tags: ["Urgente"],
-      paymentMethod: "Todos",
-      transfers: "Excluir",
-      debts: "Excluir"
-    }
-  ]);
-
-  const [notifications, setNotifications] = useState({
-    walletReminder: true,
-    scheduledPayments: true,
-    debts: true,
-    income: false
-  });
+  
+  const {
+    accounts,
+    categories,
+    tags,
+    templates,
+    filters,
+    userSettings,
+    loading,
+    createAccount,
+    updateAccount,
+    deleteAccount,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    createTag,
+    updateTag,
+    deleteTag,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+    createFilter,
+    updateFilter,
+    deleteFilter,
+    updateUserSettings,
+  } = useSettings();
 
   const handleSave = () => {
     toast({
@@ -173,6 +75,36 @@ export default function Settings() {
   const handleSignOut = async () => {
     await signOut();
   };
+
+  const handleDeleteAccount = async (id: string) => {
+    if (confirm("¿Estás seguro de que quieres eliminar esta cuenta?")) {
+      await deleteAccount(id);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (confirm("¿Estás seguro de que quieres eliminar esta categoría?")) {
+      await deleteCategory(id);
+    }
+  };
+
+  const handleDeleteTag = async (id: string) => {
+    if (confirm("¿Estás seguro de que quieres eliminar esta etiqueta?")) {
+      await deleteTag(id);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container mx-auto p-6">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   const ProfileSection = () => (
     <div className="space-y-6">
@@ -237,10 +169,7 @@ export default function Settings() {
               <CreditCard className="h-5 w-5" />
               Gestión de Cuentas
             </span>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Agregar cuenta
-            </Button>
+            <AddAccountDialog onAdd={createAccount} />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -253,19 +182,22 @@ export default function Settings() {
                   </div>
                   <div>
                     <h3 className="font-medium">{account.name}</h3>
-                    <p className="text-sm text-muted-foreground">Color: {account.color}</p>
+                    <p className="text-sm text-muted-foreground">Saldo: ${account.balance?.toFixed(2) || '0.00'}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="destructive" size="sm">
+                  <EditAccountDialog account={account} onUpdate={updateAccount} />
+                  <Button variant="destructive" size="sm" onClick={() => handleDeleteAccount(account.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             ))}
+            {accounts.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                No hay cuentas configuradas. Agrega tu primera cuenta.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -281,10 +213,7 @@ export default function Settings() {
               <FolderOpen className="h-5 w-5" />
               Administrar Categorías
             </span>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Agregar categoría
-            </Button>
+            <AddCategoryDialog onAdd={createCategory} />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -302,24 +231,29 @@ export default function Settings() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="destructive" size="sm">
+                    <EditCategoryDialog category={category} onUpdate={updateCategory} />
+                    <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(category.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-                <div className="ml-13">
-                  <p className="text-sm text-muted-foreground mb-2">Subcategorías:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {category.subcategories.map((sub, idx) => (
-                      <Badge key={idx} variant="outline">{sub}</Badge>
-                    ))}
+                {category.subcategories && category.subcategories.length > 0 && (
+                  <div className="ml-13">
+                    <p className="text-sm text-muted-foreground mb-2">Subcategorías:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {category.subcategories.map((sub) => (
+                        <Badge key={sub.id} variant="outline">{sub.name}</Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ))}
+            {categories.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                No hay categorías configuradas. Agrega tu primera categoría.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -335,10 +269,7 @@ export default function Settings() {
               <Tag className="h-5 w-5" />
               Definir Etiquetas
             </span>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Agregar etiqueta
-            </Button>
+            <AddTagDialog onAdd={createTag} />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -350,15 +281,18 @@ export default function Settings() {
                   <span className="font-medium">{tag.name}</span>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="destructive" size="sm">
+                  <EditTagDialog tag={tag} onUpdate={updateTag} />
+                  <Button variant="destructive" size="sm" onClick={() => handleDeleteTag(tag.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             ))}
+            {tags.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                No hay etiquetas configuradas. Agrega tu primera etiqueta.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -375,7 +309,6 @@ export default function Settings() {
               Administrar Plantillas
             </span>
             <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
               Agregar plantilla
             </Button>
           </CardTitle>
@@ -387,37 +320,24 @@ export default function Settings() {
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h3 className="font-medium">{template.name}</h3>
-                    <p className="text-sm text-muted-foreground">${template.amount.toFixed(2)} - {template.category}</p>
+                    <p className="text-sm text-muted-foreground">${template.amount.toFixed(2)} - {template.type}</p>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm">
-                      <Edit className="h-4 w-4" />
+                      Editar
                     </Button>
                     <Button variant="destructive" size="sm">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Cuenta:</p>
-                    <p>{template.account}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Pago:</p>
-                    <p>{template.paymentMethod}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Tipo:</p>
-                    <p>{template.type}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Beneficiario:</p>
-                    <p>{template.beneficiary}</p>
-                  </div>
-                </div>
               </div>
             ))}
+            {templates.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                No hay plantillas configuradas. Agrega tu primera plantilla.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -434,7 +354,6 @@ export default function Settings() {
               Administrar Filtros
             </span>
             <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
               Agregar filtro
             </Button>
           </CardTitle>
@@ -450,33 +369,20 @@ export default function Settings() {
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm">
-                      <Edit className="h-4 w-4" />
+                      Editar
                     </Button>
                     <Button variant="destructive" size="sm">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Categorías:</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {filter.categories.map((cat, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs">{cat}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Etiquetas:</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {filter.tags.map((tag, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs">{tag}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
               </div>
             ))}
+            {filters.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                No hay filtros configurados. Agrega tu primer filtro.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -493,63 +399,67 @@ export default function Settings() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="font-medium">Recordatorio de Wallet</p>
-              <p className="text-sm text-muted-foreground">
-                Recibe una notificación a las 20:00 para recordarte que anotes tus gastos del día.
-              </p>
-            </div>
-            <Switch 
-              checked={notifications.walletReminder}
-              onCheckedChange={(checked) => setNotifications({...notifications, walletReminder: checked})}
-            />
-          </div>
-          
-          <Separator />
-          
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="font-medium">Pagos Programados</p>
-              <p className="text-sm text-muted-foreground">
-                Notifica sobre los próximos pagos programados.
-              </p>
-            </div>
-            <Switch 
-              checked={notifications.scheduledPayments}
-              onCheckedChange={(checked) => setNotifications({...notifications, scheduledPayments: checked})}
-            />
-          </div>
-          
-          <Separator />
-          
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="font-medium">Deudas</p>
-              <p className="text-sm text-muted-foreground">
-                Recuerda las próximas fechas de vencimiento de deudas.
-              </p>
-            </div>
-            <Switch 
-              checked={notifications.debts}
-              onCheckedChange={(checked) => setNotifications({...notifications, debts: checked})}
-            />
-          </div>
-          
-          <Separator />
-          
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="font-medium">Ingresos</p>
-              <p className="text-sm text-muted-foreground">
-                Informa sobre un ingreso importante en tus cuentas.
-              </p>
-            </div>
-            <Switch 
-              checked={notifications.income}
-              onCheckedChange={(checked) => setNotifications({...notifications, income: checked})}
-            />
-          </div>
+          {userSettings && (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium">Recordatorio de Wallet</p>
+                  <p className="text-sm text-muted-foreground">
+                    Recibe una notificación a las 20:00 para recordarte que anotes tus gastos del día.
+                  </p>
+                </div>
+                <Switch 
+                  checked={userSettings.wallet_reminder}
+                  onCheckedChange={(checked) => updateUserSettings({ wallet_reminder: checked })}
+                />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium">Pagos Programados</p>
+                  <p className="text-sm text-muted-foreground">
+                    Notifica sobre los próximos pagos programados.
+                  </p>
+                </div>
+                <Switch 
+                  checked={userSettings.scheduled_payments}
+                  onCheckedChange={(checked) => updateUserSettings({ scheduled_payments: checked })}
+                />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium">Deudas</p>
+                  <p className="text-sm text-muted-foreground">
+                    Recuerda las próximas fechas de vencimiento de deudas.
+                  </p>
+                </div>
+                <Switch 
+                  checked={userSettings.debts}
+                  onCheckedChange={(checked) => updateUserSettings({ debts: checked })}
+                />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium">Ingresos</p>
+                  <p className="text-sm text-muted-foreground">
+                    Informa sobre un ingreso importante en tus cuentas.
+                  </p>
+                </div>
+                <Switch 
+                  checked={userSettings.income}
+                  onCheckedChange={(checked) => updateUserSettings({ income: checked })}
+                />
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

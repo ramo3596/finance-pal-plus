@@ -14,7 +14,371 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      accounts: {
+        Row: {
+          balance: number | null
+          color: string
+          created_at: string | null
+          icon: string
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          balance?: number | null
+          color: string
+          created_at?: string | null
+          icon: string
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          balance?: number | null
+          color?: string
+          created_at?: string | null
+          icon?: string
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          color: string
+          created_at: string | null
+          icon: string
+          id: string
+          name: string
+          nature: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color: string
+          created_at?: string | null
+          icon: string
+          id?: string
+          name: string
+          nature: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          icon?: string
+          id?: string
+          name?: string
+          nature?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      filter_categories: {
+        Row: {
+          category_id: string
+          filter_id: string
+        }
+        Insert: {
+          category_id: string
+          filter_id: string
+        }
+        Update: {
+          category_id?: string
+          filter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "filter_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "filter_categories_filter_id_fkey"
+            columns: ["filter_id"]
+            isOneToOne: false
+            referencedRelation: "filters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      filter_tags: {
+        Row: {
+          filter_id: string
+          tag_id: string
+        }
+        Insert: {
+          filter_id: string
+          tag_id: string
+        }
+        Update: {
+          filter_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "filter_tags_filter_id_fkey"
+            columns: ["filter_id"]
+            isOneToOne: false
+            referencedRelation: "filters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "filter_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      filters: {
+        Row: {
+          created_at: string | null
+          debts: string | null
+          id: string
+          name: string
+          payment_method: string | null
+          transfers: string | null
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          debts?: string | null
+          id?: string
+          name: string
+          payment_method?: string | null
+          transfers?: string | null
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          debts?: string | null
+          id?: string
+          name?: string
+          payment_method?: string | null
+          transfers?: string | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          id: string
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      subcategories: {
+        Row: {
+          category_id: string
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tags: {
+        Row: {
+          color: string
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color: string
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      template_tags: {
+        Row: {
+          tag_id: string
+          template_id: string
+        }
+        Insert: {
+          tag_id: string
+          template_id: string
+        }
+        Update: {
+          tag_id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_tags_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      templates: {
+        Row: {
+          account_id: string | null
+          amount: number
+          beneficiary: string | null
+          category_id: string | null
+          created_at: string | null
+          id: string
+          name: string
+          note: string | null
+          payment_method: string | null
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          beneficiary?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          note?: string | null
+          payment_method?: string | null
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          beneficiary?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          note?: string | null
+          payment_method?: string | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "templates_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_settings: {
+        Row: {
+          created_at: string | null
+          debts: boolean | null
+          id: string
+          income: boolean | null
+          scheduled_payments: boolean | null
+          updated_at: string | null
+          user_id: string
+          wallet_reminder: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          debts?: boolean | null
+          id?: string
+          income?: boolean | null
+          scheduled_payments?: boolean | null
+          updated_at?: string | null
+          user_id: string
+          wallet_reminder?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          debts?: boolean | null
+          id?: string
+          income?: boolean | null
+          scheduled_payments?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+          wallet_reminder?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
