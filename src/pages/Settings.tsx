@@ -33,6 +33,10 @@ import { AddCategoryDialog } from "@/components/settings/AddCategoryDialog";
 import { EditCategoryDialog } from "@/components/settings/EditCategoryDialog";
 import { AddTagDialog } from "@/components/settings/AddTagDialog";
 import { EditTagDialog } from "@/components/settings/EditTagDialog";
+import { AddTemplateDialog } from "@/components/settings/AddTemplateDialog";
+import { EditTemplateDialog } from "@/components/settings/EditTemplateDialog";
+import { AddFilterDialog } from "@/components/settings/AddFilterDialog";
+import { EditFilterDialog } from "@/components/settings/EditFilterDialog";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -91,6 +95,18 @@ export default function Settings() {
   const handleDeleteTag = async (id: string) => {
     if (confirm("¿Estás seguro de que quieres eliminar esta etiqueta?")) {
       await deleteTag(id);
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    if (confirm("¿Estás seguro de que quieres eliminar esta plantilla?")) {
+      await deleteTemplate(id);
+    }
+  };
+
+  const handleDeleteFilter = async (id: string) => {
+    if (confirm("¿Estás seguro de que quieres eliminar este filtro?")) {
+      await deleteFilter(id);
     }
   };
 
@@ -308,9 +324,11 @@ export default function Settings() {
               <FileText className="h-5 w-5" />
               Administrar Plantillas
             </span>
-            <Button size="sm">
-              Agregar plantilla
-            </Button>
+            <AddTemplateDialog 
+              onAdd={createTemplate}
+              accounts={accounts}
+              categories={categories}
+            />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -323,10 +341,13 @@ export default function Settings() {
                     <p className="text-sm text-muted-foreground">${template.amount.toFixed(2)} - {template.type}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      Editar
-                    </Button>
-                    <Button variant="destructive" size="sm">
+                    <EditTemplateDialog 
+                      template={template} 
+                      onUpdate={updateTemplate}
+                      accounts={accounts}
+                      categories={categories}
+                    />
+                    <Button variant="destructive" size="sm" onClick={() => handleDeleteTemplate(template.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -353,9 +374,7 @@ export default function Settings() {
               <Filter className="h-5 w-5" />
               Administrar Filtros
             </span>
-            <Button size="sm">
-              Agregar filtro
-            </Button>
+            <AddFilterDialog onAdd={createFilter} />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -368,10 +387,8 @@ export default function Settings() {
                     <Badge variant="secondary">{filter.type}</Badge>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      Editar
-                    </Button>
-                    <Button variant="destructive" size="sm">
+                    <EditFilterDialog filter={filter} onUpdate={updateFilter} />
+                    <Button variant="destructive" size="sm" onClick={() => handleDeleteFilter(filter.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
