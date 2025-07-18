@@ -303,6 +303,92 @@ export const useSettings = () => {
     });
   };
 
+  // Subcategory CRUD operations
+  const createSubcategory = async (subcategory: Omit<Subcategory, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase
+      .from('subcategories')
+      .insert([subcategory])
+      .select()
+      .single();
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo crear la subcategoría.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update the categories state to include the new subcategory
+    setCategories(prev => prev.map(category => 
+      category.id === subcategory.category_id 
+        ? { ...category, subcategories: [...(category.subcategories || []), data] }
+        : category
+    ));
+    
+    toast({
+      title: "Éxito",
+      description: "Subcategoría creada exitosamente.",
+    });
+  };
+
+  const updateSubcategory = async (id: string, updates: Partial<Subcategory>) => {
+    const { data, error } = await supabase
+      .from('subcategories')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar la subcategoría.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update the categories state
+    setCategories(prev => prev.map(category => ({
+      ...category,
+      subcategories: category.subcategories?.map(sub => sub.id === id ? data : sub)
+    })));
+    
+    toast({
+      title: "Éxito",
+      description: "Subcategoría actualizada exitosamente.",
+    });
+  };
+
+  const deleteSubcategory = async (id: string) => {
+    const { error } = await supabase
+      .from('subcategories')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la subcategoría.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update the categories state
+    setCategories(prev => prev.map(category => ({
+      ...category,
+      subcategories: category.subcategories?.filter(sub => sub.id !== id)
+    })));
+    
+    toast({
+      title: "Éxito",
+      description: "Subcategoría eliminada exitosamente.",
+    });
+  };
+
   // Tag CRUD operations
   const createTag = async (tag: Omit<Tag, 'id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
@@ -565,6 +651,11 @@ export const useSettings = () => {
     createCategory,
     updateCategory,
     deleteCategory,
+    
+    // Subcategory operations
+    createSubcategory,
+    updateSubcategory,
+    deleteSubcategory,
     
     // Tag operations
     createTag,

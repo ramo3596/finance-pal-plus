@@ -30,6 +30,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { AddAccountDialog } from "@/components/settings/AddAccountDialog";
 import { EditAccountDialog } from "@/components/settings/EditAccountDialog";
 import { AddCategoryDialog } from "@/components/settings/AddCategoryDialog";
+import { AddSubcategoryDialog } from "@/components/settings/AddSubcategoryDialog";
 import { EditCategoryDialog } from "@/components/settings/EditCategoryDialog";
 import { AddTagDialog } from "@/components/settings/AddTagDialog";
 import { EditTagDialog } from "@/components/settings/EditTagDialog";
@@ -67,6 +68,9 @@ export default function Settings() {
     updateFilter,
     deleteFilter,
     updateUserSettings,
+    createSubcategory,
+    updateSubcategory,
+    deleteSubcategory,
   } = useSettings();
 
   const handleSave = () => {
@@ -229,33 +233,61 @@ export default function Settings() {
               <FolderOpen className="h-5 w-5" />
               Administrar Categorías
             </span>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                Añadir subcategoría
-              </Button>
-              <AddCategoryDialog onAdd={createCategory} />
-            </div>
+            <AddCategoryDialog onAdd={createCategory} />
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {categories.map((category) => (
-              <div key={category.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ backgroundColor: category.color + '20' }}>
-                    {category.icon}
+              <div key={category.id} className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ backgroundColor: category.color + '20' }}>
+                      {category.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-medium">{category.name}</h3>
+                      <Badge variant="secondary">{category.nature}</Badge>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium">{category.name}</h3>
-                    <Badge variant="secondary">{category.nature}</Badge>
+                  <div className="flex gap-2">
+                    <AddSubcategoryDialog 
+                      categoryId={category.id} 
+                      categoryName={category.name}
+                      onAdd={createSubcategory} 
+                    />
+                    <EditCategoryDialog category={category} onUpdate={updateCategory} />
+                    <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(category.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <EditCategoryDialog category={category} onUpdate={updateCategory} />
-                  <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(category.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                
+                {/* Subcategorías */}
+                {category.subcategories && category.subcategories.length > 0 && (
+                  <div className="ml-13 space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Subcategorías:</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {category.subcategories.map((subcategory) => (
+                        <div key={subcategory.id} className="flex items-center justify-between p-2 bg-muted rounded text-sm">
+                          <span>{subcategory.name}</span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                            onClick={() => {
+                              if (confirm("¿Estás seguro de que quieres eliminar esta subcategoría?")) {
+                                deleteSubcategory(subcategory.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
             {categories.length === 0 && (
