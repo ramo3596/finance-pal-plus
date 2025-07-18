@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { Account } from "@/hooks/useSettings";
@@ -17,13 +18,23 @@ export function AddAccountDialog({ onAdd }: AddAccountDialogProps) {
     name: "",
     color: "#3b82f6",
     icon: "💳",
-    balance: 0
+    balance: 0,
+    accountNumber: ""
   });
+
+  const accountIcons = [
+    { value: "💰", label: "Dinero en efectivo" },
+    { value: "💳", label: "Tarjeta de Débito" },
+    { value: "💎", label: "Tarjeta de crédito" },
+    { value: "🎫", label: "Cupón" },
+    { value: "📱", label: "Pago por móvil" },
+    { value: "🌐", label: "Pago por web" }
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAdd(formData);
-    setFormData({ name: "", color: "#3b82f6", icon: "💳", balance: 0 });
+    setFormData({ name: "", color: "#3b82f6", icon: "💳", balance: 0, accountNumber: "" });
     setOpen(false);
   };
 
@@ -51,12 +62,21 @@ export function AddAccountDialog({ onAdd }: AddAccountDialogProps) {
           </div>
           <div>
             <Label htmlFor="icon">Icono</Label>
-            <Input
-              id="icon"
-              value={formData.icon}
-              onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-              placeholder="💳"
-            />
+            <Select value={formData.icon} onValueChange={(value) => setFormData({ ...formData, icon: value })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {accountIcons.map((icon) => (
+                  <SelectItem key={icon.value} value={icon.value}>
+                    <div className="flex items-center gap-2">
+                      <span>{icon.value}</span>
+                      <span>{icon.label}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="color">Color</Label>
@@ -65,6 +85,15 @@ export function AddAccountDialog({ onAdd }: AddAccountDialogProps) {
               type="color"
               value={formData.color}
               onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="accountNumber">Número de cuenta bancaria</Label>
+            <Input
+              id="accountNumber"
+              value={formData.accountNumber}
+              onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+              placeholder="Opcional"
             />
           </div>
           <div>

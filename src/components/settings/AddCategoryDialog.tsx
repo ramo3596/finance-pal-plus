@@ -21,6 +21,20 @@ export function AddCategoryDialog({ onAdd }: AddCategoryDialogProps) {
     nature: "Necesitar"
   });
 
+  const categoryIcons = [
+    { value: "🍔", label: "Alimentos y Bebidas" },
+    { value: "🛒", label: "Compras" },
+    { value: "🏠", label: "Vivienda" },
+    { value: "🚗", label: "Transporte" },
+    { value: "🚙", label: "Vehículos" },
+    { value: "🎮", label: "Vida y entretenimiento" },
+    { value: "💻", label: "Comunicaciones, PC" },
+    { value: "💰", label: "Gastos financieros" },
+    { value: "📈", label: "Inversiones" },
+    { value: "💵", label: "Ingreso" },
+    { value: "📁", label: "Otros" }
+  ];
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAdd(formData);
@@ -52,12 +66,21 @@ export function AddCategoryDialog({ onAdd }: AddCategoryDialogProps) {
           </div>
           <div>
             <Label htmlFor="icon">Icono</Label>
-            <Input
-              id="icon"
-              value={formData.icon}
-              onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-              placeholder="📁"
-            />
+            <Select value={formData.icon} onValueChange={(value) => setFormData({ ...formData, icon: value })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {categoryIcons.map((icon) => (
+                  <SelectItem key={icon.value} value={icon.value}>
+                    <div className="flex items-center gap-2">
+                      <span>{icon.value}</span>
+                      <span>{icon.label}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="color">Color</Label>
