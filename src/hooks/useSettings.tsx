@@ -10,6 +10,7 @@ export interface Account {
   color: string;
   icon: string;
   balance: number;
+  account_number?: string;
   created_at?: string;
   updated_at?: string;
 }
