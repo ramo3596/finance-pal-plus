@@ -229,58 +229,40 @@ export default function Settings() {
               <FolderOpen className="h-5 w-5" />
               Administrar Categorías
             </span>
-            <AddCategoryDialog onAdd={createCategory} />
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                Añadir subcategoría
+              </Button>
+              <AddCategoryDialog onAdd={createCategory} />
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-4 gap-6">
-            {/* Sidebar de categorías */}
-            <div className="md:col-span-1 space-y-2">
-              <h3 className="font-medium text-sm text-muted-foreground mb-4">Categorías</h3>
-              {categories.map((category) => (
-                <div key={category.id} className="text-sm text-muted-foreground hover:text-foreground cursor-pointer p-2 rounded hover:bg-muted">
-                  {category.name}
-                </div>
-              ))}
-            </div>
-            
-            {/* Lista principal de categorías */}
-            <div className="md:col-span-3 space-y-4">
-              {categories.map((category) => (
-                <div key={category.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ backgroundColor: category.color + '20' }}>
-                      {category.icon}
-                    </div>
-                    <div>
-                      <h3 className="font-medium">{category.name}</h3>
-                      {category.subcategories && category.subcategories.length > 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          {category.subcategories.map(sub => sub.name).join(', ')}
-                        </p>
-                      )}
-                    </div>
+          <div className="space-y-4">
+            {categories.map((category) => (
+              <div key={category.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ backgroundColor: category.color + '20' }}>
+                    {category.icon}
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                      Ocultar
-                    </Button>
-                    <EditCategoryDialog category={category} onUpdate={updateCategory} />
-                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                      Añadir subcategoría
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDeleteCategory(category.id)}>
-                      Eliminar
-                    </Button>
+                  <div>
+                    <h3 className="font-medium">{category.name}</h3>
+                    <Badge variant="secondary">{category.nature}</Badge>
                   </div>
                 </div>
-              ))}
-              {categories.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  No hay categorías configuradas. Agrega tu primera categoría.
-                </p>
-              )}
-            </div>
+                <div className="flex gap-2">
+                  <EditCategoryDialog category={category} onUpdate={updateCategory} />
+                  <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(category.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {categories.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                No hay categorías configuradas. Agrega tu primera categoría.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
