@@ -17,12 +17,13 @@ export function AddAccountDialog({ onAdd }: AddAccountDialogProps) {
   const [formData, setFormData] = useState({
     name: "",
     color: "#3b82f6",
-    icon: "💳",
+    icon: "🏦",
     balance: 0,
-    accountNumber: ""
+    account_number: ""
   });
 
   const accountIcons = [
+    { value: "🏦", label: "Cuenta Bancaria" },
     { value: "💰", label: "Dinero en efectivo" },
     { value: "💳", label: "Tarjeta de Débito" },
     { value: "💎", label: "Tarjeta de crédito" },
@@ -34,7 +35,7 @@ export function AddAccountDialog({ onAdd }: AddAccountDialogProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAdd(formData);
-    setFormData({ name: "", color: "#3b82f6", icon: "💳", balance: 0, accountNumber: "" });
+    setFormData({ name: "", color: "#3b82f6", icon: "🏦", balance: 0, account_number: "" });
     setOpen(false);
   };
 
@@ -88,11 +89,11 @@ export function AddAccountDialog({ onAdd }: AddAccountDialogProps) {
             />
           </div>
           <div>
-            <Label htmlFor="accountNumber">Número de cuenta bancaria</Label>
+            <Label htmlFor="account_number">Número de cuenta bancaria</Label>
             <Input
-              id="accountNumber"
-              value={formData.accountNumber}
-              onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+              id="account_number"
+              value={formData.account_number}
+              onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
               placeholder="Opcional"
             />
           </div>
