@@ -32,6 +32,7 @@ import { EditAccountDialog } from "@/components/settings/EditAccountDialog";
 import { AddCategoryDialog } from "@/components/settings/AddCategoryDialog";
 import { AddSubcategoryDialog } from "@/components/settings/AddSubcategoryDialog";
 import { EditCategoryDialog } from "@/components/settings/EditCategoryDialog";
+import { EditSubcategoryDialog } from "@/components/settings/EditSubcategoryDialog";
 import { AddTagDialog } from "@/components/settings/AddTagDialog";
 import { EditTagDialog } from "@/components/settings/EditTagDialog";
 import { AddTemplateDialog } from "@/components/settings/AddTemplateDialog";
@@ -267,22 +268,30 @@ export default function Settings() {
                 {category.subcategories && category.subcategories.length > 0 && (
                   <div className="ml-13 space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Subcategorías:</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    <div className="space-y-2">
                       {category.subcategories.map((subcategory) => (
-                        <div key={subcategory.id} className="flex items-center justify-between p-2 bg-muted rounded text-sm">
-                          <span>{subcategory.name}</span>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                            onClick={() => {
-                              if (confirm("¿Estás seguro de que quieres eliminar esta subcategoría?")) {
-                                deleteSubcategory(subcategory.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                        <div key={subcategory.id} className="flex items-center justify-between p-3 bg-muted rounded">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm" style={{ backgroundColor: category.color + '20' }}>
+                              {category.icon}
+                            </div>
+                            <span className="font-medium">{subcategory.name}</span>
+                          </div>
+                          <div className="flex gap-1">
+                            <EditSubcategoryDialog subcategory={subcategory} onUpdate={updateSubcategory} />
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                              onClick={() => {
+                                if (confirm("¿Estás seguro de que quieres eliminar esta subcategoría?")) {
+                                  deleteSubcategory(subcategory.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
