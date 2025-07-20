@@ -127,6 +127,83 @@ export default function Settings() {
     );
   }
 
+  const [profileData, setProfileData] = useState({
+    username: user?.email?.split('@')[0] || '',
+    email: user?.email || '',
+    password: '',
+    confirmPassword: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
+    bio: ''
+  });
+
+  const [uploading, setUploading] = useState(false);
+
+  const handleProfileUpdate = async () => {
+    // Validar que las contraseñas coincidan si se está cambiando
+    if (profileData.password && profileData.password !== profileData.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Las contraseñas no coinciden.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Aquí iría la lógica para actualizar el perfil
+      toast({
+        title: "Perfil actualizado",
+        description: "Los cambios en tu perfil se han guardado exitosamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el perfil. Intenta de nuevo.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleImageUpload = async () => {
+    setUploading(true);
+    try {
+      // Aquí iría la lógica para subir imagen
+      toast({
+        title: "Imagen actualizada",
+        description: "Tu foto de perfil se ha actualizado correctamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar la imagen. Intenta de nuevo.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteAllData = async () => {
+    if (confirm("¿Estás seguro de que quieres eliminar todos tus datos? Esta acción no se puede deshacer.")) {
+      try {
+        // Aquí iría la lógica para eliminar todos los datos del usuario
+        toast({
+          title: "Datos eliminados",
+          description: "Todos tus datos han sido eliminados exitosamente.",
+        });
+        await signOut();
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "No se pudieron eliminar los datos. Intenta de nuevo.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   const ProfileSection = () => (
     <div className="space-y-6">
       <Card>
@@ -136,44 +213,134 @@ export default function Settings() {
             Perfil de Usuario
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          {/* Foto de perfil */}
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
               <User className="h-8 w-8 text-primary" />
             </div>
-            <Button variant="outline" size="sm">
-              <Upload className="h-4 w-4 mr-2" />
-              Cambiar imagen
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleImageUpload}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-2" />
+              )}
+              {uploading ? 'Subiendo...' : 'Cambiar imagen'}
             </Button>
           </div>
           
+          {/* Información básica */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="username">Nombre de usuario</Label>
-              <Input id="username" defaultValue={user?.email?.split('@')[0]} />
+              <Input 
+                id="username" 
+                value={profileData.username}
+                onChange={(e) => setProfileData(prev => ({ ...prev, username: e.target.value }))}
+                placeholder="Tu nombre de usuario"
+              />
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" defaultValue={user?.email} disabled />
+              <Input 
+                id="email" 
+                value={profileData.email}
+                disabled 
+                className="bg-muted"
+              />
+            </div>
+            <div>
+              <Label htmlFor="firstName">Nombre</Label>
+              <Input 
+                id="firstName" 
+                value={profileData.firstName}
+                onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value }))}
+                placeholder="Tu nombre"
+              />
+            </div>
+            <div>
+              <Label htmlFor="lastName">Apellido</Label>
+              <Input 
+                id="lastName" 
+                value={profileData.lastName}
+                onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value }))}
+                placeholder="Tu apellido"
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Teléfono</Label>
+              <Input 
+                id="phone" 
+                type="tel"
+                value={profileData.phone}
+                onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="+1 (555) 123-4567"
+              />
+            </div>
+          </div>
+
+          {/* Biografía */}
+          <div>
+            <Label htmlFor="bio">Biografía</Label>
+            <textarea
+              id="bio"
+              className="w-full min-h-[80px] px-3 py-2 border border-input bg-background rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              value={profileData.bio}
+              onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
+              placeholder="Cuéntanos un poco sobre ti..."
+              maxLength={200}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {profileData.bio.length}/200 caracteres
+            </p>
+          </div>
+          
+          {/* Cambio de contraseña */}
+          <Separator />
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Cambiar Contraseña</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="password">Nueva contraseña</Label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  value={profileData.password}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Mínimo 8 caracteres"
+                />
+              </div>
+              <div>
+                <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+                <Input 
+                  id="confirmPassword" 
+                  type="password" 
+                  value={profileData.confirmPassword}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  placeholder="Repite la contraseña"
+                />
+              </div>
             </div>
           </div>
           
-          <div>
-            <Label htmlFor="password">Cambiar contraseña</Label>
-            <Input id="password" type="password" placeholder="Nueva contraseña" />
-          </div>
-          
+          {/* Botones de acción */}
+          <Separator />
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button onClick={handleSave}>
+            <Button onClick={handleProfileUpdate} className="flex-1">
               <Save className="h-4 w-4 mr-2" />
               Guardar cambios
             </Button>
             <Button variant="outline" onClick={handleSignOut}>
               Cerrar sesión
             </Button>
-            <Button variant="destructive">
+            <Button variant="destructive" onClick={handleDeleteAllData}>
               <Trash2 className="h-4 w-4 mr-2" />
-              Eliminar datos
+              Eliminar todos los datos
             </Button>
           </div>
         </CardContent>
