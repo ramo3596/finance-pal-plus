@@ -11,6 +11,7 @@ import { ExpenseTab } from "./ExpenseTab";
 import { IncomeTab } from "./IncomeTab";
 import { TransferTab } from "./TransferTab";
 import { useSettings } from "@/hooks/useSettings";
+import { useTransactions } from "@/hooks/useTransactions";
 interface AddTransactionProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -26,6 +27,8 @@ export function AddTransaction({
     templates, 
     loading 
   } = useSettings();
+  
+  const { createTransaction } = useTransactions();
   
   const [transactionType, setTransactionType] = useState<"expense" | "income" | "transfer">("expense");
   const [amount, setAmount] = useState("0");
@@ -58,36 +61,41 @@ export function AddTransaction({
     }
   };
 
-  const handleSubmit = (createAnother = false) => {
-    // Here you would submit the transaction data
-    console.log("Transaction data:", {
-      type: transactionType,
-      amount: parseFloat(amount),
-      account: selectedAccount,
-      toAccount: toAccount,
-      category: selectedCategory,
-      tags: selectedTags,
-      date,
-      time,
-      beneficiary,
-      note,
-      paymentMethod,
-      location,
-      template: selectedTemplate
-    });
-    if (!createAnother) {
-      onOpenChange(false);
-    } else {
-      // Reset form for new transaction
-      setAmount("0");
-      setSelectedAccount("");
-      setToAccount("");
-      setSelectedCategory("");
-      setSelectedTags([]);
-      setBeneficiary("");
-      setNote("");
-      setPaymentMethod("");
-      setLocation("");
+  const handleSubmit = async (createAnother = false) => {
+    try {
+      const transactionData = {
+        type: transactionType,
+        amount: parseFloat(amount),
+        account_id: selectedAccount,
+        to_account_id: toAccount || undefined,
+        category_id: selectedCategory || undefined,
+        description: beneficiary || `${transactionType} transaction`,
+        beneficiary,
+        note,
+        payment_method: paymentMethod,
+        location,
+        tags: selectedTags,
+        transaction_date: new Date(`${date}T${time}`).toISOString(),
+      };
+
+      await createTransaction(transactionData);
+
+      if (!createAnother) {
+        onOpenChange(false);
+      } else {
+        // Reset form for new transaction
+        setAmount("0");
+        setSelectedAccount("");
+        setToAccount("");
+        setSelectedCategory("");
+        setSelectedTags([]);
+        setBeneficiary("");
+        setNote("");
+        setPaymentMethod("");
+        setLocation("");
+      }
+    } catch (error) {
+      console.error('Error creating transaction:', error);
     }
   };
   return <Dialog open={open} onOpenChange={onOpenChange}>

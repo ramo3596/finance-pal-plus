@@ -47,13 +47,13 @@ export const useTransactions = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('transactions')
+        .from('transactions' as any)
         .select('*')
         .eq('user_id', user.id)
         .order('transaction_date', { ascending: false });
 
       if (error) throw error;
-      setTransactions(data || []);
+      setTransactions((data as unknown as Transaction[]) || []);
     } catch (error) {
       console.error('Error fetching transactions:', error);
       toast.error('Error al cargar las transacciones');
@@ -67,7 +67,7 @@ export const useTransactions = () => {
 
     try {
       const { data, error } = await supabase
-        .from('transactions')
+        .from('transactions' as any)
         .insert([{
           ...transaction,
           user_id: user.id,
@@ -77,7 +77,7 @@ export const useTransactions = () => {
 
       if (error) throw error;
       
-      setTransactions(prev => [data, ...prev]);
+      setTransactions(prev => [data as unknown as Transaction, ...prev]);
       toast.success('Transacción creada exitosamente');
       return data;
     } catch (error) {
@@ -90,7 +90,7 @@ export const useTransactions = () => {
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
     try {
       const { data, error } = await supabase
-        .from('transactions')
+        .from('transactions' as any)
         .update(updates)
         .eq('id', id)
         .select()
@@ -98,7 +98,7 @@ export const useTransactions = () => {
 
       if (error) throw error;
       
-      setTransactions(prev => prev.map(t => t.id === id ? data : t));
+      setTransactions(prev => prev.map(t => t.id === id ? data as unknown as Transaction : t));
       toast.success('Transacción actualizada');
       return data;
     } catch (error) {
@@ -111,7 +111,7 @@ export const useTransactions = () => {
   const deleteTransaction = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('transactions')
+        .from('transactions' as any)
         .delete()
         .eq('id', id);
 
