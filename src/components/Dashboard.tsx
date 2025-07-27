@@ -148,28 +148,68 @@ export function Dashboard() {
   )
 
   const renderTransactionsCard = () => {
-    const getTransactionIcon = (transaction: any) => {
-      if (transaction.type === 'transfer') {
+    const getTransactionIcon = (transaction: any, category?: any) => {
+      // For transfers, use the Plus icon rotated
+      if (transaction.description?.includes('Transferencia')) {
         return <Plus className="w-4 h-4 text-primary rotate-45" />;
       }
+      
+      // For regular transactions, use category icon or default to DollarSign
+      if (category?.icon) {
+        const IconComponent = require('lucide-react')[category.icon];
+        if (IconComponent) {
+          return <IconComponent className="w-4 h-4 text-primary" />;
+        }
+      }
+      
       return <DollarSign className="w-4 h-4 text-primary" />;
     };
 
     const getTransactionInfo = (transaction: any) => {
-      if (transaction.type === 'transfer') {
-        const sourceAccount = accounts.find(acc => acc.id === transaction.account_id);
-        const destAccount = accounts.find(acc => acc.id === transaction.to_account_id);
-        return {
-          title: 'Transferencia',
-          subtitle: `${sourceAccount?.name || 'Cuenta'} → ${destAccount?.name || 'Cuenta'}`,
-        };
+      // Check if it's a transfer by looking at the description
+      if (transaction.description?.includes('Transferencia')) {
+        const isOutgoing = transaction.amount < 0;
+        const sourceAccountId = transaction.description.includes('a ') 
+          ? transaction.description.split('a ')[1] 
+          : transaction.account_id;
+        const destAccountId = transaction.description.includes('desde ') 
+          ? transaction.description.split('desde ')[1] 
+          : transaction.account_id;
+        
+        const sourceAccount = accounts.find(acc => acc.id === (isOutgoing ? transaction.account_id : destAccountId));
+        const destAccount = accounts.find(acc => acc.id === (isOutgoing ? sourceAccountId : transaction.account_id));
+        
+        if (isOutgoing) {
+          // Outgoing transfer - bold source account
+          return {
+            title: 'Transferencia',
+            subtitle: (
+              <span>
+                <strong>{sourceAccount?.name || 'Cuenta'}</strong> → {destAccount?.name || 'Cuenta'}
+              </span>
+            ),
+          };
+        } else {
+          // Incoming transfer - bold destination account
+          return {
+            title: 'Transferencia',
+            subtitle: (
+              <span>
+                {sourceAccount?.name || 'Cuenta'} → <strong>{destAccount?.name || 'Cuenta'}</strong>
+              </span>
+            ),
+          };
+        }
       } else {
+        // Regular income/expense transaction
         const category = categories.find(cat => cat.id === transaction.category_id);
         const account = accounts.find(acc => acc.id === transaction.account_id);
         const tags = transaction.tags?.join(', ') || '';
+        
         return {
           title: category?.name || transaction.description,
           subtitle: `${account?.name || 'Cuenta'}${tags ? `, ${tags}` : ''}`,
+          category
         };
       }
     };
@@ -183,7 +223,7 @@ export function Dashboard() {
               <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 rounded-lg bg-primary/20">
-                    {getTransactionIcon(transaction)}
+                    {getTransactionIcon(transaction, transactionInfo.category)}
                   </div>
                   <div>
                     <p className="font-medium text-foreground">{transactionInfo.title}</p>
