@@ -1,16 +1,18 @@
-import { Wallet, CreditCard, Banknote, TrendingUp } from "lucide-react";
+import { Wallet } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Account } from "@/hooks/useSettings";
 
 interface IncomeTabProps {
   amount: string;
   setAmount: (amount: string) => void;
   selectedAccount: string;
   setSelectedAccount: (account: string) => void;
+  accounts: Account[];
 }
 
-export function IncomeTab({ amount, setAmount, selectedAccount, setSelectedAccount }: IncomeTabProps) {
+export function IncomeTab({ amount, setAmount, selectedAccount, setSelectedAccount, accounts }: IncomeTabProps) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -24,30 +26,17 @@ export function IncomeTab({ amount, setAmount, selectedAccount, setSelectedAccou
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="cash">
-                <div className="flex items-center space-x-2">
-                  <Banknote className="h-4 w-4" />
-                  <span>Efectivo</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="main">
-                <div className="flex items-center space-x-2">
-                  <Wallet className="h-4 w-4" />
-                  <span>Cuenta Principal</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="savings">
-                <div className="flex items-center space-x-2">
-                  <Wallet className="h-4 w-4" />
-                  <span>Ahorros</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="investment">
-                <div className="flex items-center space-x-2">
-                  <TrendingUp className="h-4 w-4" />
-                  <span>Inversiones</span>
-                </div>
-              </SelectItem>
+              {accounts.map((account) => (
+                <SelectItem key={account.id} value={account.id}>
+                  <div className="flex items-center space-x-2">
+                    <span>{account.icon}</span>
+                    <span>{account.name}</span>
+                    <span className="text-muted-foreground text-xs">
+                      (${account.balance?.toFixed(2) || '0.00'})
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

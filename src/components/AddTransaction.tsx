@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Search, MapPin, Wallet, CreditCard, Banknote, Smartphone, Globe, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExpenseTab } from "./ExpenseTab";
 import { IncomeTab } from "./IncomeTab";
 import { TransferTab } from "./TransferTab";
+import { useSettings } from "@/hooks/useSettings";
 interface AddTransactionProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -18,12 +19,20 @@ export function AddTransaction({
   open,
   onOpenChange
 }: AddTransactionProps) {
+  const { 
+    accounts, 
+    categories, 
+    tags, 
+    templates, 
+    loading 
+  } = useSettings();
+  
   const [transactionType, setTransactionType] = useState<"expense" | "income" | "transfer">("expense");
   const [amount, setAmount] = useState("0");
   const [selectedAccount, setSelectedAccount] = useState("");
   const [toAccount, setToAccount] = useState(""); // For transfers
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [selectedTags, setSelectedTags] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-US', {
     hour12: false,
@@ -35,6 +44,20 @@ export function AddTransaction({
   const [paymentMethod, setPaymentMethod] = useState("");
   const [location, setLocation] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState("");
+  // Function to apply template data
+  const applyTemplate = (templateId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    if (template) {
+      setAmount(template.amount.toString());
+      setSelectedAccount(template.account_id || "");
+      setSelectedCategory(template.category_id || "");
+      setPaymentMethod(template.payment_method || "");
+      setBeneficiary(template.beneficiary || "");
+      setNote(template.note || "");
+      setTransactionType(template.type.toLowerCase() as "expense" | "income" | "transfer");
+    }
+  };
+
   const handleSubmit = (createAnother = false) => {
     // Here you would submit the transaction data
     console.log("Transaction data:", {
@@ -60,7 +83,7 @@ export function AddTransaction({
       setSelectedAccount("");
       setToAccount("");
       setSelectedCategory("");
-      setSelectedTags("");
+      setSelectedTags([]);
       setBeneficiary("");
       setNote("");
       setPaymentMethod("");
@@ -80,15 +103,19 @@ export function AddTransaction({
           {/* Template Selector */}
           <div className="pt-4">
             <Label htmlFor="template">Plantilla</Label>
-            <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+            <Select value={selectedTemplate} onValueChange={(value) => {
+              setSelectedTemplate(value);
+              if (value) applyTemplate(value);
+            }}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccione una plantilla" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="grocery">Compra de supermercado</SelectItem>
-                <SelectItem value="salary">Salario mensual</SelectItem>
-                <SelectItem value="bills">Facturas</SelectItem>
-                <SelectItem value="transfer">Transferencia</SelectItem>
+                {templates.map((template) => (
+                  <SelectItem key={template.id} value={template.id}>
+                    {template.name} - ${template.amount.toFixed(2)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -108,7 +135,8 @@ export function AddTransaction({
                 amount={amount} 
                 setAmount={setAmount} 
                 selectedAccount={selectedAccount} 
-                setSelectedAccount={setSelectedAccount} 
+                setSelectedAccount={setSelectedAccount}
+                accounts={accounts} 
               />
             </TabsContent>
 
@@ -117,7 +145,8 @@ export function AddTransaction({
                 amount={amount} 
                 setAmount={setAmount} 
                 selectedAccount={selectedAccount} 
-                setSelectedAccount={setSelectedAccount} 
+                setSelectedAccount={setSelectedAccount}
+                accounts={accounts} 
               />
             </TabsContent>
 
@@ -129,6 +158,7 @@ export function AddTransaction({
                 setSelectedAccount={setSelectedAccount}
                 toAccount={toAccount}
                 setToAccount={setToAccount}
+                accounts={accounts}
               />
             </TabsContent>
           </Tabs>
@@ -139,32 +169,44 @@ export function AddTransaction({
               <Label htmlFor="category">Categoría</Label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar" />
+                  <SelectValue placeholder="Seleccionar categoría" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="food">Alimentación</SelectItem>
-                  <SelectItem value="transport">Transporte</SelectItem>
-                  <SelectItem value="entertainment">Entretenimiento</SelectItem>
-                  <SelectItem value="shopping">Compras</SelectItem>
-                  <SelectItem value="bills">Facturas</SelectItem>
-                  <SelectItem value="salary">Salario</SelectItem>
-                  <SelectItem value="other">Otros</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{category.icon}</span>
+                        <span>{category.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="tags">Etiquetas</Label>
-              <Select value={selectedTags} onValueChange={setSelectedTags}>
+              <Select value={selectedTags.join(',')} onValueChange={(value) => {
+                if (value) {
+                  const newTags = value.split(',');
+                  setSelectedTags(newTags);
+                }
+              }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar" />
+                  <SelectValue placeholder="Seleccionar etiquetas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="urgent">Urgente</SelectItem>
-                  <SelectItem value="recurring">Recurrente</SelectItem>
-                  <SelectItem value="business">Negocio</SelectItem>
-                  <SelectItem value="personal">Personal</SelectItem>
-                  <SelectItem value="vacation">Vacaciones</SelectItem>
+                  {tags.map((tag) => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        <span>{tag.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

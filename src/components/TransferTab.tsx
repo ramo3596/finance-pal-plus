@@ -1,7 +1,8 @@
-import { Wallet, CreditCard, Banknote, ArrowRightLeft } from "lucide-react";
+import { Wallet, ArrowRightLeft } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Account } from "@/hooks/useSettings";
 
 interface TransferTabProps {
   amount: string;
@@ -10,6 +11,7 @@ interface TransferTabProps {
   setSelectedAccount: (account: string) => void;
   toAccount: string;
   setToAccount: (account: string) => void;
+  accounts: Account[];
 }
 
 export function TransferTab({ 
@@ -18,7 +20,8 @@ export function TransferTab({
   selectedAccount, 
   setSelectedAccount, 
   toAccount, 
-  setToAccount 
+  setToAccount,
+  accounts 
 }: TransferTabProps) {
   return (
     <div className="space-y-4">
@@ -33,30 +36,17 @@ export function TransferTab({
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="cash">
-                <div className="flex items-center space-x-2">
-                  <Banknote className="h-4 w-4" />
-                  <span>Efectivo</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="main">
-                <div className="flex items-center space-x-2">
-                  <Wallet className="h-4 w-4" />
-                  <span>Cuenta Principal</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="savings">
-                <div className="flex items-center space-x-2">
-                  <Wallet className="h-4 w-4" />
-                  <span>Ahorros</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="credit">
-                <div className="flex items-center space-x-2">
-                  <CreditCard className="h-4 w-4" />
-                  <span>Tarjeta de Crédito</span>
-                </div>
-              </SelectItem>
+              {accounts.filter(acc => acc.id !== toAccount).map((account) => (
+                <SelectItem key={account.id} value={account.id}>
+                  <div className="flex items-center space-x-2">
+                    <span>{account.icon}</span>
+                    <span>{account.name}</span>
+                    <span className="text-muted-foreground text-xs">
+                      (${account.balance?.toFixed(2) || '0.00'})
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -71,30 +61,17 @@ export function TransferTab({
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="cash">
-                <div className="flex items-center space-x-2">
-                  <Banknote className="h-4 w-4" />
-                  <span>Efectivo</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="main">
-                <div className="flex items-center space-x-2">
-                  <Wallet className="h-4 w-4" />
-                  <span>Cuenta Principal</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="savings">
-                <div className="flex items-center space-x-2">
-                  <Wallet className="h-4 w-4" />
-                  <span>Ahorros</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="credit">
-                <div className="flex items-center space-x-2">
-                  <CreditCard className="h-4 w-4" />
-                  <span>Tarjeta de Crédito</span>
-                </div>
-              </SelectItem>
+              {accounts.filter(acc => acc.id !== selectedAccount).map((account) => (
+                <SelectItem key={account.id} value={account.id}>
+                  <div className="flex items-center space-x-2">
+                    <span>{account.icon}</span>
+                    <span>{account.name}</span>
+                    <span className="text-muted-foreground text-xs">
+                      (${account.balance?.toFixed(2) || '0.00'})
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

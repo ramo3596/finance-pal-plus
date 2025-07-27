@@ -79,14 +79,15 @@ export function AddFilterDialog({ onAdd }: AddFilterDialogProps) {
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Todos">Todos</SelectItem>
-                <SelectItem value="Efectivo">Efectivo</SelectItem>
-                <SelectItem value="Tarjeta de Débito">Tarjeta de Débito</SelectItem>
-                <SelectItem value="Tarjeta de Crédito">Tarjeta de Crédito</SelectItem>
-                <SelectItem value="Transferencia">Transferencia</SelectItem>
-                <SelectItem value="Otro">Otro</SelectItem>
-              </SelectContent>
+               <SelectContent>
+                 <SelectItem value="Todos">Todos</SelectItem>
+                 <SelectItem value="Dinero en efectivo">Dinero en efectivo</SelectItem>
+                 <SelectItem value="Tarjeta de Débito">Tarjeta de Débito</SelectItem>
+                 <SelectItem value="Tarjeta de crédito">Tarjeta de crédito</SelectItem>
+                 <SelectItem value="Cupón">Cupón</SelectItem>
+                 <SelectItem value="Pago por móvil">Pago por móvil</SelectItem>
+                 <SelectItem value="Pago por web">Pago por web</SelectItem>
+               </SelectContent>
             </Select>
           </div>
           <div>
