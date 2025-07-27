@@ -66,20 +66,52 @@ export const useTransactions = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('transactions' as any)
-        .insert([{
-          ...transaction,
-          user_id: user.id,
-        }])
-        .select()
-        .single();
+      if (transaction.type === 'transfer') {
+        // For transfers, create two transactions: one debit and one credit
+        const transferData = [
+          {
+            ...transaction,
+            user_id: user.id,
+            amount: -Math.abs(transaction.amount), // Negative for source account
+            account_id: transaction.account_id, // Source account
+            description: `Transferencia a ${transaction.to_account_id}`,
+          },
+          {
+            ...transaction,
+            user_id: user.id,
+            amount: Math.abs(transaction.amount), // Positive for destination account
+            account_id: transaction.to_account_id, // Destination account
+            description: `Transferencia desde ${transaction.account_id}`,
+          }
+        ];
 
-      if (error) throw error;
-      
-      setTransactions(prev => [data as unknown as Transaction, ...prev]);
-      toast.success('Transacción creada exitosamente');
-      return data;
+        const { data, error } = await supabase
+          .from('transactions' as any)
+          .insert(transferData)
+          .select();
+
+        if (error) throw error;
+        
+        setTransactions(prev => [...(data as unknown as Transaction[]), ...prev]);
+        toast.success('Transferencia creada exitosamente');
+        return data;
+      } else {
+        // For regular income/expense transactions
+        const { data, error } = await supabase
+          .from('transactions' as any)
+          .insert([{
+            ...transaction,
+            user_id: user.id,
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        
+        setTransactions(prev => [data as unknown as Transaction, ...prev]);
+        toast.success('Transacción creada exitosamente');
+        return data;
+      }
     } catch (error) {
       console.error('Error creating transaction:', error);
       toast.error('Error al crear la transacción');

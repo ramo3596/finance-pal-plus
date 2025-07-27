@@ -45,7 +45,7 @@ const mockExpenses = [
 export function Dashboard() {
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false)
   const { transactions, cards, updateCardPosition } = useTransactions()
-  const { accounts } = useSettings()
+  const { accounts, categories } = useSettings()
   
   // Sensors for drag and drop
   const sensors = useSensors(
@@ -147,36 +147,67 @@ export function Dashboard() {
     </div>
   )
 
-  const renderTransactionsCard = () => (
-    <div className="space-y-4">
-      {recentTransactions.length > 0 ? (
-        recentTransactions.map((transaction) => (
-          <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-            <div className="flex items-center space-x-3">
-              <div className={`p-2 rounded-lg bg-primary/20`}>
-                <DollarSign className={`w-4 h-4 text-primary`} />
+  const renderTransactionsCard = () => {
+    const getTransactionIcon = (transaction: any) => {
+      if (transaction.type === 'transfer') {
+        return <Plus className="w-4 h-4 text-primary rotate-45" />;
+      }
+      return <DollarSign className="w-4 h-4 text-primary" />;
+    };
+
+    const getTransactionInfo = (transaction: any) => {
+      if (transaction.type === 'transfer') {
+        const sourceAccount = accounts.find(acc => acc.id === transaction.account_id);
+        const destAccount = accounts.find(acc => acc.id === transaction.to_account_id);
+        return {
+          title: 'Transferencia',
+          subtitle: `${sourceAccount?.name || 'Cuenta'} → ${destAccount?.name || 'Cuenta'}`,
+        };
+      } else {
+        const category = categories.find(cat => cat.id === transaction.category_id);
+        const account = accounts.find(acc => acc.id === transaction.account_id);
+        const tags = transaction.tags?.join(', ') || '';
+        return {
+          title: category?.name || transaction.description,
+          subtitle: `${account?.name || 'Cuenta'}${tags ? `, ${tags}` : ''}`,
+        };
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        {recentTransactions.length > 0 ? (
+          recentTransactions.map((transaction) => {
+            const transactionInfo = getTransactionInfo(transaction);
+            return (
+              <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 rounded-lg bg-primary/20">
+                    {getTransactionIcon(transaction)}
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">{transactionInfo.title}</p>
+                    <p className="text-sm text-muted-foreground">{transactionInfo.subtitle}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className={`font-bold ${transaction.amount >= 0 ? 'text-success' : 'text-expense-red'}`}>
+                    {transaction.amount >= 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(transaction.transaction_date).toLocaleDateString()}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-foreground">{transaction.description}</p>
-                <p className="text-sm text-muted-foreground">{transaction.type}</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className={`font-bold ${transaction.amount >= 0 ? 'text-success' : 'text-foreground'}`}>
-                {transaction.amount >= 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {new Date(transaction.transaction_date).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
-        ))
-      ) : (
-        <p className="text-muted-foreground text-center py-4">No hay transacciones recientes</p>
-      )}
-      <Button variant="outline" size="sm" className="w-full">Ver Todas</Button>
-    </div>
-  )
+            );
+          })
+        ) : (
+          <p className="text-muted-foreground text-center py-4">No hay transacciones recientes</p>
+        )}
+        <Button variant="outline" size="sm" className="w-full">Ver Todas</Button>
+      </div>
+    );
+  }
 
   const renderExpensesCard = () => (
     <div className="space-y-4">
