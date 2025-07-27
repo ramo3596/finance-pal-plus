@@ -362,6 +362,7 @@ export default function Settings() {
               onAdd={createTemplate}
               accounts={accounts}
               categories={categories}
+              tags={tags}
             />
           </CardTitle>
         </CardHeader>
@@ -380,6 +381,7 @@ export default function Settings() {
                       onUpdate={updateTemplate}
                       accounts={accounts}
                       categories={categories}
+                      tags={tags}
                     />
                     <Button variant="destructive" size="sm" onClick={() => handleDeleteTemplate(template.id)}>
                       <Trash2 className="h-4 w-4" />
@@ -408,7 +410,12 @@ export default function Settings() {
               <Filter className="h-5 w-5" />
               Administrar Filtros
             </span>
-            <AddFilterDialog onAdd={createFilter} />
+            <AddFilterDialog 
+              onAdd={createFilter}
+              accounts={accounts}
+              categories={categories}
+              tags={tags}
+            />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -421,7 +428,13 @@ export default function Settings() {
                     <Badge variant="secondary">{filter.type}</Badge>
                   </div>
                   <div className="flex gap-2">
-                    <EditFilterDialog filter={filter} onUpdate={updateFilter} />
+                    <EditFilterDialog 
+                      filter={filter} 
+                      onUpdate={updateFilter}
+                      accounts={accounts}
+                      categories={categories}
+                      tags={tags}
+                    />
                     <Button variant="destructive" size="sm" onClick={() => handleDeleteFilter(filter.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>

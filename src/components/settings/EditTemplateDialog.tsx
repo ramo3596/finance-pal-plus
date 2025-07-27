@@ -13,9 +13,10 @@ interface EditTemplateDialogProps {
   onUpdate: (id: string, template: Partial<Template>) => void;
   accounts: Array<{ id: string; name: string }>;
   categories: Array<{ id: string; name: string }>;
+  tags: Array<{ id: string; name: string; color: string }>;
 }
 
-export function EditTemplateDialog({ template, onUpdate, accounts, categories }: EditTemplateDialogProps) {
+export function EditTemplateDialog({ template, onUpdate, accounts, categories, tags }: EditTemplateDialogProps) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: template.name,
@@ -25,7 +26,8 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories }:
     payment_method: template.payment_method || "Dinero en efectivo",
     type: template.type,
     beneficiary: template.beneficiary || "",
-    note: template.note || ""
+    note: template.note || "",
+    tag_ids: template.tags?.map(tag => tag.id) || []
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -35,8 +37,9 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories }:
       account_id: formData.account_id || undefined,
       category_id: formData.category_id || undefined,
       beneficiary: formData.beneficiary || undefined,
-      note: formData.note || undefined
-    });
+      note: formData.note || undefined,
+      tag_ids: formData.tag_ids.length > 0 ? formData.tag_ids : undefined
+    } as any);
     setOpen(false);
   };
 
@@ -143,6 +146,41 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories }:
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
               rows={3}
             />
+          </div>
+          <div>
+            <Label htmlFor="tags">Etiquetas (opcional)</Label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {tags.map((tag) => (
+                <div key={tag.id} className="flex items-center gap-2 p-2 border rounded-lg">
+                  <input
+                    type="checkbox"
+                    id={`tag-${tag.id}`}
+                    checked={formData.tag_ids.includes(tag.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({ 
+                          ...formData, 
+                          tag_ids: [...formData.tag_ids, tag.id] 
+                        });
+                      } else {
+                        setFormData({ 
+                          ...formData, 
+                          tag_ids: formData.tag_ids.filter(id => id !== tag.id) 
+                        });
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }}></div>
+                  <Label htmlFor={`tag-${tag.id}`} className="text-sm">{tag.name}</Label>
+                </div>
+              ))}
+            </div>
+            {tags.length === 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                No hay etiquetas disponibles. Crea etiquetas en la sección de Etiquetas.
+              </p>
+            )}
           </div>
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

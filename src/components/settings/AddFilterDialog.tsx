@@ -9,16 +9,22 @@ import { Filter } from "@/hooks/useSettings";
 
 interface AddFilterDialogProps {
   onAdd: (filter: Omit<Filter, 'id' | 'created_at' | 'updated_at'>) => void;
+  accounts: Array<{ id: string; name: string }>;
+  categories: Array<{ id: string; name: string }>;
+  tags: Array<{ id: string; name: string; color: string }>;
 }
 
-export function AddFilterDialog({ onAdd }: AddFilterDialogProps) {
+export function AddFilterDialog({ onAdd, accounts, categories, tags }: AddFilterDialogProps) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     type: "Todo",
     payment_method: "Todos",
     transfers: "Excluir",
-    debts: "Excluir"
+    debts: "Excluir",
+    account_ids: [] as string[],
+    category_ids: [] as string[],
+    tag_ids: [] as string[]
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -26,13 +32,19 @@ export function AddFilterDialog({ onAdd }: AddFilterDialogProps) {
     onAdd({
       ...formData,
       payment_method: formData.payment_method !== "Todos" ? formData.payment_method : undefined,
-    });
+      account_ids: formData.account_ids.length > 0 ? formData.account_ids : undefined,
+      category_ids: formData.category_ids.length > 0 ? formData.category_ids : undefined,
+      tag_ids: formData.tag_ids.length > 0 ? formData.tag_ids : undefined
+    } as any);
     setFormData({ 
       name: "", 
       type: "Todo", 
       payment_method: "Todos", 
       transfers: "Excluir", 
-      debts: "Excluir" 
+      debts: "Excluir",
+      account_ids: [],
+      category_ids: [],
+      tag_ids: []
     });
     setOpen(false);
   };
@@ -113,6 +125,109 @@ export function AddFilterDialog({ onAdd }: AddFilterDialogProps) {
                 <SelectItem value="Excluir">Excluir</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <Label htmlFor="accounts">Cuentas (opcional)</Label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {accounts.map((account) => (
+                <div key={account.id} className="flex items-center gap-2 p-2 border rounded-lg">
+                  <input
+                    type="checkbox"
+                    id={`account-${account.id}`}
+                    checked={formData.account_ids.includes(account.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({ 
+                          ...formData, 
+                          account_ids: [...formData.account_ids, account.id] 
+                        });
+                      } else {
+                        setFormData({ 
+                          ...formData, 
+                          account_ids: formData.account_ids.filter(id => id !== account.id) 
+                        });
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <Label htmlFor={`account-${account.id}`} className="text-sm">{account.name}</Label>
+                </div>
+              ))}
+            </div>
+            {accounts.length === 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                No hay cuentas disponibles. Crea cuentas en la sección de Cuentas.
+              </p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="categories">Categorías (opcional)</Label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {categories.map((category) => (
+                <div key={category.id} className="flex items-center gap-2 p-2 border rounded-lg">
+                  <input
+                    type="checkbox"
+                    id={`category-${category.id}`}
+                    checked={formData.category_ids.includes(category.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({ 
+                          ...formData, 
+                          category_ids: [...formData.category_ids, category.id] 
+                        });
+                      } else {
+                        setFormData({ 
+                          ...formData, 
+                          category_ids: formData.category_ids.filter(id => id !== category.id) 
+                        });
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <Label htmlFor={`category-${category.id}`} className="text-sm">{category.name}</Label>
+                </div>
+              ))}
+            </div>
+            {categories.length === 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                No hay categorías disponibles. Crea categorías en la sección de Categorías.
+              </p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="tags">Etiquetas (opcional)</Label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {tags.map((tag) => (
+                <div key={tag.id} className="flex items-center gap-2 p-2 border rounded-lg">
+                  <input
+                    type="checkbox"
+                    id={`tag-${tag.id}`}
+                    checked={formData.tag_ids.includes(tag.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({ 
+                          ...formData, 
+                          tag_ids: [...formData.tag_ids, tag.id] 
+                        });
+                      } else {
+                        setFormData({ 
+                          ...formData, 
+                          tag_ids: formData.tag_ids.filter(id => id !== tag.id) 
+                        });
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }}></div>
+                  <Label htmlFor={`tag-${tag.id}`} className="text-sm">{tag.name}</Label>
+                </div>
+              ))}
+            </div>
+            {tags.length === 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                No hay etiquetas disponibles. Crea etiquetas en la sección de Etiquetas.
+              </p>
+            )}
           </div>
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
