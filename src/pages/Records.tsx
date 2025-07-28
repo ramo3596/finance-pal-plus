@@ -27,17 +27,24 @@ const Records = () => {
   const { transactions, loading: transactionsLoading } = useTransactions();
   const navigate = useNavigate();
 
-  const [filters, setFilters] = useState<RecordsFilters>({
-    searchTerm: "",
-    selectedAccounts: [],
-    selectedCategories: [],
-    selectedTags: [],
-    selectedTypes: [],
-    amountRange: { min: 0, max: 0 },
-    selectedPaymentMethods: [],
-    status: "Todo",
-    dateRange: { from: null, to: null },
-    sortBy: "date-desc"
+  const [filters, setFilters] = useState<RecordsFilters>(() => {
+    // Set default date range to last 30 days
+    const now = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(now.getDate() - 29);
+    
+    return {
+      searchTerm: "",
+      selectedAccounts: [],
+      selectedCategories: [],
+      selectedTags: [],
+      selectedTypes: [],
+      amountRange: { min: 0, max: 0 },
+      selectedPaymentMethods: [],
+      status: "Todo",
+      dateRange: { from: thirtyDaysAgo, to: now },
+      sortBy: "date-desc"
+    };
   });
 
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);

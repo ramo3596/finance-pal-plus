@@ -25,20 +25,15 @@ export function RecordsFilters({ filters, onFilterChange }: RecordsFiltersProps)
   ];
 
   const paymentMethods = [
-    "Efectivo",
-    "Tarjeta de Débito",
-    "Tarjeta de Crédito",
-    "Transferencia",
-    "Cheque",
-    "Otro"
+    { id: "cash", label: "Dinero en efectivo" },
+    { id: "debit", label: "Tarjeta de débito" },
+    { id: "credit", label: "Tarjeta de crédito" },
+    { id: "transfer", label: "Transferencia bancaria" },
+    { id: "coupon", label: "Cupón" },
+    { id: "mobile", label: "Pago por móvil" },
+    { id: "web", label: "Pago por web" }
   ];
 
-  const recordStatuses = [
-    "Todo",
-    "Completado",
-    "Pendiente",
-    "Cancelado"
-  ];
 
   const handleAccountToggle = (accountId: string, checked: boolean) => {
     const newSelected = checked 
@@ -68,10 +63,10 @@ export function RecordsFilters({ filters, onFilterChange }: RecordsFiltersProps)
     onFilterChange({ selectedTypes: newSelected });
   };
 
-  const handlePaymentMethodToggle = (method: string, checked: boolean) => {
+  const handlePaymentMethodToggle = (methodId: string, checked: boolean) => {
     const newSelected = checked 
-      ? [...filters.selectedPaymentMethods, method]
-      : filters.selectedPaymentMethods.filter(m => m !== method);
+      ? [...filters.selectedPaymentMethods, methodId]
+      : filters.selectedPaymentMethods.filter(m => m !== methodId);
     onFilterChange({ selectedPaymentMethods: newSelected });
   };
 
@@ -266,48 +261,22 @@ export function RecordsFilters({ filters, onFilterChange }: RecordsFiltersProps)
           <ScrollArea className="h-32">
             <div className="space-y-2">
               {paymentMethods.map((method) => (
-                <div key={method} className="flex items-center space-x-2">
+                <div key={method.id} className="flex items-center space-x-2">
                   <Checkbox 
-                    id={`payment-${method}`}
-                    checked={filters.selectedPaymentMethods.includes(method)}
-                    onCheckedChange={(checked) => handlePaymentMethodToggle(method, checked as boolean)}
+                    id={`payment-${method.id}`}
+                    checked={filters.selectedPaymentMethods.includes(method.id)}
+                    onCheckedChange={(checked) => handlePaymentMethodToggle(method.id, checked as boolean)}
                   />
                   <Label 
-                    htmlFor={`payment-${method}`} 
+                    htmlFor={`payment-${method.id}`} 
                     className="text-sm cursor-pointer"
                   >
-                    {method}
+                    {method.label}
                   </Label>
                 </div>
               ))}
             </div>
           </ScrollArea>
-        </div>
-
-        <Separator />
-
-        {/* Record Status */}
-        <div className="space-y-2">
-          <Label className="font-medium">ESTADOS DE REGISTRO</Label>
-          <div className="space-y-2">
-            {recordStatuses.map((status) => (
-              <div key={status} className="flex items-center space-x-2">
-                <Checkbox 
-                  id={`status-${status}`}
-                  checked={filters.status === status}
-                  onCheckedChange={(checked) => {
-                    if (checked) onFilterChange({ status });
-                  }}
-                />
-                <Label 
-                  htmlFor={`status-${status}`} 
-                  className="text-sm cursor-pointer"
-                >
-                  {status}
-                </Label>
-              </div>
-            ))}
-          </div>
         </div>
       </CardContent>
     </Card>

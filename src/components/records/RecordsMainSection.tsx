@@ -178,6 +178,14 @@ export function RecordsMainSection({
     }
   };
 
+  const handleBulkDelete = async () => {
+    try {
+      await Promise.all(selectedTransactions.map(id => deleteTransaction(id)));
+    } catch (error) {
+      console.error('Error deleting transactions:', error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Summary Header */}
@@ -191,6 +199,24 @@ export function RecordsMainSection({
                 className="h-5 w-5"
               />
               <span className="text-sm font-medium">Seleccionar todo</span>
+              
+              {/* Bulk Actions */}
+              {selectedTransactions.length > 0 && (
+                <div className="flex items-center space-x-2 ml-4">
+                  <span className="text-sm text-muted-foreground">
+                    {selectedTransactions.length} seleccionados
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Eliminar
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-muted-foreground">
@@ -247,13 +273,26 @@ export function RecordsMainSection({
                         )}
                       </div>
                       
-                      {/* Transaction Details */}
+                       {/* Transaction Details */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-medium text-sm">{transaction.description}</p>
-                            <p className="text-xs text-muted-foreground">{accountName}</p>
-                            {transaction.beneficiary && (
+                            <p className="text-xs text-muted-foreground">
+                              {transaction.type === 'transfer' 
+                                ? `${getAccountName(transaction.account_id)} → ${getAccountName(transaction.to_account_id || '')}`
+                                : accountName
+                              }
+                            </p>
+                            {transaction.type !== 'transfer' && transaction.tags.length > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                {transaction.tags.map(tagName => {
+                                  const tag = tags.find(t => t.name === tagName);
+                                  return tag?.name;
+                                }).filter(Boolean).join(', ')}
+                              </p>
+                            )}
+                            {transaction.type === 'transfer' && transaction.beneficiary && (
                               <p className="text-xs text-muted-foreground">{transaction.beneficiary}</p>
                             )}
                           </div>

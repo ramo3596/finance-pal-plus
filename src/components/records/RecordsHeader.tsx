@@ -1,14 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
 import { AddTransaction } from "@/components/AddTransaction";
 import { useState } from "react";
 import { RecordsFilters } from "@/pages/Records";
+import { EnhancedDateSelector } from "./EnhancedDateSelector";
 
 interface RecordsHeaderProps {
   filters: RecordsFilters;
@@ -32,53 +28,11 @@ export function RecordsHeader({ filters, onFilterChange }: RecordsHeaderProps) {
             Nueva Transacción
           </Button>
           
-          {/* Date Range Filter */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-[240px] justify-start text-left font-normal",
-                  !filters.dateRange.from && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {filters.dateRange.from ? (
-                  filters.dateRange.to ? (
-                    <>
-                      {format(filters.dateRange.from, "dd MMM", { locale: es })} -{" "}
-                      {format(filters.dateRange.to, "dd MMM yyyy", { locale: es })}
-                    </>
-                  ) : (
-                    format(filters.dateRange.from, "dd MMM yyyy", { locale: es })
-                  )
-                ) : (
-                  <span>Seleccionar fechas</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                initialFocus
-                mode="range"
-                selected={{
-                  from: filters.dateRange.from || undefined,
-                  to: filters.dateRange.to || undefined,
-                }}
-                onSelect={(range) => {
-                  onFilterChange({
-                    dateRange: {
-                      from: range?.from || null,
-                      to: range?.to || null,
-                    }
-                  });
-                }}
-                numberOfMonths={2}
-                locale={es}
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
+          {/* Enhanced Date Range Filter */}
+          <EnhancedDateSelector
+            dateRange={filters.dateRange}
+            onDateRangeChange={(range) => onFilterChange({ dateRange: range })}
+          />
 
           {/* Sort By */}
           <Select 
