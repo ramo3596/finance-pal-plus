@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { useSettings } from './useSettings';
 
 export interface Transaction {
   id: string;
@@ -32,6 +33,7 @@ export interface DashboardCard {
 
 export const useTransactions = () => {
   const { user } = useAuth();
+  const { refetch: refetchSettings } = useSettings();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [cards, setCards] = useState<DashboardCard[]>([
     { id: 'overview', type: 'overview', title: 'Resumen', position: 0, visible: true },
@@ -93,15 +95,23 @@ export const useTransactions = () => {
         if (error) throw error;
         
         setTransactions(prev => [...(data as unknown as Transaction[]), ...prev]);
+        // Refetch accounts to update balances
+        refetchSettings();
         toast.success('Transferencia creada exitosamente');
         return data;
       } else {
         // For regular income/expense transactions
+        // Make sure expenses are negative
+        const adjustedAmount = transaction.type === 'expense' 
+          ? -Math.abs(transaction.amount) 
+          : Math.abs(transaction.amount);
+
         const { data, error } = await supabase
           .from('transactions' as any)
           .insert([{
             ...transaction,
             user_id: user.id,
+            amount: adjustedAmount,
           }])
           .select()
           .single();
@@ -109,6 +119,8 @@ export const useTransactions = () => {
         if (error) throw error;
         
         setTransactions(prev => [data as unknown as Transaction, ...prev]);
+        // Refetch accounts to update balances
+        refetchSettings();
         toast.success('Transacción creada exitosamente');
         return data;
       }
@@ -131,6 +143,8 @@ export const useTransactions = () => {
       if (error) throw error;
       
       setTransactions(prev => prev.map(t => t.id === id ? data as unknown as Transaction : t));
+      // Refetch accounts to update balances
+      refetchSettings();
       toast.success('Transacción actualizada');
       return data;
     } catch (error) {
@@ -150,6 +164,8 @@ export const useTransactions = () => {
       if (error) throw error;
       
       setTransactions(prev => prev.filter(t => t.id !== id));
+      // Refetch accounts to update balances
+      refetchSettings();
       toast.success('Transacción eliminada');
     } catch (error) {
       console.error('Error deleting transaction:', error);

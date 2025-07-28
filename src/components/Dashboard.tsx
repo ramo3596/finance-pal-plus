@@ -45,7 +45,7 @@ const mockExpenses = [
 export function Dashboard() {
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false)
   const { transactions, cards, updateCardPosition } = useTransactions()
-  const { accounts, categories } = useSettings()
+  const { accounts, categories, tags } = useSettings()
   
   // Sensors for drag and drop
   const sensors = useSensors(
@@ -156,9 +156,15 @@ export function Dashboard() {
       
       // For regular transactions, use category icon or default to DollarSign
       if (category?.icon) {
-        const IconComponent = require('lucide-react')[category.icon];
-        if (IconComponent) {
-          return <IconComponent className="w-4 h-4 text-primary" />;
+        try {
+          // Use dynamic import for icon components
+          const iconModule = require('lucide-react');
+          const IconComponent = iconModule[category.icon];
+          if (IconComponent) {
+            return <IconComponent className="w-4 h-4 text-primary" />;
+          }
+        } catch (error) {
+          console.log('Icon not found:', category.icon);
         }
       }
       
@@ -204,11 +210,17 @@ export function Dashboard() {
         // Regular income/expense transaction
         const category = categories.find(cat => cat.id === transaction.category_id);
         const account = accounts.find(acc => acc.id === transaction.account_id);
-        const tags = transaction.tags?.join(', ') || '';
+        
+        // Get tag names instead of IDs
+        const transactionTags = transaction.tags || [];
+        const tagNames = transactionTags.map(tagId => {
+          const tag = tags.find(t => t.id === tagId);
+          return tag?.name || tagId;
+        }).join(', ');
         
         return {
           title: category?.name || transaction.description,
-          subtitle: `${account?.name || 'Cuenta'}${tags ? `, ${tags}` : ''}`,
+          subtitle: `${account?.name || 'Cuenta'}${tagNames ? `, ${tagNames}` : ''}`,
           category
         };
       }
