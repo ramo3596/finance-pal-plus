@@ -76,14 +76,16 @@ export const useTransactions = () => {
             user_id: user.id,
             amount: -Math.abs(transaction.amount), // Negative for source account
             account_id: transaction.account_id, // Source account
-            description: `Transferencia a ${transaction.to_account_id}`,
+            to_account_id: transaction.to_account_id,
+            description: `Transferencia`,
           },
           {
             ...transaction,
             user_id: user.id,
             amount: Math.abs(transaction.amount), // Positive for destination account
             account_id: transaction.to_account_id, // Destination account
-            description: `Transferencia desde ${transaction.account_id}`,
+            to_account_id: transaction.account_id,
+            description: `Transferencia`,
           }
         ];
 

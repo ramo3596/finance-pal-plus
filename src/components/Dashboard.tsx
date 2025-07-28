@@ -150,14 +150,14 @@ export function Dashboard() {
   const renderTransactionsCard = () => {
     const getTransactionIcon = (transaction: any, category?: any) => {
       // For transfers, use the Plus icon rotated
-      if (transaction.description?.includes('Transferencia')) {
+      if (transaction.description === 'Transferencia') {
         return <Plus className="w-4 h-4 text-primary rotate-45" />;
       }
       
       // For regular transactions, use category icon or default to DollarSign
       if (category?.icon) {
+        // Try to dynamically import the icon from lucide-react
         try {
-          // Use dynamic import for icon components
           const iconModule = require('lucide-react');
           const IconComponent = iconModule[category.icon];
           if (IconComponent) {
@@ -173,17 +173,15 @@ export function Dashboard() {
 
     const getTransactionInfo = (transaction: any) => {
       // Check if it's a transfer by looking at the description
-      if (transaction.description?.includes('Transferencia')) {
+      if (transaction.description === 'Transferencia') {
         const isOutgoing = transaction.amount < 0;
-        const sourceAccountId = transaction.description.includes('a ') 
-          ? transaction.description.split('a ')[1] 
-          : transaction.account_id;
-        const destAccountId = transaction.description.includes('desde ') 
-          ? transaction.description.split('desde ')[1] 
-          : transaction.account_id;
         
-        const sourceAccount = accounts.find(acc => acc.id === (isOutgoing ? transaction.account_id : destAccountId));
-        const destAccount = accounts.find(acc => acc.id === (isOutgoing ? sourceAccountId : transaction.account_id));
+        // For transfers, use to_account_id to determine the other account
+        const sourceAccountId = transaction.account_id;
+        const destAccountId = transaction.to_account_id;
+        
+        const sourceAccount = accounts.find(acc => acc.id === sourceAccountId);
+        const destAccount = accounts.find(acc => acc.id === destAccountId);
         
         if (isOutgoing) {
           // Outgoing transfer - bold source account
@@ -201,7 +199,7 @@ export function Dashboard() {
             title: 'Transferencia',
             subtitle: (
               <span>
-                {sourceAccount?.name || 'Cuenta'} → <strong>{destAccount?.name || 'Cuenta'}</strong>
+                {destAccount?.name || 'Cuenta'} → <strong>{sourceAccount?.name || 'Cuenta'}</strong>
               </span>
             ),
           };
