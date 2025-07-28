@@ -31,7 +31,7 @@ export function EditTransaction({
     loading 
   } = useSettings();
   
-  const { updateTransaction } = useTransactions();
+  const { updateTransaction, updateTransferPair } = useTransactions();
   
   const [transactionType, setTransactionType] = useState<"expense" | "income" | "transfer">("expense");
   const [amount, setAmount] = useState("0");
@@ -57,7 +57,11 @@ export function EditTransaction({
       setSelectedTags(transaction.tags || []);
       
       const transactionDate = new Date(transaction.transaction_date);
-      setDate(transactionDate.toISOString().split('T')[0]);
+      // Use getFullYear, getMonth, getDate to avoid timezone issues
+      const year = transactionDate.getFullYear();
+      const month = String(transactionDate.getMonth() + 1).padStart(2, '0');
+      const day = String(transactionDate.getDate()).padStart(2, '0');
+      setDate(`${year}-${month}-${day}`);
       setTime(transactionDate.toLocaleTimeString('en-US', {
         hour12: false,
         hour: '2-digit',
@@ -77,10 +81,10 @@ export function EditTransaction({
     try {
       // For transfers, we need special handling since they're stored as paired transactions
       if (transactionType === 'transfer') {
-        // This is simplified - in a real app you'd need to handle transfer pairs properly
-        await updateTransaction(transaction.id, {
+        // Update both records of the transfer
+        await updateTransferPair(transaction.id, {
           type: transactionType,
-          amount: transaction.amount < 0 ? -Math.abs(parseFloat(amount)) : Math.abs(parseFloat(amount)),
+          amount: parseFloat(amount),
           account_id: selectedAccount,
           to_account_id: toAccount || undefined,
           category_id: selectedCategory || undefined,

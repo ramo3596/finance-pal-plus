@@ -156,6 +156,78 @@ export const useTransactions = () => {
     }
   };
 
+  const updateTransferPair = async (id: string, updates: Partial<Transaction>) => {
+    try {
+      // Find the current transaction to get its pair
+      const currentTransaction = transactions.find(t => t.id === id);
+      if (!currentTransaction || currentTransaction.type !== 'transfer') {
+        throw new Error('Transaction not found or not a transfer');
+      }
+
+      // Find the paired transaction
+      const pairedTransaction = transactions.find(t => 
+        t.id !== id && 
+        t.type === 'transfer' &&
+        t.transaction_date === currentTransaction.transaction_date &&
+        ((t.account_id === currentTransaction.to_account_id && t.to_account_id === currentTransaction.account_id) ||
+         (t.account_id === currentTransaction.account_id && t.to_account_id === currentTransaction.to_account_id))
+      );
+
+      if (!pairedTransaction) {
+        throw new Error('Paired transfer transaction not found');
+      }
+
+      // Update both transactions
+      const sourceUpdate = {
+        ...updates,
+        amount: -Math.abs(updates.amount || 0),
+        account_id: updates.account_id,
+        to_account_id: updates.to_account_id,
+      };
+
+      const destUpdate = {
+        ...updates,
+        amount: Math.abs(updates.amount || 0),
+        account_id: updates.to_account_id,
+        to_account_id: updates.account_id,
+      };
+
+      const { data: sourceData, error: sourceError } = await supabase
+        .from('transactions' as any)
+        .update(sourceUpdate)
+        .eq('id', currentTransaction.amount < 0 ? id : pairedTransaction.id)
+        .select()
+        .single();
+
+      if (sourceError) throw sourceError;
+
+      const { data: destData, error: destError } = await supabase
+        .from('transactions' as any)
+        .update(destUpdate)
+        .eq('id', currentTransaction.amount < 0 ? pairedTransaction.id : id)
+        .select()
+        .single();
+
+      if (destError) throw destError;
+      
+      // Update local state
+      setTransactions(prev => prev.map(t => {
+        if (t.id === (sourceData as unknown as Transaction).id) return sourceData as unknown as Transaction;
+        if (t.id === (destData as unknown as Transaction).id) return destData as unknown as Transaction;
+        return t;
+      }));
+      
+      // Refetch accounts to update balances
+      refetchSettings();
+      toast.success('Transferencia actualizada');
+      return [sourceData, destData];
+    } catch (error) {
+      console.error('Error updating transfer pair:', error);
+      toast.error('Error al actualizar la transferencia');
+      throw error;
+    }
+  };
+
   const deleteTransaction = async (id: string) => {
     try {
       const { error } = await supabase
@@ -212,6 +284,7 @@ export const useTransactions = () => {
     loading,
     createTransaction,
     updateTransaction,
+    updateTransferPair,
     deleteTransaction,
     updateCardPosition,
     toggleCardVisibility,
