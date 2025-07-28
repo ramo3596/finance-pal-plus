@@ -230,17 +230,62 @@ export const useTransactions = () => {
 
   const deleteTransaction = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('transactions' as any)
-        .delete()
-        .eq('id', id);
+      // Find the transaction to delete
+      const transactionToDelete = transactions.find(t => t.id === id);
+      if (!transactionToDelete) {
+        throw new Error('Transaction not found');
+      }
 
-      if (error) throw error;
+      // If it's a transfer, find and delete both transactions
+      if (transactionToDelete.type === 'transfer') {
+        // Find the paired transaction
+        const pairedTransaction = transactions.find(t => 
+          t.id !== id && 
+          t.type === 'transfer' &&
+          t.transaction_date === transactionToDelete.transaction_date &&
+          ((t.account_id === transactionToDelete.to_account_id && t.to_account_id === transactionToDelete.account_id) ||
+           (t.account_id === transactionToDelete.account_id && t.to_account_id === transactionToDelete.to_account_id))
+        );
+
+        // Delete both transactions in parallel
+        const deletePromises = [
+          supabase.from('transactions' as any).delete().eq('id', id)
+        ];
+
+        if (pairedTransaction) {
+          deletePromises.push(
+            supabase.from('transactions' as any).delete().eq('id', pairedTransaction.id)
+          );
+        }
+
+        const results = await Promise.all(deletePromises);
+        
+        // Check for errors
+        for (const result of results) {
+          if (result.error) throw result.error;
+        }
+        
+        // Update local state - remove both transactions
+        setTransactions(prev => prev.filter(t => 
+          t.id !== id && (!pairedTransaction || t.id !== pairedTransaction.id)
+        ));
+        
+        toast.success('Transferencia eliminada completamente');
+      } else {
+        // For regular transactions, delete normally
+        const { error } = await supabase
+          .from('transactions' as any)
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        
+        setTransactions(prev => prev.filter(t => t.id !== id));
+        toast.success('Transacción eliminada');
+      }
       
-      setTransactions(prev => prev.filter(t => t.id !== id));
       // Refetch accounts to update balances
       refetchSettings();
-      toast.success('Transacción eliminada');
     } catch (error) {
       console.error('Error deleting transaction:', error);
       toast.error('Error al eliminar la transacción');
