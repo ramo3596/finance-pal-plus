@@ -7,7 +7,7 @@ import { MoreVertical, Edit, Trash2 } from "lucide-react";
 import { Transaction } from "@/hooks/useTransactions";
 import { RecordsFilters } from "@/pages/Records";
 import { useSettings } from "@/hooks/useSettings";
-import { format, isToday, isYesterday, startOfDay, isAfter, isBefore } from "date-fns";
+import { format, isToday, isYesterday, startOfDay, endOfDay, isAfter, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useMemo, useState } from "react";
@@ -90,7 +90,7 @@ export function RecordsMainSection({
         if (filters.dateRange.from && isBefore(transactionDate, startOfDay(filters.dateRange.from))) {
           return false;
         }
-        if (filters.dateRange.to && isAfter(transactionDate, startOfDay(filters.dateRange.to))) {
+        if (filters.dateRange.to && isAfter(transactionDate, endOfDay(filters.dateRange.to))) {
           return false;
         }
       }
