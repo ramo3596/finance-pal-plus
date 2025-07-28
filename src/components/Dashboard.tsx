@@ -11,7 +11,8 @@ import {
   TrendingDown,
   DollarSign,
   PiggyBank,
-  Building2
+  Building2,
+  icons
 } from "lucide-react"
 import { AddTransaction } from "./AddTransaction"
 import { DashboardCard } from "./DashboardCard"
@@ -156,15 +157,9 @@ export function Dashboard() {
       
       // For regular transactions, use category icon or default to DollarSign
       if (category?.icon) {
-        // Try to dynamically import the icon from lucide-react
-        try {
-          const iconModule = require('lucide-react');
-          const IconComponent = iconModule[category.icon];
-          if (IconComponent) {
-            return <IconComponent className="w-4 h-4 text-primary" />;
-          }
-        } catch (error) {
-          console.log('Icon not found:', category.icon);
+        const IconComponent = icons[category.icon as keyof typeof icons];
+        if (IconComponent) {
+          return <IconComponent className="w-4 h-4 text-primary" />;
         }
       }
       
