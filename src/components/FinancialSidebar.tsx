@@ -31,7 +31,7 @@ const menuItems = [
   { title: "Estadística", url: "/statistics", icon: BarChart3 },
   { title: "Pagos programados", url: "/scheduled-payments", icon: Calendar },
   { title: "Deudas", url: "/debts", icon: Target },
-  { title: "Compartir en grupo", url: "/group-sharing", icon: Users },
+  { title: "Contactos", url: "/contacts", icon: Users },
   { title: "Configuración", url: "/settings", icon: Settings },
 ]
 

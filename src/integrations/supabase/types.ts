@@ -83,6 +83,72 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_tags: {
+        Row: {
+          contact_id: string
+          tag_id: string
+        }
+        Insert: {
+          contact_id: string
+          tag_id: string
+        }
+        Update: {
+          contact_id?: string
+          tag_id?: string
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          address: string | null
+          contact_type: string
+          created_at: string
+          email: string | null
+          id: string
+          identification_number: string | null
+          image_url: string | null
+          internal_notes: string | null
+          mobile: string | null
+          name: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          contact_type: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          identification_number?: string | null
+          image_url?: string | null
+          internal_notes?: string | null
+          mobile?: string | null
+          name: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          contact_type?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          identification_number?: string | null
+          image_url?: string | null
+          internal_notes?: string | null
+          mobile?: string | null
+          name?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       filter_categories: {
         Row: {
           category_id: string
@@ -355,11 +421,13 @@ export type Database = {
           amount: number
           beneficiary: string | null
           category_id: string | null
+          contact_id: string | null
           created_at: string
           description: string
           id: string
           location: string | null
           note: string | null
+          payer_contact_id: string | null
           payment_method: string | null
           tags: string[] | null
           to_account_id: string | null
@@ -373,11 +441,13 @@ export type Database = {
           amount: number
           beneficiary?: string | null
           category_id?: string | null
+          contact_id?: string | null
           created_at?: string
           description: string
           id?: string
           location?: string | null
           note?: string | null
+          payer_contact_id?: string | null
           payment_method?: string | null
           tags?: string[] | null
           to_account_id?: string | null
@@ -391,11 +461,13 @@ export type Database = {
           amount?: number
           beneficiary?: string | null
           category_id?: string | null
+          contact_id?: string | null
           created_at?: string
           description?: string
           id?: string
           location?: string | null
           note?: string | null
+          payer_contact_id?: string | null
           payment_method?: string | null
           tags?: string[] | null
           to_account_id?: string | null
