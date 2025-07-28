@@ -164,6 +164,107 @@ export type Database = {
         }
         Relationships: []
       }
+      debt_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          debt_id: string
+          description: string | null
+          id: string
+          payment_date: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          debt_id: string
+          description?: string | null
+          id?: string
+          payment_date?: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          debt_id?: string
+          description?: string | null
+          id?: string
+          payment_date?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debt_payments_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debts: {
+        Row: {
+          account_id: string
+          contact_id: string
+          created_at: string
+          current_balance: number
+          debt_date: string
+          description: string
+          due_date: string | null
+          id: string
+          initial_amount: number
+          status: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          contact_id: string
+          created_at?: string
+          current_balance?: number
+          debt_date: string
+          description: string
+          due_date?: string | null
+          id?: string
+          initial_amount: number
+          status?: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          contact_id?: string
+          created_at?: string
+          current_balance?: number
+          debt_date?: string
+          description?: string
+          due_date?: string | null
+          id?: string
+          initial_amount?: number
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       filter_categories: {
         Row: {
           category_id: string

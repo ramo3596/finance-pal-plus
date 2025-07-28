@@ -1,0 +1,270 @@
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { format } from "date-fns"
+import { CalendarIcon } from "lucide-react"
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Calendar } from "@/components/ui/calendar"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
+import { useDebts, type Debt } from "@/hooks/useDebts"
+
+const paymentSchema = z.object({
+  action: z.enum(['payment', 'increase']),
+  account_id: z.string().min(1, "Selecciona una cuenta"),
+  amount: z.number().positive("El monto debe ser positivo"),
+  payment_date: z.date(),
+  description: z.string().optional(),
+})
+
+type PaymentFormData = z.infer<typeof paymentSchema>
+
+interface AddPaymentDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  debt: Debt
+  accounts: Array<{ id: string; name: string }>
+}
+
+export function AddPaymentDialog({ open, onOpenChange, debt, accounts }: AddPaymentDialogProps) {
+  const { addDebtPayment } = useDebts()
+
+  const form = useForm<PaymentFormData>({
+    resolver: zodResolver(paymentSchema),
+    defaultValues: {
+      action: 'payment',
+      payment_date: new Date(),
+    },
+  })
+
+  const watchedAction = form.watch('action')
+  const isDebt = debt.type === 'debt'
+  const contactName = debt.contacts?.name || 'Contacto'
+
+  const onSubmit = async (data: PaymentFormData) => {
+    // For debts: payment reduces debt (positive), increase adds debt (negative)
+    // For loans: payment reduces loan (positive), increase adds loan (negative)
+    let amount = data.amount
+    if (data.action === 'increase') {
+      amount = -amount
+    }
+
+    const result = await addDebtPayment(debt.id, {
+      amount,
+      payment_date: data.payment_date.toISOString(),
+      description: data.description,
+    })
+
+    if (result) {
+      form.reset()
+      onOpenChange(false)
+    }
+  }
+
+  const getActionLabel = () => {
+    if (isDebt) {
+      return watchedAction === 'payment' ? 'Pago de deuda' : 'Aumento de deuda'
+    } else {
+      return watchedAction === 'payment' ? 'Cobro de préstamo' : 'Aumento de préstamo'
+    }
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(amount)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Añadir Registro</DialogTitle>
+          <div className="text-sm text-muted-foreground">
+            {isDebt ? 'DEBO' : 'ME DEBEN'} {contactName}
+          </div>
+          <div className="text-sm font-medium">
+            Saldo actual: {formatCurrency(Math.abs(debt.current_balance))}
+          </div>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="action"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Acción</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex flex-col space-y-2"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="payment" id="payment" />
+                        <Label htmlFor="payment">
+                          {isDebt ? 'Reembolsar deuda' : 'Cobrar préstamo'}
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="increase" id="increase" />
+                        <Label htmlFor="increase">
+                          {isDebt ? 'Aumento de deuda' : 'Aumento de préstamo'}
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="account_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cuenta</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una cuenta" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {accounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cantidad</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <div className="text-xs text-muted-foreground">
+                    {getActionLabel()}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="payment_date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Fecha</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "dd/MM/yyyy")
+                          ) : (
+                            <span>Selecciona fecha</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date > new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descripción (opcional)</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Notas adicionales..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">
+                Registrar {getActionLabel()}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  )
+}
