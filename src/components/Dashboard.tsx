@@ -15,6 +15,7 @@ import {
   icons
 } from "lucide-react"
 import { AddTransaction } from "./AddTransaction"
+import { EditTransaction } from "./EditTransaction"
 import { DashboardCard } from "./DashboardCard"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useSettings } from "@/hooks/useSettings"
@@ -45,6 +46,8 @@ const mockExpenses = [
 
 export function Dashboard() {
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false)
+  const [isEditTransactionOpen, setIsEditTransactionOpen] = useState(false)
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
   const { transactions, cards, updateCardPosition } = useTransactions()
   const { accounts, categories, tags } = useSettings()
   
@@ -227,7 +230,13 @@ export function Dashboard() {
             return (
               <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-lg bg-primary/20">
+                  <div 
+                    className="p-2 rounded-lg bg-primary/20 cursor-pointer hover:bg-primary/30 transition-colors" 
+                    onClick={() => {
+                      setSelectedTransaction(transaction);
+                      setIsEditTransactionOpen(true);
+                    }}
+                  >
                     {getTransactionIcon(transaction, transactionInfo.category)}
                   </div>
                   <div>
@@ -345,6 +354,13 @@ export function Dashboard() {
       <AddTransaction 
         open={isAddTransactionOpen} 
         onOpenChange={setIsAddTransactionOpen} 
+      />
+
+      {/* Edit Transaction Modal */}
+      <EditTransaction 
+        open={isEditTransactionOpen} 
+        onOpenChange={setIsEditTransactionOpen}
+        transaction={selectedTransaction}
       />
     </div>
   )
