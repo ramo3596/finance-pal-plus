@@ -279,10 +279,25 @@ export function RecordsMainSection({
                           <div>
                             <p className="font-medium text-sm">{transaction.description}</p>
                             <p className="text-xs text-muted-foreground">
-                              {transaction.type === 'transfer' 
-                                ? `${getAccountName(transaction.account_id)} → ${getAccountName(transaction.to_account_id || '')}`
-                                : accountName
-                              }
+                              {transaction.type === 'transfer' ? (
+                                transaction.amount < 0 ? (
+                                  // Transferencia saliente: cuenta origen en negrita
+                                  <>
+                                    <span className="font-semibold">{getAccountName(transaction.account_id)}</span>
+                                    {' → '}
+                                    {getAccountName(transaction.to_account_id || '')}
+                                  </>
+                                ) : (
+                                  // Transferencia entrante: cuenta destino en negrita
+                                  <>
+                                    {getAccountName(transaction.account_id)}
+                                    {' → '}
+                                    <span className="font-semibold">{getAccountName(transaction.to_account_id || '')}</span>
+                                  </>
+                                )
+                              ) : (
+                                accountName
+                              )}
                             </p>
                             {transaction.type !== 'transfer' && transaction.tags.length > 0 && (
                               <p className="text-xs text-muted-foreground">
