@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Search, MapPin, Wallet, CreditCard, Banknote, Smartphone, Globe, Receipt } from "lucide-react";
+import { X, Search, MapPin, Wallet, CreditCard, Banknote, Smartphone, Globe, Receipt, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,7 +31,7 @@ export function EditTransaction({
     loading 
   } = useSettings();
   
-  const { updateTransaction, updateTransferPair } = useTransactions();
+  const { updateTransaction, updateTransferPair, deleteTransaction } = useTransactions();
   
   const [transactionType, setTransactionType] = useState<"expense" | "income" | "transfer">("expense");
   const [amount, setAmount] = useState("0");
@@ -120,6 +120,19 @@ export function EditTransaction({
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating transaction:', error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!transaction) return;
+    
+    if (window.confirm('¿Estás seguro de que quieres eliminar esta transacción?')) {
+      try {
+        await deleteTransaction(transaction.id);
+        onOpenChange(false);
+      } catch (error) {
+        console.error('Error deleting transaction:', error);
+      }
     }
   };
 
@@ -325,6 +338,10 @@ export function EditTransaction({
           <div className="flex flex-col space-y-2 pt-4">
             <Button onClick={handleSubmit} className="w-full">
               Actualizar Transacción
+            </Button>
+            <Button onClick={handleDelete} variant="destructive" className="w-full">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Eliminar Transacción
             </Button>
           </div>
         </div>
