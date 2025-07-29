@@ -146,45 +146,9 @@ export function useDebts() {
   const ensureDebtCategories = async () => {
     if (!user) return { debtCategoryId: null, loanCategoryId: null }
 
-    // Check if categories exist
-    let debtCategory = categories.find(c => c.name === 'Deuda' && c.nature === 'expense')
-    let loanCategory = categories.find(c => c.name === 'Préstamo' && c.nature === 'income')
-
-    // Create debt category if it doesn't exist
-    if (!debtCategory) {
-      await createCategory({
-        name: 'Deuda',
-        nature: 'expense',
-        color: 'hsl(0, 84%, 60%)', // Red color for debts
-        icon: 'CreditCard'
-      })
-      // Fetch updated categories to get the new one
-      const { data: updatedCategories } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('name', 'Deuda')
-
-      debtCategory = updatedCategories?.[0]
-    }
-
-    // Create loan category if it doesn't exist
-    if (!loanCategory) {
-      await createCategory({
-        name: 'Préstamo',
-        nature: 'income',
-        color: 'hsl(142, 76%, 36%)', // Green color for loans
-        icon: 'HandCoins'
-      })
-      // Fetch updated categories to get the new one
-      const { data: updatedCategories } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('name', 'Préstamo')
-
-      loanCategory = updatedCategories?.[0]
-    }
+    // Use existing categories from configuration, prioritizing them regardless of nature
+    const debtCategory = categories.find(c => c.name === 'Deuda')
+    const loanCategory = categories.find(c => c.name === 'Préstamo')
 
     return {
       debtCategoryId: debtCategory?.id || null,
