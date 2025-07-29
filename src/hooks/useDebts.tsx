@@ -269,6 +269,20 @@ export function useDebts() {
 
   const addDebtPayment = async (debtId: string, paymentData: Omit<DebtPayment, 'id' | 'debt_id' | 'created_at'>) => {
     try {
+      // Get debt information first
+      const debt = debts.find(d => d.id === debtId)
+      if (!debt) throw new Error('Debt not found')
+
+      // Ensure debt/loan categories exist
+      const { debtCategoryId, loanCategoryId } = await ensureDebtCategories()
+
+      // Get contact information for the transaction
+      const { data: contactData } = await supabase
+        .from('contacts')
+        .select('name')
+        .eq('id', debt.contact_id)
+        .single()
+
       // Create payment record
       const { data: payment, error: paymentError } = await supabase
         .from('debt_payments')
@@ -281,47 +295,116 @@ export function useDebts() {
 
       if (paymentError) throw paymentError
 
-      // Update debt balance and handle automatic conversion
-      const debt = debts.find(d => d.id === debtId)
-      if (debt) {
-        const newBalance = debt.current_balance - paymentData.amount
-        
-        // Check if overpayment/overcollection occurred
-        if (Math.abs(newBalance) < 0.01) {
-          // Exact payment - close the debt/loan
-          await updateDebt(debtId, { 
-            current_balance: 0,
-            status: 'closed'
-          })
-        } else if ((debt.type === 'debt' && newBalance < 0) || (debt.type === 'loan' && newBalance < 0)) {
-          // Overpayment occurred - close current debt and create opposite type
-          await updateDebt(debtId, { 
-            current_balance: 0,
-            status: 'closed'
-          })
-          
-          // Create new debt/loan of opposite type for the excess amount
-          const newDebtData = {
-            contact_id: debt.contact_id,
-            account_id: debt.account_id,
-            type: debt.type === 'debt' ? 'loan' as const : 'debt' as const,
-            description: `Saldo a favor - ${debt.description}`,
-            initial_amount: Math.abs(newBalance),
-            current_balance: Math.abs(newBalance),
-            debt_date: paymentData.payment_date,
-            status: 'active' as const
-          }
-          
-          await createDebt(newDebtData)
-          toast.success(`Pago registrado. ${debt.type === 'debt' ? 'Préstamo' : 'Deuda'} creado por el exceso.`)
+      // Create corresponding transaction in the main records
+      const isPayment = paymentData.amount > 0
+      
+      // Determine transaction type and category based on debt type and payment direction
+      let transactionType: 'income' | 'expense'
+      let categoryId: string | null
+      let description: string
+
+      if (debt.type === 'debt') {
+        if (isPayment) {
+          // Paying a debt = expense
+          transactionType = 'expense'
+          categoryId = debtCategoryId
+          description = `Pago de deuda a ${contactData?.name || 'contacto'}`
         } else {
-          // Normal payment - update balance
-          await updateDebt(debtId, { 
-            current_balance: newBalance,
-            status: 'active'
-          })
-          toast.success('Pago registrado exitosamente')
+          // Receiving money for a debt = income (unusual case)
+          transactionType = 'income'
+          categoryId = debtCategoryId
+          description = `Ajuste de deuda con ${contactData?.name || 'contacto'}`
         }
+      } else {
+        // debt.type === 'loan'
+        if (isPayment) {
+          // Collecting a loan = income
+          transactionType = 'income'
+          categoryId = loanCategoryId
+          description = `Cobro de préstamo de ${contactData?.name || 'contacto'}`
+        } else {
+          // Giving more money to a loan = expense (unusual case)
+          transactionType = 'expense'
+          categoryId = loanCategoryId
+          description = `Ajuste de préstamo a ${contactData?.name || 'contacto'}`
+        }
+      }
+
+      // Create the transaction if category exists
+      let transactionId = null
+      if (categoryId) {
+        const transactionData = {
+          type: transactionType,
+          amount: Math.abs(paymentData.amount),
+          account_id: debt.account_id,
+          category_id: categoryId,
+          description,
+          beneficiary: contactData?.name,
+          note: paymentData.description,
+          transaction_date: paymentData.payment_date,
+          tags: []
+        }
+
+        try {
+          const createdTransaction = await createTransaction(transactionData)
+          if (createdTransaction && typeof createdTransaction === 'object') {
+            if (Array.isArray(createdTransaction) && createdTransaction.length > 0) {
+              transactionId = (createdTransaction[0] as any)?.id
+            } else if ('id' in createdTransaction) {
+              transactionId = (createdTransaction as any).id
+            }
+          }
+        } catch (err) {
+          console.error('Error creating transaction for debt payment:', err)
+        }
+      }
+
+      // Update the payment record with the transaction ID
+      if (transactionId) {
+        await supabase
+          .from('debt_payments')
+          .update({ transaction_id: transactionId })
+          .eq('id', payment.id)
+      }
+
+      // Update debt balance and handle automatic conversion
+      const newBalance = debt.current_balance - paymentData.amount
+      
+      // Check if overpayment/overcollection occurred
+      if (Math.abs(newBalance) < 0.01) {
+        // Exact payment - close the debt/loan
+        await updateDebt(debtId, { 
+          current_balance: 0,
+          status: 'closed'
+        })
+      } else if ((debt.type === 'debt' && newBalance < 0) || (debt.type === 'loan' && newBalance < 0)) {
+        // Overpayment occurred - close current debt and create opposite type
+        await updateDebt(debtId, { 
+          current_balance: 0,
+          status: 'closed'
+        })
+        
+        // Create new debt/loan of opposite type for the excess amount
+        const newDebtData = {
+          contact_id: debt.contact_id,
+          account_id: debt.account_id,
+          type: debt.type === 'debt' ? 'loan' as const : 'debt' as const,
+          description: `Saldo a favor - ${debt.description}`,
+          initial_amount: Math.abs(newBalance),
+          current_balance: Math.abs(newBalance),
+          debt_date: paymentData.payment_date,
+          status: 'active' as const
+        }
+        
+        await createDebt(newDebtData)
+        toast.success(`Pago registrado. ${debt.type === 'debt' ? 'Préstamo' : 'Deuda'} creado por el exceso.`)
+      } else {
+        // Normal payment - update balance
+        await updateDebt(debtId, { 
+          current_balance: newBalance,
+          status: 'active'
+        })
+        toast.success('Pago registrado exitosamente')
       }
 
       return payment
@@ -334,14 +417,30 @@ export function useDebts() {
 
   const deleteDebtPayment = async (paymentId: string, debtId: string) => {
     try {
-      // Get payment details before deleting
+      // Get payment details before deleting, including transaction_id
       const { data: payment } = await supabase
         .from('debt_payments')
-        .select('amount')
+        .select('amount, transaction_id')
         .eq('id', paymentId)
         .single()
 
       if (!payment) throw new Error('Payment not found')
+
+      // Delete associated transaction if it exists
+      if (payment.transaction_id) {
+        try {
+          const { error: transactionError } = await supabase
+            .from('transactions')
+            .delete()
+            .eq('id', payment.transaction_id)
+          
+          if (transactionError) {
+            console.error('Error deleting associated transaction:', transactionError)
+          }
+        } catch (transactionErr) {
+          console.error('Error deleting transaction:', transactionErr)
+        }
+      }
 
       // Delete payment
       const { error } = await supabase
@@ -371,10 +470,10 @@ export function useDebts() {
 
   const updateDebtPayment = async (paymentId: string, debtId: string, updatedData: Partial<DebtPayment>) => {
     try {
-      // Get current payment details
+      // Get current payment details, including transaction_id
       const { data: currentPayment } = await supabase
         .from('debt_payments')
-        .select('amount')
+        .select('amount, transaction_id, payment_date, description')
         .eq('id', paymentId)
         .single()
 
@@ -387,6 +486,38 @@ export function useDebts() {
         .eq('id', paymentId)
 
       if (error) throw error
+
+      // Update associated transaction if it exists and relevant fields changed
+      if (currentPayment.transaction_id && 
+          (updatedData.amount !== undefined || 
+           updatedData.payment_date !== undefined || 
+           updatedData.description !== undefined)) {
+        
+        const transactionUpdates: any = {}
+        
+        if (updatedData.amount !== undefined) {
+          transactionUpdates.amount = Math.abs(updatedData.amount)
+        }
+        if (updatedData.payment_date !== undefined) {
+          transactionUpdates.transaction_date = updatedData.payment_date
+        }
+        if (updatedData.description !== undefined) {
+          transactionUpdates.note = updatedData.description
+        }
+
+        try {
+          const { error: transactionError } = await supabase
+            .from('transactions')
+            .update(transactionUpdates)
+            .eq('id', currentPayment.transaction_id)
+          
+          if (transactionError) {
+            console.error('Error updating associated transaction:', transactionError)
+          }
+        } catch (transactionErr) {
+          console.error('Error updating transaction:', transactionErr)
+        }
+      }
 
       // If amount changed, update debt balance
       if (updatedData.amount !== undefined) {
