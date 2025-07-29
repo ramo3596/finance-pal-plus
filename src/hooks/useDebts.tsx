@@ -126,15 +126,29 @@ export function useDebts() {
       if (error) throw error
 
       // Add category and account info to each payment
-      const enrichedPayments = (data || []).map(payment => ({
-        ...payment,
-        transactions: {
-          category_id: payment.amount > 0 ? loanCategory?.id : debtCategory?.id,
-          account_id: debt.account_id,
-          categories: payment.amount > 0 ? loanCategory : debtCategory,
-          accounts: debt.accounts
+      const enrichedPayments = (data || []).map(payment => {
+        // Determine category based on payment type and debt type
+        let selectedCategory
+        if (payment.description?.includes('Registro inicial')) {
+          // Initial records should match the debt type
+          selectedCategory = debt.type === 'loan' ? loanCategory : debtCategory
+        } else {
+          // Regular payments: positive amounts are payments reducing debt (use opposite category)
+          selectedCategory = payment.amount > 0 ? 
+            (debt.type === 'debt' ? debtCategory : loanCategory) : 
+            (debt.type === 'debt' ? loanCategory : debtCategory)
         }
-      }))
+
+        return {
+          ...payment,
+          transactions: {
+            category_id: selectedCategory?.id,
+            account_id: debt.account_id,
+            categories: selectedCategory,
+            accounts: debt.accounts
+          }
+        }
+      })
 
       return enrichedPayments
     } catch (error) {
@@ -198,6 +212,16 @@ export function useDebts() {
       if (transactionData.category_id) {
         await createTransaction(transactionData)
       }
+
+      // Create initial payment record in debt_payments for history tracking
+      await supabase
+        .from('debt_payments')
+        .insert({
+          debt_id: data.id,
+          amount: debtData.initial_amount,
+          payment_date: debtData.debt_date,
+          description: `Registro inicial - ${debtData.type === 'loan' ? 'Préstamo' : 'Deuda'}`
+        })
       
       await fetchDebts()
       toast.success('Deuda creada exitosamente')
