@@ -281,22 +281,131 @@ export function useDebts() {
 
       if (paymentError) throw paymentError
 
-      // Update debt balance
+      // Update debt balance and handle automatic conversion
       const debt = debts.find(d => d.id === debtId)
       if (debt) {
         const newBalance = debt.current_balance - paymentData.amount
-        await updateDebt(debtId, { 
-          current_balance: newBalance,
-          status: Math.abs(newBalance) < 0.01 ? 'closed' : 'active'
-        })
+        
+        // Check if overpayment/overcollection occurred
+        if (Math.abs(newBalance) < 0.01) {
+          // Exact payment - close the debt/loan
+          await updateDebt(debtId, { 
+            current_balance: 0,
+            status: 'closed'
+          })
+        } else if ((debt.type === 'debt' && newBalance < 0) || (debt.type === 'loan' && newBalance < 0)) {
+          // Overpayment occurred - close current debt and create opposite type
+          await updateDebt(debtId, { 
+            current_balance: 0,
+            status: 'closed'
+          })
+          
+          // Create new debt/loan of opposite type for the excess amount
+          const newDebtData = {
+            contact_id: debt.contact_id,
+            account_id: debt.account_id,
+            type: debt.type === 'debt' ? 'loan' as const : 'debt' as const,
+            description: `Saldo a favor - ${debt.description}`,
+            initial_amount: Math.abs(newBalance),
+            current_balance: Math.abs(newBalance),
+            debt_date: paymentData.payment_date,
+            status: 'active' as const
+          }
+          
+          await createDebt(newDebtData)
+          toast.success(`Pago registrado. ${debt.type === 'debt' ? 'Préstamo' : 'Deuda'} creado por el exceso.`)
+        } else {
+          // Normal payment - update balance
+          await updateDebt(debtId, { 
+            current_balance: newBalance,
+            status: 'active'
+          })
+          toast.success('Pago registrado exitosamente')
+        }
       }
 
-      toast.success('Pago registrado exitosamente')
       return payment
     } catch (error) {
       console.error('Error adding debt payment:', error)
       toast.error('Error al registrar el pago')
       return null
+    }
+  }
+
+  const deleteDebtPayment = async (paymentId: string, debtId: string) => {
+    try {
+      // Get payment details before deleting
+      const { data: payment } = await supabase
+        .from('debt_payments')
+        .select('amount')
+        .eq('id', paymentId)
+        .single()
+
+      if (!payment) throw new Error('Payment not found')
+
+      // Delete payment
+      const { error } = await supabase
+        .from('debt_payments')
+        .delete()
+        .eq('id', paymentId)
+
+      if (error) throw error
+
+      // Update debt balance by reversing the payment
+      const debt = debts.find(d => d.id === debtId)
+      if (debt) {
+        const newBalance = debt.current_balance + payment.amount
+        await updateDebt(debtId, { 
+          current_balance: newBalance,
+          status: 'active'
+        })
+      }
+
+      await fetchDebts()
+      toast.success('Registro eliminado exitosamente')
+    } catch (error) {
+      console.error('Error deleting debt payment:', error)
+      toast.error('Error al eliminar el registro')
+    }
+  }
+
+  const updateDebtPayment = async (paymentId: string, debtId: string, updatedData: Partial<DebtPayment>) => {
+    try {
+      // Get current payment details
+      const { data: currentPayment } = await supabase
+        .from('debt_payments')
+        .select('amount')
+        .eq('id', paymentId)
+        .single()
+
+      if (!currentPayment) throw new Error('Payment not found')
+
+      // Update payment
+      const { error } = await supabase
+        .from('debt_payments')
+        .update(updatedData)
+        .eq('id', paymentId)
+
+      if (error) throw error
+
+      // If amount changed, update debt balance
+      if (updatedData.amount !== undefined) {
+        const debt = debts.find(d => d.id === debtId)
+        if (debt) {
+          const balanceChange = currentPayment.amount - updatedData.amount
+          const newBalance = debt.current_balance + balanceChange
+          await updateDebt(debtId, { 
+            current_balance: newBalance,
+            status: Math.abs(newBalance) < 0.01 ? 'closed' : 'active'
+          })
+        }
+      }
+
+      await fetchDebts()
+      toast.success('Registro actualizado exitosamente')
+    } catch (error) {
+      console.error('Error updating debt payment:', error)
+      toast.error('Error al actualizar el registro')
     }
   }
 
@@ -315,6 +424,8 @@ export function useDebts() {
     createDebt,
     updateDebt,
     deleteDebt,
-    addDebtPayment
+    addDebtPayment,
+    deleteDebtPayment,
+    updateDebtPayment
   }
 }

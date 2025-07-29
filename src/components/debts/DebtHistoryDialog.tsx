@@ -2,10 +2,13 @@ import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { TrendingUp, TrendingDown } from "lucide-react"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { TrendingUp, TrendingDown, Edit, Trash2, X } from "lucide-react"
 import { type Debt, type DebtPayment } from "@/hooks/useDebts"
 import { useDebts } from "@/hooks/useDebts"
+import { EditPaymentDialog } from "./EditPaymentDialog"
 
 interface DebtHistoryDialogProps {
   open: boolean
@@ -15,13 +18,22 @@ interface DebtHistoryDialogProps {
 
 export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialogProps) {
   const [payments, setPayments] = useState<DebtPayment[]>([])
-  const { fetchDebtPayments } = useDebts()
+  const [editingPayment, setEditingPayment] = useState<DebtPayment | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const { fetchDebtPayments, deleteDebtPayment, deleteDebt } = useDebts()
+
+  const refreshPayments = async () => {
+    if (debt.id) {
+      const updatedPayments = await fetchDebtPayments(debt.id)
+      setPayments(updatedPayments)
+    }
+  }
 
   useEffect(() => {
-    if (open && debt.id) {
-      fetchDebtPayments(debt.id).then(setPayments)
+    if (open) {
+      refreshPayments()
     }
-  }, [open, debt.id, fetchDebtPayments])
+  }, [open, debt.id])
 
   const isDebt = debt.type === 'debt'
   const contactName = debt.contacts?.name || 'Contacto'
@@ -49,13 +61,61 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
     }
   }
 
+  const handleEditPayment = (payment: DebtPayment) => {
+    setEditingPayment(payment)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleDeletePayment = async (paymentId: string) => {
+    await deleteDebtPayment(paymentId, debt.id)
+    refreshPayments()
+  }
+
+  const handleDeleteDebt = async () => {
+    await deleteDebt(debt.id)
+    onOpenChange(false)
+  }
+
+  const isInitialRecord = (payment: DebtPayment) => {
+    return payment.description?.includes('Registro inicial')
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>
-            Historial de {isDebt ? 'Deuda' : 'Préstamo'} - {contactName}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>
+              Historial de {isDebt ? 'Deuda' : 'Préstamo'} - {contactName}
+            </DialogTitle>
+            <div className="flex items-center space-x-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar {isDebt ? 'Deuda' : 'Préstamo'}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Eliminar {isDebt ? 'deuda' : 'préstamo'}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta acción eliminará permanentemente {isDebt ? 'la deuda' : 'el préstamo'} y todo su historial de movimientos. Esta acción no se puede deshacer.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteDebt} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Eliminar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -104,8 +164,8 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
               ) : (
                 <div className="space-y-3">
                   {payments.map((payment) => (
-                    <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                      <div className="flex items-center space-x-3">
+                    <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
+                      <div className="flex items-center space-x-3 flex-1">
                         <div 
                           className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
                           style={{ 
@@ -118,7 +178,7 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
                             </span>
                           )}
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <p className="font-medium text-foreground">
                             {payment.transactions?.categories?.name || getPaymentType(payment.amount)}
                           </p>
@@ -132,13 +192,55 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className={`font-bold ${getPaymentColor(payment.amount)}`}>
-                          {payment.amount > 0 ? '+' : ''}{formatCurrency(payment.amount)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(payment.payment_date), 'dd/MM/yyyy')}
-                        </p>
+                      <div className="flex items-center space-x-3">
+                        <div className="text-right">
+                          <p className={`font-bold ${getPaymentColor(payment.amount)}`}>
+                            {payment.amount > 0 ? '+' : ''}{formatCurrency(payment.amount)}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(payment.payment_date), 'dd/MM/yyyy')}
+                          </p>
+                        </div>
+                        {!isInitialRecord(payment) && (
+                          <div className="flex items-center space-x-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditPayment(payment)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>¿Eliminar registro?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta acción eliminará permanentemente este registro de pago. Esta acción no se puede deshacer.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeletePayment(payment.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Eliminar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -147,6 +249,21 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
             </ScrollArea>
           </div>
         </div>
+        
+        {editingPayment && (
+          <EditPaymentDialog
+            open={isEditDialogOpen}
+            onOpenChange={(open) => {
+              setIsEditDialogOpen(open)
+              if (!open) {
+                setEditingPayment(null)
+                refreshPayments()
+              }
+            }}
+            payment={editingPayment}
+            debtId={debt.id}
+          />
+        )}
       </DialogContent>
     </Dialog>
   )
