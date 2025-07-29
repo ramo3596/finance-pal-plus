@@ -106,16 +106,24 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
                   {payments.map((payment) => (
                     <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                       <div className="flex items-center space-x-3">
-                        <div className="p-2 rounded-lg bg-primary/20">
-                          {payment.amount > 0 ? (
-                            <TrendingUp className="w-4 h-4 text-primary" />
-                          ) : (
-                            <TrendingDown className="w-4 h-4 text-primary" />
+                        <div 
+                          className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
+                          style={{ 
+                            backgroundColor: payment.transactions?.categories?.color || 'hsl(var(--primary))' 
+                          }}
+                        >
+                          {payment.transactions?.categories?.icon && (
+                            <span className="text-sm">
+                              {payment.transactions.categories.icon === 'CreditCard' ? '💳' : '🤝'}
+                            </span>
                           )}
                         </div>
                         <div>
                           <p className="font-medium text-foreground">
-                            {getPaymentType(payment.amount)}
+                            {payment.transactions?.categories?.name || getPaymentType(payment.amount)}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {payment.transactions?.accounts?.name}
                           </p>
                           {payment.description && (
                             <p className="text-sm text-muted-foreground">

@@ -38,6 +38,18 @@ export interface DebtPayment {
   payment_date: string
   description?: string
   created_at: string
+  transactions?: {
+    category_id: string
+    account_id: string
+    categories: {
+      name: string
+      icon: string
+      color: string
+    }
+    accounts: {
+      name: string
+    }
+  }
 }
 
 export function useDebts() {
@@ -79,6 +91,32 @@ export function useDebts() {
 
   const fetchDebtPayments = async (debtId: string) => {
     try {
+      // Get the debt details first to determine category
+      const { data: debt, error: debtError } = await supabase
+        .from('debts')
+        .select(`
+          *,
+          accounts (
+            name
+          )
+        `)
+        .eq('id', debtId)
+        .single()
+
+      if (debtError) throw debtError
+
+      // Get categories for debt and loan
+      const { data: categories, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .in('name', ['Deuda', 'Préstamo'])
+
+      if (categoriesError) throw categoriesError
+
+      const debtCategory = categories?.find(c => c.name === 'Deuda')
+      const loanCategory = categories?.find(c => c.name === 'Préstamo')
+
+      // Get payments
       const { data, error } = await supabase
         .from('debt_payments')
         .select('*')
@@ -86,10 +124,21 @@ export function useDebts() {
         .order('payment_date', { ascending: false })
 
       if (error) throw error
-      return data || []
+
+      // Add category and account info to each payment
+      const enrichedPayments = (data || []).map(payment => ({
+        ...payment,
+        transactions: {
+          category_id: payment.amount > 0 ? loanCategory?.id : debtCategory?.id,
+          account_id: debt.account_id,
+          categories: payment.amount > 0 ? loanCategory : debtCategory,
+          accounts: debt.accounts
+        }
+      }))
+
+      return enrichedPayments
     } catch (error) {
       console.error('Error fetching debt payments:', error)
-      toast.error('Error al cargar los pagos de la deuda')
       return []
     }
   }
