@@ -2,6 +2,8 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "./useAuth"
 import { toast } from "sonner"
+import { useTransactions } from "./useTransactions"
+import { useSettings } from "./useSettings"
 
 export interface Debt {
   id: string
@@ -43,6 +45,8 @@ export function useDebts() {
   const [debtPayments, setDebtPayments] = useState<DebtPayment[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
+  const { createTransaction } = useTransactions()
+  const { categories, createCategory } = useSettings()
 
   const fetchDebts = async () => {
     if (!user) return
@@ -90,10 +94,69 @@ export function useDebts() {
     }
   }
 
+  const ensureDebtCategories = async () => {
+    if (!user) return { debtCategoryId: null, loanCategoryId: null }
+
+    // Check if categories exist
+    let debtCategory = categories.find(c => c.name === 'Deuda' && c.nature === 'expense')
+    let loanCategory = categories.find(c => c.name === 'Préstamo' && c.nature === 'income')
+
+    // Create debt category if it doesn't exist
+    if (!debtCategory) {
+      await createCategory({
+        name: 'Deuda',
+        nature: 'expense',
+        color: 'hsl(0, 84%, 60%)', // Red color for debts
+        icon: 'CreditCard'
+      })
+      // Fetch updated categories to get the new one
+      const { data: updatedCategories } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('name', 'Deuda')
+
+      debtCategory = updatedCategories?.[0]
+    }
+
+    // Create loan category if it doesn't exist
+    if (!loanCategory) {
+      await createCategory({
+        name: 'Préstamo',
+        nature: 'income',
+        color: 'hsl(142, 76%, 36%)', // Green color for loans
+        icon: 'HandCoins'
+      })
+      // Fetch updated categories to get the new one
+      const { data: updatedCategories } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('name', 'Préstamo')
+
+      loanCategory = updatedCategories?.[0]
+    }
+
+    return {
+      debtCategoryId: debtCategory?.id || null,
+      loanCategoryId: loanCategory?.id || null
+    }
+  }
+
   const createDebt = async (debtData: Omit<Debt, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     if (!user) return null
 
     try {
+      // Ensure debt/loan categories exist
+      const { debtCategoryId, loanCategoryId } = await ensureDebtCategories()
+
+      // Get contact information for the transaction
+      const { data: contactData } = await supabase
+        .from('contacts')
+        .select('name')
+        .eq('id', debtData.contact_id)
+        .single()
+
       const { data, error } = await supabase
         .from('debts')
         .insert({
@@ -105,6 +168,23 @@ export function useDebts() {
         .single()
 
       if (error) throw error
+
+      // Create corresponding transaction in the history
+      const transactionData = {
+        type: debtData.type === 'loan' ? 'income' as const : 'expense' as const,
+        amount: debtData.initial_amount,
+        account_id: debtData.account_id,
+        category_id: debtData.type === 'loan' ? loanCategoryId : debtCategoryId,
+        description: `${debtData.type === 'loan' ? 'Préstamo a' : 'Deuda con'} ${contactData?.name || 'contacto'}`,
+        beneficiary: contactData?.name,
+        transaction_date: debtData.debt_date,
+        tags: []
+      }
+
+      // Create the transaction
+      if (transactionData.category_id) {
+        await createTransaction(transactionData)
+      }
       
       await fetchDebts()
       toast.success('Deuda creada exitosamente')
