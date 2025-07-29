@@ -114,7 +114,7 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
                         >
                           {payment.transactions?.categories?.icon && (
                             <span className="text-sm">
-                              {payment.transactions.categories.icon === 'CreditCard' ? '💳' : '🤝'}
+                              {payment.transactions.categories.icon}
                             </span>
                           )}
                         </div>
