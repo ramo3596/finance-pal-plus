@@ -1,15 +1,11 @@
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { useDebts, type Debt, type DebtPayment } from "@/hooks/useDebts"
+import { type Debt, type DebtPayment } from "@/hooks/useDebts"
+import { useDebts } from "@/hooks/useDebts"
 
 interface DebtHistoryDialogProps {
   open: boolean
@@ -41,100 +37,86 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
     if (amount > 0) {
       return isDebt ? 'Pago' : 'Cobro'
     } else {
-      return isDebt ? 'Aumento' : 'Incremento'
+      return 'Aumento'
     }
   }
 
   const getPaymentColor = (amount: number) => {
-    return amount > 0 ? 'text-green-600' : 'text-red-600'
+    if (amount > 0) {
+      return isDebt ? 'text-green-600' : 'text-blue-600'
+    } else {
+      return 'text-orange-600'
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>Historial de {isDebt ? 'Deuda' : 'Préstamo'}</DialogTitle>
-          <div className="text-sm text-muted-foreground">
-            {isDebt ? 'DEBO' : 'ME DEBEN'} {contactName}
-          </div>
+          <DialogTitle>
+            Historial de {isDebt ? 'Deuda' : 'Préstamo'} - {contactName}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Debt Summary */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-muted-foreground">Descripción</div>
-                  <div className="font-medium">{debt.description}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Cuenta</div>
-                  <div className="font-medium">{debt.accounts?.name}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Monto inicial</div>
-                  <div className="font-medium">{formatCurrency(debt.initial_amount)}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Saldo actual</div>
-                  <div className={`font-medium ${isDebt ? 'text-red-600' : 'text-green-600'}`}>
-                    {formatCurrency(Math.abs(debt.current_balance))}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Fecha</div>
-                  <div className="font-medium">{format(new Date(debt.debt_date), 'dd/MM/yyyy')}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Estado</div>
-                  <Badge variant={debt.status === 'active' ? 'default' : 'secondary'}>
-                    {debt.status === 'active' ? 'Activo' : 'Cerrado'}
-                  </Badge>
-                </div>
-                {debt.due_date && (
-                  <div className="col-span-2">
-                    <div className="text-muted-foreground">Fecha de vencimiento</div>
-                    <div className="font-medium">
-                      {format(new Date(debt.due_date), 'dd/MM/yyyy')}
-                      {new Date(debt.due_date) < new Date() && (
-                        <Badge variant="destructive" className="ml-2">
-                          Vencida
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
+          {/* Resumen de la deuda */}
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Descripción:</span>
+                <p className="font-medium">{debt.description}</p>
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <span className="text-muted-foreground">Cuenta:</span>
+                <p className="font-medium">{debt.accounts?.name}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Monto inicial:</span>
+                <p className="font-medium">{formatCurrency(debt.initial_amount)}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Saldo actual:</span>
+                <p className={`font-semibold ${isDebt ? 'text-red-600' : 'text-green-600'}`}>
+                  {formatCurrency(Math.abs(debt.current_balance))}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Fecha:</span>
+                <p className="font-medium">{format(new Date(debt.debt_date), 'dd/MM/yyyy')}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Estado:</span>
+                <Badge variant={debt.status === 'active' ? 'default' : 'secondary'}>
+                  {debt.status === 'active' ? 'Activo' : 'Cerrado'}
+                </Badge>
+              </div>
+            </div>
+          </div>
 
-          <Separator />
-
-          {/* Payment History */}
+          {/* Historial de pagos */}
           <div>
-            <h3 className="font-semibold mb-3">Historial de Movimientos</h3>
-            {payments.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No hay movimientos registrados
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {payments.map((payment) => (
-                  <Card key={payment.id}>
-                    <CardContent className="p-3">
-                      <div className="flex justify-between items-start">
+            <h3 className="text-lg font-semibold mb-3">Historial de Movimientos</h3>
+            <ScrollArea className="h-[300px] border rounded-lg p-4">
+              {payments.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  No hay historial de pagos disponible
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {payments.map((payment, index) => (
+                    <div key={payment.id}>
+                      <div className="flex justify-between items-center">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <Badge variant="outline">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium">
                               {getPaymentType(payment.amount)}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {format(new Date(payment.payment_date), 'dd/MM/yyyy')}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(payment.payment_date), 'dd/MM/yyyy HH:mm')}
                             </span>
                           </div>
                           {payment.description && (
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-muted-foreground mt-1">
                               {payment.description}
                             </p>
                           )}
@@ -143,11 +125,12 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
                           {payment.amount > 0 ? '+' : ''}{formatCurrency(payment.amount)}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                      {index < payments.length - 1 && <Separator className="mt-3" />}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
           </div>
         </div>
       </DialogContent>
