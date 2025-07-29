@@ -3,7 +3,7 @@ import { format } from "date-fns"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
+import { TrendingUp, TrendingDown } from "lucide-react"
 import { type Debt, type DebtPayment } from "@/hooks/useDebts"
 import { useDebts } from "@/hooks/useDebts"
 
@@ -43,9 +43,9 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
 
   const getPaymentColor = (amount: number) => {
     if (amount > 0) {
-      return isDebt ? 'text-green-600' : 'text-blue-600'
+      return isDebt ? 'text-success' : 'text-success'
     } else {
-      return 'text-orange-600'
+      return 'text-expense-red'
     }
   }
 
@@ -103,29 +103,35 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {payments.map((payment, index) => (
-                    <div key={payment.id}>
-                      <div className="flex justify-between items-center">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium">
-                              {getPaymentType(payment.amount)}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(payment.payment_date), 'dd/MM/yyyy HH:mm')}
-                            </span>
-                          </div>
+                  {payments.map((payment) => (
+                    <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 rounded-lg bg-primary/20">
+                          {payment.amount > 0 ? (
+                            <TrendingUp className="w-4 h-4 text-primary" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4 text-primary" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {getPaymentType(payment.amount)}
+                          </p>
                           {payment.description && (
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-sm text-muted-foreground">
                               {payment.description}
                             </p>
                           )}
                         </div>
-                        <div className={`font-semibold ${getPaymentColor(payment.amount)}`}>
-                          {payment.amount > 0 ? '+' : ''}{formatCurrency(payment.amount)}
-                        </div>
                       </div>
-                      {index < payments.length - 1 && <Separator className="mt-3" />}
+                      <div className="text-right">
+                        <p className={`font-bold ${getPaymentColor(payment.amount)}`}>
+                          {payment.amount > 0 ? '+' : ''}{formatCurrency(payment.amount)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(payment.payment_date), 'dd/MM/yyyy')}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
