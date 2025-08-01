@@ -301,13 +301,42 @@ export function useDebts() {
 
   const deleteDebt = async (id: string) => {
     try {
-      // First, get all debt payments to delete associated transactions
+      // Get the debt information to find the initial transaction
+      const { data: debt } = await supabase
+        .from('debts')
+        .select('contact_id, type, debt_date')
+        .eq('id', id)
+        .single()
+
+      // Get contact name for transaction description matching
+      let contactName = ''
+      if (debt?.contact_id) {
+        const { data: contact } = await supabase
+          .from('contacts')
+          .select('name')
+          .eq('id', debt.contact_id)
+          .single()
+        contactName = contact?.name || ''
+      }
+
+      // Find and delete the initial transaction based on description pattern
+      if (debt && contactName) {
+        const initialDescription = `${debt.type === 'loan' ? 'Préstamo a' : 'Deuda con'} ${contactName}`
+        
+        await supabase
+          .from('transactions')
+          .delete()
+          .eq('description', initialDescription)
+          .eq('transaction_date', debt.debt_date)
+      }
+
+      // Get all debt payments to delete associated transactions
       const { data: payments } = await supabase
         .from('debt_payments')
         .select('transaction_id')
         .eq('debt_id', id)
 
-      // Delete associated transactions
+      // Delete associated transactions from payments
       if (payments && payments.length > 0) {
         const transactionIds = payments
           .filter(p => p.transaction_id)
