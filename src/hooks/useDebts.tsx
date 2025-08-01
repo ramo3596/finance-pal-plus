@@ -408,9 +408,31 @@ export function useDebts() {
       // Create the transaction if category exists
       let transactionId = null
       if (categoryId) {
+        // Determine the correct amount based on debt type and payment direction
+        let transactionAmount: number
+        
+        if (debt.type === 'debt') {
+          if (paymentData.amount > 0) {
+            // Aumento de deuda → positive amount
+            transactionAmount = Math.abs(paymentData.amount)
+          } else {
+            // Reembolsar deuda → negative amount
+            transactionAmount = -Math.abs(paymentData.amount)
+          }
+        } else {
+          // debt.type === 'loan'
+          if (paymentData.amount < 0) {
+            // Aumento de préstamo → positive amount
+            transactionAmount = Math.abs(paymentData.amount)
+          } else {
+            // Cobro de préstamo → negative amount  
+            transactionAmount = -Math.abs(paymentData.amount)
+          }
+        }
+
         const transactionData = {
           type: transactionType,
-          amount: Math.abs(paymentData.amount),
+          amount: transactionAmount,
           account_id: debt.account_id,
           category_id: categoryId,
           description,
