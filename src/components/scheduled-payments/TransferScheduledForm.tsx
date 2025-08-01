@@ -24,6 +24,7 @@ const formSchema = z.object({
   account_id: z.string().min(1, 'La cuenta origen es requerida'),
   to_account_id: z.string().min(1, 'La cuenta destino es requerida'),
   amount: z.number().min(0.01, 'El importe debe ser mayor a 0'),
+  payment_method: z.string().optional(),
   contact_id: z.string().optional(),
   frequency_type: z.enum(['once', 'recurring']),
   start_date: z.date({ required_error: 'La fecha de inicio es requerida' }),
@@ -46,7 +47,7 @@ interface TransferScheduledFormProps {
 
 export const TransferScheduledForm = ({ onClose }: TransferScheduledFormProps) => {
   const { createScheduledPayment } = useScheduledPayments();
-  const { accounts } = useSettings();
+  const { accounts, tags } = useSettings();
   const { contacts } = useContacts();
   const [isRecurrenceDialogOpen, setIsRecurrenceDialogOpen] = useState(false);
   const [recurrenceData, setRecurrenceData] = useState<any>(null);
@@ -59,6 +60,16 @@ export const TransferScheduledForm = ({ onClose }: TransferScheduledFormProps) =
       tags: [],
     },
   });
+
+  const paymentMethods = [
+    { value: "cash", label: "Dinero en efectivo" },
+    { value: "debit", label: "Tarjeta de débito" },
+    { value: "credit", label: "Tarjeta de crédito" },
+    { value: "transfer", label: "Transferencia bancaria" },
+    { value: "coupon", label: "Cupón" },
+    { value: "mobile", label: "Pago por móvil" },
+    { value: "web", label: "Pago por web" }
+  ];
 
   const notificationOptions = [
     { value: 0, label: 'Ninguno' },
@@ -201,6 +212,32 @@ export const TransferScheduledForm = ({ onClose }: TransferScheduledFormProps) =
               )}
             />
 
+            {/* Payment Method */}
+            <FormField
+              control={form.control}
+              name="payment_method"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Forma de pago</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar forma de pago" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {paymentMethods.map((method) => (
+                        <SelectItem key={method.value} value={method.value}>
+                          {method.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Contact */}
             <FormField
               control={form.control}
@@ -337,6 +374,75 @@ export const TransferScheduledForm = ({ onClose }: TransferScheduledFormProps) =
               )}
             </div>
           )}
+
+          {/* Tags */}
+          <FormField
+            control={form.control}
+            name="tags"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Etiquetas</FormLabel>
+                <Select 
+                  value={field.value?.join(',')} 
+                  onValueChange={(value) => {
+                    if (value) {
+                      const currentTags = field.value || [];
+                      const tagId = value.split(',').pop() || '';
+                      if (!currentTags.includes(tagId)) {
+                        field.onChange([...currentTags, tagId]);
+                      }
+                    }
+                  }}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar etiquetas" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {tags.map((tag) => (
+                      <SelectItem key={tag.id} value={tag.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: tag.color }}
+                          />
+                          <span>{tag.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {field.value?.map((tagId) => {
+                    const tag = tags.find(t => t.id === tagId);
+                    return tag ? (
+                      <span 
+                        key={tagId}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-xs"
+                      >
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        {tag.name}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            field.onChange(field.value?.filter(id => id !== tagId) || []);
+                          }}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Note */}
           <FormField

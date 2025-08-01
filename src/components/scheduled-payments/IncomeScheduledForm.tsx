@@ -62,7 +62,15 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
   });
 
   const incomeCategories = categories.filter(cat => cat.nature === 'income');
-  const paymentMethods = ['Efectivo', 'Tarjeta de débito', 'Tarjeta de crédito', 'Transferencia bancaria', 'Cheque', 'PayPal', 'Otro'];
+  const paymentMethods = [
+    { value: "cash", label: "Dinero en efectivo" },
+    { value: "debit", label: "Tarjeta de débito" },
+    { value: "credit", label: "Tarjeta de crédito" },
+    { value: "transfer", label: "Transferencia bancaria" },
+    { value: "coupon", label: "Cupón" },
+    { value: "mobile", label: "Pago por móvil" },
+    { value: "web", label: "Pago por web" }
+  ];
   const notificationOptions = [
     { value: 0, label: 'Ninguno' },
     { value: 1, label: 'Fecha límite' },
@@ -218,8 +226,8 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
                     </FormControl>
                     <SelectContent>
                       {paymentMethods.map((method) => (
-                        <SelectItem key={method} value={method}>
-                          {method}
+                        <SelectItem key={method.value} value={method.value}>
+                          {method.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -365,6 +373,75 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
               )}
             </div>
           )}
+
+          {/* Tags */}
+          <FormField
+            control={form.control}
+            name="tags"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Etiquetas</FormLabel>
+                <Select 
+                  value={field.value?.join(',')} 
+                  onValueChange={(value) => {
+                    if (value) {
+                      const currentTags = field.value || [];
+                      const tagId = value.split(',').pop() || '';
+                      if (!currentTags.includes(tagId)) {
+                        field.onChange([...currentTags, tagId]);
+                      }
+                    }
+                  }}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar etiquetas" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {tags.map((tag) => (
+                      <SelectItem key={tag.id} value={tag.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: tag.color }}
+                          />
+                          <span>{tag.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {field.value?.map((tagId) => {
+                    const tag = tags.find(t => t.id === tagId);
+                    return tag ? (
+                      <span 
+                        key={tagId}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-xs"
+                      >
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        {tag.name}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            field.onChange(field.value?.filter(id => id !== tagId) || []);
+                          }}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Note */}
           <FormField
