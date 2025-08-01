@@ -72,12 +72,14 @@ export function AddPaymentDialog({ open, onOpenChange, debt, accounts }: AddPaym
   const contactName = debt.contacts?.name || 'Contacto'
 
   const onSubmit = async (data: PaymentFormData) => {
-    // For debts: payment reduces debt (positive), increase adds debt (negative)
-    // For loans: payment reduces loan (positive), increase adds loan (negative)
+    // Para deudas:
+    // - "Aumento de deuda" = valor positivo (aumenta lo que debemos)
+    // - "Reembolsar deuda" = valor negativo (reduce lo que debemos)
     let amount = data.amount
-    if (data.action === 'increase') {
-      amount = -amount
+    if (data.action === 'payment') {
+      amount = -amount // Reembolsar deuda = valor negativo
     }
+    // Si es 'increase', mantener valor positivo (Aumento de deuda = valor positivo)
 
     const result = await addDebtPayment(debt.id, {
       amount,

@@ -385,7 +385,7 @@ export function useDebts() {
           categoryId = debtCategoryId
           description = `Aumento de deuda con ${contactData?.name || 'contacto'}`
         } else {
-          // Reembolsar deuda → category "Préstamo", negative amount
+          // Reembolsar deuda → category "Préstamo", negative amount  
           transactionType = 'expense'
           categoryId = loanCategoryId
           description = `Reembolsar deuda a ${contactData?.name || 'contacto'}`
