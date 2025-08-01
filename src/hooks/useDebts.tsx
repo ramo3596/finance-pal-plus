@@ -467,8 +467,17 @@ export function useDebts() {
       }
 
       // Update debt balance and handle automatic conversion
-      // Para deudas: amount positivo suma al saldo, amount negativo resta al saldo
-      const newBalance = debt.current_balance + paymentData.amount
+      let newBalance: number
+      
+      if (debt.type === 'debt') {
+        // Para deudas: amount positivo suma al saldo, amount negativo resta al saldo
+        newBalance = debt.current_balance + paymentData.amount
+      } else {
+        // Para préstamos: la lógica debe ser invertida
+        // - amount negativo (aumento de préstamo) debe AUMENTAR el saldo (me deben más)
+        // - amount positivo (cobro de préstamo) debe DISMINUIR el saldo (me deben menos)
+        newBalance = debt.current_balance - paymentData.amount
+      }
       
       // Check if balance reaches zero to close debt/loan
       if (Math.abs(newBalance) < 0.01) {
