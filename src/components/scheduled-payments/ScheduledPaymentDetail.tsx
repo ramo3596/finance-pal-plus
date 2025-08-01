@@ -132,9 +132,8 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
     }).format(amount);
   };
 
-  const getTagByName = (tagName: string) => {
-    console.log('Looking for tag:', tagName, 'in available tags:', tags);
-    return tags.find(tag => tag.name === tagName);
+  const getTagById = (tagId: string) => {
+    return tags.find(tag => tag.id === tagId);
   };
 
   const handleConfirmPayment = async (occurrence: PaymentOccurrence) => {
@@ -323,21 +322,18 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
           {payment.tags && payment.tags.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-medium text-sm">Etiquetas:</span>
-              {(() => {
-                console.log('Payment tags array:', payment.tags);
-                return payment.tags.map((tagName, index) => {
-                  const tag = getTagByName(tagName);
-                  return (
-                    <Badge 
-                      key={index} 
-                      variant="secondary"
-                      className={tag?.color ? `bg-[${tag.color}] text-white` : ''}
-                    >
-                      {tag?.name || tagName}
-                    </Badge>
-                  );
-                });
-              })()}
+              {payment.tags.map((tagId, index) => {
+                const tag = getTagById(tagId);
+                return (
+                  <Badge 
+                    key={index} 
+                    variant="secondary"
+                    style={tag?.color ? { backgroundColor: tag.color, color: 'white' } : {}}
+                  >
+                    {tag?.name || tagId}
+                  </Badge>
+                );
+              })}
             </div>
           )}
 
