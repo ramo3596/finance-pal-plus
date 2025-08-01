@@ -20,7 +20,7 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
   const [payments, setPayments] = useState<DebtPayment[]>([])
   const [editingPayment, setEditingPayment] = useState<DebtPayment | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const { fetchDebtPayments, deleteDebtPayment, deleteDebt } = useDebts()
+  const { fetchDebtPayments, deleteDebtPayment, deleteDebt, reactivateDebt } = useDebts()
 
   const refreshPayments = async () => {
     if (debt.id) {
@@ -144,11 +144,21 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
                 <span className="text-muted-foreground">Fecha:</span>
                 <p className="font-medium">{format(new Date(debt.debt_date), 'dd/MM/yyyy')}</p>
               </div>
-              <div>
+              <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Estado:</span>
                 <Badge variant={debt.status === 'active' ? 'default' : 'secondary'}>
                   {debt.status === 'active' ? 'Activo' : 'Cerrado'}
                 </Badge>
+                {debt.status === 'closed' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => reactivateDebt(debt.id)}
+                    className="text-xs"
+                  >
+                    Reactivar
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -201,16 +211,16 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
                             {format(new Date(payment.payment_date), 'dd/MM/yyyy')}
                           </p>
                         </div>
-                        {!isInitialRecord(payment) && (
-                          <div className="flex items-center space-x-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditPayment(payment)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
+                        <div className="flex items-center space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditPayment(payment)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          {!isInitialRecord(payment) && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
@@ -239,8 +249,8 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

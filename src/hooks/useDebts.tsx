@@ -255,11 +255,14 @@ export function useDebts() {
       }
 
       // Create initial payment record in debt_payments for history tracking
+      // For debts, the initial amount should be negative to reflect the debt
+      const initialPaymentAmount = debtData.type === 'debt' ? -debtData.initial_amount : debtData.initial_amount
+      
       await supabase
         .from('debt_payments')
         .insert({
           debt_id: data.id,
-          amount: debtData.initial_amount,
+          amount: initialPaymentAmount,
           payment_date: debtData.debt_date,
           description: `Registro inicial - ${debtData.type === 'loan' ? 'Préstamo' : 'Deuda'}`
         })
@@ -294,6 +297,33 @@ export function useDebts() {
 
   const deleteDebt = async (id: string) => {
     try {
+      // First, get all debt payments to delete associated transactions
+      const { data: payments } = await supabase
+        .from('debt_payments')
+        .select('transaction_id')
+        .eq('debt_id', id)
+
+      // Delete associated transactions
+      if (payments && payments.length > 0) {
+        const transactionIds = payments
+          .filter(p => p.transaction_id)
+          .map(p => p.transaction_id)
+        
+        if (transactionIds.length > 0) {
+          await supabase
+            .from('transactions')
+            .delete()
+            .in('id', transactionIds)
+        }
+      }
+
+      // Delete debt payments first
+      await supabase
+        .from('debt_payments')
+        .delete()
+        .eq('debt_id', id)
+
+      // Delete the debt
       const { error } = await supabase
         .from('debts')
         .delete()
@@ -302,6 +332,7 @@ export function useDebts() {
       if (error) throw error
       
       await fetchDebts()
+      refetchTransactions() // Refresh transactions to show changes in Records page
       toast.success('Deuda eliminada exitosamente')
     } catch (error) {
       console.error('Error deleting debt:', error)
@@ -414,9 +445,9 @@ export function useDebts() {
       // Update debt balance and handle automatic conversion
       const newBalance = debt.current_balance - paymentData.amount
       
-      // Check if overpayment/overcollection occurred
+      // Check if balance reaches zero to close debt/loan
       if (Math.abs(newBalance) < 0.01) {
-        // Exact payment - close the debt/loan
+        // Exact payment - close the debt/loan only when balance is zero
         await updateDebt(debtId, { 
           current_balance: 0,
           status: 'closed'
@@ -446,7 +477,7 @@ export function useDebts() {
         // Normal payment - update balance
         await updateDebt(debtId, { 
           current_balance: newBalance,
-          status: 'active'
+          status: newBalance === 0 ? 'closed' : 'active'
         })
         toast.success('Pago registrado exitosamente')
       }
@@ -525,6 +556,10 @@ export function useDebts() {
 
       if (!currentPayment) throw new Error('Payment not found')
 
+      // Get debt details
+      const debt = debts.find(d => d.id === debtId)
+      if (!debt) throw new Error('Debt not found')
+
       // Update payment
       const { error } = await supabase
         .from('debt_payments')
@@ -565,10 +600,24 @@ export function useDebts() {
         }
       }
 
-      // If amount changed, update debt balance
+      // If amount changed, update debt balance and initial amount if it's an initial record
       if (updatedData.amount !== undefined) {
-        const debt = debts.find(d => d.id === debtId)
-        if (debt) {
+        const isInitialRecord = currentPayment.description?.includes('Registro inicial')
+        
+        if (isInitialRecord) {
+          // For initial records, update the debt's initial_amount and recalculate balance
+          const newInitialAmount = Math.abs(updatedData.amount)
+          const { error: debtUpdateError } = await supabase
+            .from('debts')
+            .update({ 
+              initial_amount: newInitialAmount,
+              current_balance: debt.type === 'debt' ? newInitialAmount : newInitialAmount
+            })
+            .eq('id', debtId)
+          
+          if (debtUpdateError) throw debtUpdateError
+        } else {
+          // For regular payments, update balance normally
           const balanceChange = currentPayment.amount - updatedData.amount
           const newBalance = debt.current_balance + balanceChange
           await updateDebt(debtId, { 
@@ -593,6 +642,23 @@ export function useDebts() {
     }
   }, [user])
 
+  const reactivateDebt = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('debts')
+        .update({ status: 'active' })
+        .eq('id', id)
+
+      if (error) throw error
+      
+      await fetchDebts()
+      toast.success('Deuda reactivada exitosamente')
+    } catch (error) {
+      console.error('Error reactivating debt:', error)
+      toast.error('Error al reactivar la deuda')
+    }
+  }
+
   return {
     debts,
     debtPayments,
@@ -604,6 +670,7 @@ export function useDebts() {
     deleteDebt,
     addDebtPayment,
     deleteDebtPayment,
-    updateDebtPayment
+    updateDebtPayment,
+    reactivateDebt
   }
 }
