@@ -340,7 +340,10 @@ export function RecordsMainSection({
                               "text-sm font-bold min-w-[80px] text-right",
                               transaction.amount >= 0 ? "text-green-600" : "text-red-600"
                             )}>
-                              {transaction.amount >= 0 ? '+' : '-'}${Math.abs(transaction.amount).toFixed(2)}
+                              {transaction.amount > 0 ? '+' : ''}{new Intl.NumberFormat('en-US', {
+                                style: 'currency',
+                                currency: 'USD'
+                              }).format(transaction.amount)}
                             </span>
                             
                             {/* Actions Menu */}
