@@ -381,14 +381,14 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
                         </div>
                       )}
                       
-                      {isPending && (
+                      {occurrence.status === 'pending' && isPending && (
                         <div className="flex items-center gap-2 text-blue-600">
                           <Clock className="h-4 w-4" />
                           <span>Quedan {daysRemaining} días</span>
                         </div>
                       )}
                       
-                      {isOverdue && (
+                      {occurrence.status === 'pending' && isOverdue && (
                         <div className="flex items-center gap-2 text-red-600">
                           <AlertCircle className="h-4 w-4" />
                           <span>Vencido hace {Math.abs(daysRemaining)} días</span>
