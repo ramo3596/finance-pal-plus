@@ -8,6 +8,7 @@ import { format, addDays, addWeeks, addMonths, addYears, differenceInDays, isBef
 import { es } from 'date-fns/locale';
 import { ScheduledPayment, useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { useTransactions } from '@/hooks/useTransactions';
+import { useSettings } from '@/hooks/useSettings';
 import { toast } from '@/hooks/use-toast';
 
 interface ScheduledPaymentDetailProps {
@@ -29,6 +30,7 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
   const [occurrences, setOccurrences] = useState<PaymentOccurrence[]>([]);
   const { updateScheduledPayment } = useScheduledPayments();
   const { createTransaction } = useTransactions();
+  const { tags } = useSettings();
 
   // Generate payment occurrences based on recurrence pattern
   const generateOccurrences = () => {
@@ -128,6 +130,10 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
       style: 'currency',
       currency: 'EUR'
     }).format(amount);
+  };
+
+  const getTagByName = (tagName: string) => {
+    return tags.find(tag => tag.name === tagName);
   };
 
   const handleConfirmPayment = async (occurrence: PaymentOccurrence) => {
@@ -316,9 +322,18 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
           {payment.tags && payment.tags.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-medium text-sm">Etiquetas:</span>
-              {payment.tags.map((tag, index) => (
-                <Badge key={index} variant="secondary">{tag}</Badge>
-              ))}
+              {payment.tags.map((tagName, index) => {
+                const tag = getTagByName(tagName);
+                return (
+                  <Badge 
+                    key={index} 
+                    variant="secondary"
+                    className={tag?.color ? `bg-[${tag.color}] text-white` : ''}
+                  >
+                    {tag?.name || tagName}
+                  </Badge>
+                );
+              })}
             </div>
           )}
 
