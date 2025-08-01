@@ -57,7 +57,7 @@ export function useDebts() {
   const [debtPayments, setDebtPayments] = useState<DebtPayment[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
-  const { createTransaction } = useTransactions()
+  const { createTransaction, refetch: refetchTransactions } = useTransactions()
   const { categories, createCategory } = useSettings()
 
   const fetchDebts = async () => {
@@ -161,8 +161,44 @@ export function useDebts() {
     if (!user) return { debtCategoryId: null, loanCategoryId: null }
 
     // Use existing categories from configuration, prioritizing them regardless of nature
-    const debtCategory = categories.find(c => c.name === 'Deuda')
-    const loanCategory = categories.find(c => c.name === 'Préstamo')
+    let debtCategory = categories.find(c => c.name === 'Deuda')
+    let loanCategory = categories.find(c => c.name === 'Préstamo')
+
+    // Create debt category if it doesn't exist
+    if (!debtCategory) {
+      try {
+        const newDebtCategory = await createCategory({
+          name: 'Deuda',
+          color: '#ef4444', // Red color for debts
+          icon: '💳',
+          nature: 'expense'
+        })
+        if (newDebtCategory) {
+          debtCategory = newDebtCategory
+          console.log('Created debt category:', debtCategory)
+        }
+      } catch (error) {
+        console.error('Error creating debt category:', error)
+      }
+    }
+
+    // Create loan category if it doesn't exist
+    if (!loanCategory) {
+      try {
+        const newLoanCategory = await createCategory({
+          name: 'Préstamo',
+          color: '#22c55e', // Green color for loans
+          icon: '🏦',
+          nature: 'income'
+        })
+        if (newLoanCategory) {
+          loanCategory = newLoanCategory
+          console.log('Created loan category:', loanCategory)
+        }
+      } catch (error) {
+        console.error('Error creating loan category:', error)
+      }
+    }
 
     return {
       debtCategoryId: debtCategory?.id || null,
@@ -210,7 +246,12 @@ export function useDebts() {
 
       // Create the transaction
       if (transactionData.category_id) {
-        await createTransaction(transactionData)
+        try {
+          const createdTransaction = await createTransaction(transactionData)
+          console.log('Transaction created successfully for debt:', createdTransaction)
+        } catch (err) {
+          console.error('Error creating transaction for debt:', err)
+        }
       }
 
       // Create initial payment record in debt_payments for history tracking
@@ -224,6 +265,7 @@ export function useDebts() {
         })
       
       await fetchDebts()
+      refetchTransactions() // Refresh transactions to show in Records page
       toast.success('Deuda creada exitosamente')
       return data
     } catch (error) {
@@ -347,6 +389,7 @@ export function useDebts() {
 
         try {
           const createdTransaction = await createTransaction(transactionData)
+          console.log('Created transaction for debt payment:', createdTransaction)
           if (createdTransaction && typeof createdTransaction === 'object') {
             if (Array.isArray(createdTransaction) && createdTransaction.length > 0) {
               transactionId = (createdTransaction[0] as any)?.id
@@ -354,6 +397,7 @@ export function useDebts() {
               transactionId = (createdTransaction as any).id
             }
           }
+          console.log('Extracted transaction ID:', transactionId)
         } catch (err) {
           console.error('Error creating transaction for debt payment:', err)
         }
@@ -407,6 +451,7 @@ export function useDebts() {
         toast.success('Pago registrado exitosamente')
       }
 
+      refetchTransactions() // Refresh transactions to show in Records page
       return payment
     } catch (error) {
       console.error('Error adding debt payment:', error)
@@ -461,6 +506,7 @@ export function useDebts() {
       }
 
       await fetchDebts()
+      refetchTransactions() // Refresh transactions to show in Records page
       toast.success('Registro eliminado exitosamente')
     } catch (error) {
       console.error('Error deleting debt payment:', error)
@@ -533,6 +579,7 @@ export function useDebts() {
       }
 
       await fetchDebts()
+      refetchTransactions() // Refresh transactions to show in Records page
       toast.success('Registro actualizado exitosamente')
     } catch (error) {
       console.error('Error updating debt payment:', error)

@@ -233,7 +233,7 @@ export const useSettings = () => {
 
   // Category CRUD operations
   const createCategory = async (category: Omit<Category, 'id' | 'created_at' | 'updated_at'>) => {
-    if (!user) return;
+    if (!user) return null;
     
     const { data, error } = await supabase
       .from('categories')
@@ -247,7 +247,7 @@ export const useSettings = () => {
         description: "No se pudo crear la categoría.",
         variant: "destructive",
       });
-      return;
+      return null;
     }
 
     setCategories(prev => [...prev, data]);
@@ -255,6 +255,7 @@ export const useSettings = () => {
       title: "Éxito",
       description: "Categoría creada exitosamente.",
     });
+    return data as Category;
   };
 
   const updateCategory = async (id: string, updates: Partial<Category>) => {
