@@ -62,7 +62,7 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
     },
   });
 
-  const incomeCategories = categories.filter(cat => cat.nature === 'income' || cat.nature === 'Ingresos');
+  const incomeCategories = categories; // Mostrar todas las categorías disponibles para ingresos
   const paymentMethods = [
     { value: "cash", label: "Dinero en efectivo" },
     { value: "debit", label: "Tarjeta de débito" },
