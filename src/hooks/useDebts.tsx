@@ -133,10 +133,14 @@ export function useDebts() {
           // Initial records should match the debt type
           selectedCategory = debt.type === 'loan' ? loanCategory : debtCategory
         } else {
-          // Regular payments: positive amounts are payments reducing debt (use opposite category)
-          selectedCategory = payment.amount > 0 ? 
-            (debt.type === 'debt' ? debtCategory : loanCategory) : 
-            (debt.type === 'debt' ? loanCategory : debtCategory)
+          // Apply the same category logic as addDebtPayment
+          if (debt.type === 'debt') {
+            // For debts: positive = "Deuda", negative = "Préstamo"
+            selectedCategory = payment.amount > 0 ? debtCategory : loanCategory
+          } else {
+            // For loans: positive = "Deuda", negative = "Préstamo"
+            selectedCategory = payment.amount > 0 ? debtCategory : loanCategory
+          }
         }
 
         return {
@@ -376,27 +380,27 @@ export function useDebts() {
 
       if (debt.type === 'debt') {
         if (paymentData.amount > 0) {
-          // Positive amount for debt = increase debt (expense)
+          // Positive amount for debt = increase debt → category "Deuda"
           transactionType = 'expense'
           categoryId = debtCategoryId
           description = `Aumento de deuda con ${contactData?.name || 'contacto'}`
         } else {
-          // Negative amount for debt = debt payment (expense)
+          // Negative amount for debt = reimburse debt → category "Préstamo"
           transactionType = 'expense'
-          categoryId = debtCategoryId
+          categoryId = loanCategoryId
           description = `Reembolsar deuda a ${contactData?.name || 'contacto'}`
         }
       } else {
         // debt.type === 'loan'
         if (paymentData.amount < 0) {
-          // Negative amount for loan = increase loan (income)
+          // Negative amount for loan = increase loan → category "Préstamo"
           transactionType = 'income'
           categoryId = loanCategoryId
           description = `Aumento de préstamo a ${contactData?.name || 'contacto'}`
         } else {
-          // Positive amount for loan = loan collection (income)
+          // Positive amount for loan = collect loan → category "Deuda"
           transactionType = 'income'
-          categoryId = loanCategoryId
+          categoryId = debtCategoryId
           description = `Cobro de préstamo de ${contactData?.name || 'contacto'}`
         }
       }
