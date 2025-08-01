@@ -52,6 +52,7 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
   const [isRecurrenceDialogOpen, setIsRecurrenceDialogOpen] = useState(false);
   const [recurrenceData, setRecurrenceData] = useState<any>(null);
 
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -61,7 +62,7 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
     },
   });
 
-  const incomeCategories = categories.filter(cat => cat.nature === 'income');
+  const incomeCategories = categories.filter(cat => cat.nature === 'income' || cat.nature === 'Ingresos');
   const paymentMethods = [
     { value: "cash", label: "Dinero en efectivo" },
     { value: "debit", label: "Tarjeta de débito" },
