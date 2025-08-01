@@ -467,7 +467,8 @@ export function useDebts() {
       }
 
       // Update debt balance and handle automatic conversion
-      const newBalance = debt.current_balance - paymentData.amount
+      // Para deudas: amount positivo suma al saldo, amount negativo resta al saldo
+      const newBalance = debt.current_balance + paymentData.amount
       
       // Check if balance reaches zero to close debt/loan
       if (Math.abs(newBalance) < 0.01) {
@@ -553,7 +554,8 @@ export function useDebts() {
       // Update debt balance by reversing the payment
       const debt = debts.find(d => d.id === debtId)
       if (debt) {
-        const newBalance = debt.current_balance + payment.amount
+        // Revertir el pago: si agregamos payment.amount, ahora restamos payment.amount
+        const newBalance = debt.current_balance - payment.amount
         await updateDebt(debtId, { 
           current_balance: newBalance,
           status: 'active'
@@ -642,7 +644,8 @@ export function useDebts() {
           if (debtUpdateError) throw debtUpdateError
         } else {
           // For regular payments, update balance normally
-          const balanceChange = currentPayment.amount - updatedData.amount
+          // Revertir el cambio anterior y aplicar el nuevo
+          const balanceChange = updatedData.amount - currentPayment.amount
           const newBalance = debt.current_balance + balanceChange
           await updateDebt(debtId, { 
             current_balance: newBalance,
