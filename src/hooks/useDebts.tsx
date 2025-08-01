@@ -380,12 +380,12 @@ export function useDebts() {
 
       if (debt.type === 'debt') {
         if (paymentData.amount > 0) {
-          // Positive amount for debt = increase debt → category "Deuda"
+          // Aumento de deuda → category "Deuda", positive amount
           transactionType = 'expense'
           categoryId = debtCategoryId
           description = `Aumento de deuda con ${contactData?.name || 'contacto'}`
         } else {
-          // Negative amount for debt = reimburse debt → category "Préstamo"
+          // Reembolsar deuda → category "Préstamo", negative amount
           transactionType = 'expense'
           categoryId = loanCategoryId
           description = `Reembolsar deuda a ${contactData?.name || 'contacto'}`
