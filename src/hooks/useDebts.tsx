@@ -632,6 +632,11 @@ export function useDebts() {
       await fetchDebts()
       refetchTransactions() // Refresh transactions to show in Records page
       toast.success('Registro actualizado exitosamente')
+      
+      // Force re-fetch of debt payments to reflect updated categories
+      setTimeout(() => {
+        fetchDebts()
+      }, 100)
     } catch (error) {
       console.error('Error updating debt payment:', error)
       toast.error('Error al actualizar el registro')
