@@ -385,6 +385,93 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_payments: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category_id: string | null
+          contact_id: string | null
+          created_at: string
+          description: string | null
+          end_count: number | null
+          end_date: string | null
+          end_type: string | null
+          frequency_type: string
+          id: string
+          is_active: boolean | null
+          name: string
+          next_payment_date: string | null
+          note: string | null
+          notification_days: number | null
+          payment_method: string | null
+          recurrence_day_option: string | null
+          recurrence_interval: number | null
+          recurrence_pattern: string | null
+          start_date: string
+          tags: string[] | null
+          to_account_id: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          category_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_count?: number | null
+          end_date?: string | null
+          end_type?: string | null
+          frequency_type: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          next_payment_date?: string | null
+          note?: string | null
+          notification_days?: number | null
+          payment_method?: string | null
+          recurrence_day_option?: string | null
+          recurrence_interval?: number | null
+          recurrence_pattern?: string | null
+          start_date: string
+          tags?: string[] | null
+          to_account_id?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_count?: number | null
+          end_date?: string | null
+          end_type?: string | null
+          frequency_type?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          next_payment_date?: string | null
+          note?: string | null
+          notification_days?: number | null
+          payment_method?: string | null
+          recurrence_day_option?: string | null
+          recurrence_interval?: number | null
+          recurrence_pattern?: string | null
+          start_date?: string
+          tags?: string[] | null
+          to_account_id?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subcategories: {
         Row: {
           category_id: string
