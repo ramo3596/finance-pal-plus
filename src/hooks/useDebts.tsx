@@ -255,8 +255,8 @@ export function useDebts() {
       }
 
       // Create initial payment record in debt_payments for history tracking
-      // For debts, the initial amount should be negative to reflect the debt
-      const initialPaymentAmount = debtData.type === 'debt' ? -debtData.initial_amount : debtData.initial_amount
+      // For debts, the initial amount should be positive, for loans negative
+      const initialPaymentAmount = debtData.type === 'debt' ? debtData.initial_amount : -debtData.initial_amount
       
       await supabase
         .from('debt_payments')
@@ -369,37 +369,35 @@ export function useDebts() {
       if (paymentError) throw paymentError
 
       // Create corresponding transaction in the main records
-      const isPayment = paymentData.amount > 0
-      
       // Determine transaction type and category based on debt type and payment direction
       let transactionType: 'income' | 'expense'
       let categoryId: string | null
       let description: string
 
       if (debt.type === 'debt') {
-        if (isPayment) {
-          // Paying a debt = expense
+        if (paymentData.amount > 0) {
+          // Positive amount for debt = increase debt (expense)
           transactionType = 'expense'
           categoryId = debtCategoryId
-          description = `Pago de deuda a ${contactData?.name || 'contacto'}`
+          description = `Aumento de deuda con ${contactData?.name || 'contacto'}`
         } else {
-          // Receiving money for a debt = income (unusual case)
-          transactionType = 'income'
+          // Negative amount for debt = debt payment (expense)
+          transactionType = 'expense'
           categoryId = debtCategoryId
-          description = `Ajuste de deuda con ${contactData?.name || 'contacto'}`
+          description = `Reembolsar deuda a ${contactData?.name || 'contacto'}`
         }
       } else {
         // debt.type === 'loan'
-        if (isPayment) {
-          // Collecting a loan = income
+        if (paymentData.amount < 0) {
+          // Negative amount for loan = increase loan (income)
+          transactionType = 'income'
+          categoryId = loanCategoryId
+          description = `Aumento de préstamo a ${contactData?.name || 'contacto'}`
+        } else {
+          // Positive amount for loan = loan collection (income)
           transactionType = 'income'
           categoryId = loanCategoryId
           description = `Cobro de préstamo de ${contactData?.name || 'contacto'}`
-        } else {
-          // Giving more money to a loan = expense (unusual case)
-          transactionType = 'expense'
-          categoryId = loanCategoryId
-          description = `Ajuste de préstamo a ${contactData?.name || 'contacto'}`
         }
       }
 
