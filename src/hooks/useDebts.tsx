@@ -413,20 +413,20 @@ export function useDebts() {
         
         if (debt.type === 'debt') {
           if (paymentData.amount > 0) {
-            // Aumento de deuda → positive amount
-            transactionAmount = Math.abs(paymentData.amount)
+            // Aumento de deuda → positive amount (keep as entered)
+            transactionAmount = paymentData.amount
           } else {
-            // Reembolsar deuda → negative amount
-            transactionAmount = -Math.abs(paymentData.amount)
+            // Reembolsar deuda → negative amount (keep as entered)
+            transactionAmount = paymentData.amount
           }
         } else {
           // debt.type === 'loan'
           if (paymentData.amount < 0) {
-            // Aumento de préstamo → positive amount
-            transactionAmount = Math.abs(paymentData.amount)
+            // Aumento de préstamo → keep as entered (negative)
+            transactionAmount = paymentData.amount
           } else {
-            // Cobro de préstamo → negative amount  
-            transactionAmount = -Math.abs(paymentData.amount)
+            // Cobro de préstamo → keep as entered (positive)
+            transactionAmount = paymentData.amount
           }
         }
 
