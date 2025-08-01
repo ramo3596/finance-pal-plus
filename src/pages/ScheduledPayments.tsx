@@ -6,16 +6,20 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Search, ArrowUpDown, Plus, Calendar, User, DollarSign } from 'lucide-react';
-import { useScheduledPayments } from '@/hooks/useScheduledPayments';
+import { useScheduledPayments, ScheduledPayment } from '@/hooks/useScheduledPayments';
 import { AddScheduledPaymentDialog } from '@/components/scheduled-payments/AddScheduledPaymentDialog';
+import { EditScheduledPaymentDialog } from '@/components/scheduled-payments/EditScheduledPaymentDialog';
+import { ScheduledPaymentDetail } from '@/components/scheduled-payments/ScheduledPaymentDetail';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const ScheduledPayments = () => {
-  const { scheduledPayments, loading } = useScheduledPayments();
+  const { scheduledPayments, loading, deleteScheduledPayment } = useScheduledPayments();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<ScheduledPayment | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const filteredPayments = scheduledPayments.filter(payment => {
     const matchesSearch = payment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -70,6 +74,54 @@ const ScheduledPayments = () => {
       currency: 'EUR'
     }).format(amount);
   };
+
+  const handlePaymentClick = (payment: ScheduledPayment) => {
+    setSelectedPayment(payment);
+  };
+
+  const handleBackToList = () => {
+    setSelectedPayment(null);
+  };
+
+  const handleEditPayment = () => {
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditDialogClose = (open: boolean) => {
+    setIsEditDialogOpen(open);
+    if (!open) {
+      // Refresh the current payment data when closing edit dialog
+      const updatedPayment = scheduledPayments.find(p => p.id === selectedPayment?.id);
+      if (updatedPayment) {
+        setSelectedPayment(updatedPayment);
+      }
+    }
+  };
+
+  const handleDeletePayment = async () => {
+    if (selectedPayment) {
+      try {
+        await deleteScheduledPayment(selectedPayment.id);
+        setSelectedPayment(null);
+      } catch (error) {
+        console.error('Error deleting payment:', error);
+      }
+    }
+  };
+
+  // If a payment is selected, show detail view
+  if (selectedPayment) {
+    return (
+      <Layout>
+        <ScheduledPaymentDetail
+          payment={selectedPayment}
+          onBack={handleBackToList}
+          onEdit={handleEditPayment}
+          onDelete={handleDeletePayment}
+        />
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -136,7 +188,11 @@ const ScheduledPayments = () => {
             </div>
           ) : (
             filteredPayments.map((payment) => (
-              <Card key={payment.id} className="hover:shadow-md transition-shadow">
+              <Card 
+                key={payment.id} 
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => handlePaymentClick(payment)}
+              >
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                     {/* Left side - Main info */}
@@ -202,6 +258,13 @@ const ScheduledPayments = () => {
         <AddScheduledPaymentDialog 
           open={isAddDialogOpen} 
           onOpenChange={setIsAddDialogOpen}
+        />
+
+        {/* Edit Scheduled Payment Dialog */}
+        <EditScheduledPaymentDialog 
+          open={isEditDialogOpen} 
+          onOpenChange={handleEditDialogClose}
+          payment={selectedPayment}
         />
       </div>
     </Layout>
