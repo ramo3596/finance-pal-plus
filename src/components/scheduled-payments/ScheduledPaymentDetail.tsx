@@ -47,14 +47,23 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
     while (count < maxOccurrences && (payment.end_type !== 'date' || isBefore(currentDate, endDate))) {
       const occurrenceId = `${payment.id}-${count}`;
       
-      // Check if this occurrence was manually confirmed
-      const isManuallyConfirmed = confirmedPayments.has(occurrenceId);
+      // Determine status: manually confirmed takes priority
+      let status: 'pending' | 'paid' | 'deleted' = 'pending';
+      let paidDate: Date | undefined = undefined;
+      
+      if (confirmedPayments.has(occurrenceId)) {
+        status = 'paid';
+        paidDate = new Date();
+      } else if (isBefore(currentDate, today)) {
+        status = 'paid';
+        paidDate = currentDate;
+      }
       
       occurrences.push({
         id: occurrenceId,
         date: new Date(currentDate),
-        status: isManuallyConfirmed ? 'paid' : (isBefore(currentDate, today) ? 'paid' : 'pending'),
-        paidDate: isManuallyConfirmed ? new Date() : (isBefore(currentDate, today) ? currentDate : undefined),
+        status,
+        paidDate,
         amount: payment.amount
       });
 
