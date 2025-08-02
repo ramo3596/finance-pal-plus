@@ -174,65 +174,34 @@ export function Dashboard() {
     </div>
   )
 
-  const [accountBackgrounds, setAccountBackgrounds] = useState<{[key: string]: string}>({})
-
-  const handleImageUpload = (accountId: string, file: File) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setAccountBackgrounds(prev => ({
-          ...prev,
-          [accountId]: e.target?.result as string
-        }))
-      }
-    }
-    reader.readAsDataURL(file)
-  }
-
   const renderAccountsCard = () => (
     <div className="space-y-4">
       <div className="grid grid-cols-3 lg:grid-cols-5 gap-4">
         {accounts.map((account) => (
           <Card 
             key={account.id} 
-            className="p-6 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden min-h-[120px]"
+            className="p-6 hover:shadow-lg transition-all duration-200 cursor-pointer relative overflow-hidden min-h-[120px] border-none"
             style={{
-              backgroundImage: accountBackgrounds[account.id] ? `url(${accountBackgrounds[account.id]})` : undefined,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center'
+              backgroundColor: account.color || '#6b7280'
             }}
-            onClick={() => {
-              const input = document.createElement('input')
-              input.type = 'file'
-              input.accept = 'image/*'
-              input.onchange = (e) => {
-                const file = (e.target as HTMLInputElement).files?.[0]
-                if (file) {
-                  handleImageUpload(account.id, file)
-                }
-              }
-              input.click()
-            }}
+            onClick={() => navigate(`/settings?tab=accounts&edit=${account.id}`)}
           >
-            {accountBackgrounds[account.id] && (
-              <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
-            )}
             <div className="text-center space-y-3 relative z-10">
               <div>
-                <p className={`font-semibold text-lg truncate ${accountBackgrounds[account.id] ? 'text-white drop-shadow-lg' : 'text-foreground'}`}>
+                <p className="font-semibold text-lg truncate text-white drop-shadow-sm">
                   {account.name}
                 </p>
               </div>
               <div className="pt-2">
-                <p className={`font-bold text-xl ${account.balance >= 0 ? 'text-success' : 'text-expense-red'} ${accountBackgrounds[account.id] ? 'drop-shadow-lg' : ''}`}>
+                <p className="font-bold text-xl text-white drop-shadow-sm">
                   {account.balance >= 0 ? '+' : ''}${account.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </p>
-                <p className={`text-sm ${accountBackgrounds[account.id] ? 'text-white/90 drop-shadow-md' : 'text-muted-foreground'}`}>USD</p>
+                <p className="text-sm text-white/90 drop-shadow-sm">USD</p>
               </div>
             </div>
           </Card>
         ))}
-        <Card className="p-6 border-dashed border-2 hover:border-primary/50 transition-colors cursor-pointer min-h-[120px]" onClick={() => navigate('/settings?tab=accounts')}>
+        <Card className="p-6 border-dashed border-2 hover:border-primary/50 transition-colors cursor-pointer min-h-[120px]" onClick={() => navigate('/settings?tab=accounts&add=true')}>
           <div className="text-center space-y-3 h-full flex flex-col justify-center">
             <div className="mx-auto p-3 rounded-lg bg-muted w-fit">
               <Plus className="w-6 h-6 text-muted-foreground" />

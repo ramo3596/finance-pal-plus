@@ -10,10 +10,14 @@ import { Account } from "@/hooks/useSettings";
 
 interface AddAccountDialogProps {
   onAdd: (account: Omit<Account, 'id' | 'created_at' | 'updated_at'>) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddAccountDialog({ onAdd }: AddAccountDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddAccountDialog({ onAdd, open: externalOpen, onOpenChange }: AddAccountDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [formData, setFormData] = useState({
     name: "",
     color: "#3b82f6",

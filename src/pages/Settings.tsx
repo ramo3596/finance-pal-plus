@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,45 @@ import { EditFilterDialog } from "@/components/settings/EditFilterDialog";
 export default function Settings() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("profile");
+  const [showAddAccountDialog, setShowAddAccountDialog] = useState(false);
+  const [editAccountId, setEditAccountId] = useState<string | null>(null);
+
+  // Handle URL parameters
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const add = searchParams.get('add');
+    const edit = searchParams.get('edit');
+    
+    if (tab) {
+      setActiveTab(tab);
+    }
+    
+    if (add === 'true') {
+      setShowAddAccountDialog(true);
+    }
+    
+    if (edit) {
+      setEditAccountId(edit);
+    }
+  }, [searchParams]);
+
+  const handleCloseAddAccountDialog = () => {
+    setShowAddAccountDialog(false);
+    // Remove the add parameter from URL
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('add');
+    setSearchParams(newParams);
+  };
+
+  const handleCloseEditAccountDialog = () => {
+    setEditAccountId(null);
+    // Remove the edit parameter from URL
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('edit');
+    setSearchParams(newParams);
+  };
   
   const {
     accounts,
@@ -181,49 +220,72 @@ export default function Settings() {
     </div>
   );
 
-  const AccountsSection = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Gestión de Cuentas
-            </span>
-            <AddAccountDialog onAdd={createAccount} />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {accounts.map((account) => (
-              <div key={account.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ backgroundColor: account.color + '20' }}>
-                    {account.icon}
+  const AccountsSection = () => {
+    const editAccount = editAccountId ? accounts.find(acc => acc.id === editAccountId) : null;
+    
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Gestión de Cuentas
+              </span>
+              <AddAccountDialog 
+                onAdd={createAccount} 
+                open={showAddAccountDialog}
+                onOpenChange={handleCloseAddAccountDialog}
+              />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {accounts.map((account) => (
+                <div key={account.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ backgroundColor: account.color + '20' }}>
+                      {account.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-medium">{account.name}</h3>
+                      <p className="text-sm text-muted-foreground">Saldo: ${account.balance?.toFixed(2) || '0.00'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium">{account.name}</h3>
-                    <p className="text-sm text-muted-foreground">Saldo: ${account.balance?.toFixed(2) || '0.00'}</p>
+                  <div className="flex gap-2">
+                    <EditAccountDialog 
+                      account={account} 
+                      onUpdate={updateAccount}
+                      open={editAccountId === account.id}
+                      onOpenChange={() => editAccountId === account.id ? handleCloseEditAccountDialog() : null}
+                    />
+                    <Button variant="destructive" size="sm" onClick={() => handleDeleteAccount(account.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <EditAccountDialog account={account} onUpdate={updateAccount} />
-                  <Button variant="destructive" size="sm" onClick={() => handleDeleteAccount(account.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {accounts.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                No hay cuentas configuradas. Agrega tu primera cuenta.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+              ))}
+              {accounts.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">
+                  No hay cuentas configuradas. Agrega tu primera cuenta.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Controlled edit dialog for URL-based navigation */}
+        {editAccount && (
+          <EditAccountDialog
+            account={editAccount}
+            onUpdate={updateAccount}
+            open={true}
+            onOpenChange={handleCloseEditAccountDialog}
+          />
+        )}
+      </div>
+    );
+  };
 
   const CategoriesSection = () => (
     <div className="space-y-6">

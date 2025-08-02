@@ -10,10 +10,14 @@ import { Account } from "@/hooks/useSettings";
 interface EditAccountDialogProps {
   account: Account;
   onUpdate: (id: string, updates: Partial<Account>) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function EditAccountDialog({ account, onUpdate }: EditAccountDialogProps) {
-  const [open, setOpen] = useState(false);
+export function EditAccountDialog({ account, onUpdate, open: externalOpen, onOpenChange }: EditAccountDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [formData, setFormData] = useState({
     name: account.name,
     color: account.color,
