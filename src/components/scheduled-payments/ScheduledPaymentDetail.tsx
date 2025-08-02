@@ -28,7 +28,10 @@ interface PaymentOccurrence {
 
 export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: ScheduledPaymentDetailProps) => {
   const [occurrences, setOccurrences] = useState<PaymentOccurrence[]>([]);
-  const [confirmedPayments, setConfirmedPayments] = useState<Set<string>>(new Set());
+  const [confirmedPayments, setConfirmedPayments] = useState<Set<string>>(() => {
+    const stored = localStorage.getItem('confirmedPayments');
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  });
   const { updateScheduledPayment } = useScheduledPayments();
   const { createTransaction } = useTransactions();
   const { tags } = useSettings();
@@ -170,8 +173,10 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
 
       await createTransaction(transactionData);
 
-      // Add to confirmed payments set to persist the state
-      setConfirmedPayments(prev => new Set(prev).add(occurrence.id));
+      // Add to confirmed payments set and persist to localStorage
+      const newConfirmedPayments = new Set(confirmedPayments).add(occurrence.id);
+      setConfirmedPayments(newConfirmedPayments);
+      localStorage.setItem('confirmedPayments', JSON.stringify(Array.from(newConfirmedPayments)));
 
       toast({
         title: "Pago confirmado",
