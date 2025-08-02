@@ -175,35 +175,36 @@ export function Dashboard() {
   )
 
   const renderAccountsCard = () => (
-    <div className="space-y-3">
-      {accounts.map((account) => (
-        <div key={account.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
-          <div className="flex items-center space-x-2">
-            <div className={`p-1.5 rounded-md bg-primary/20`}>
-              <Building2 className={`w-4 h-4 text-primary`} />
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 lg:grid-cols-5 gap-4">
+        {accounts.map((account) => (
+          <Card key={account.id} className="p-4 hover:shadow-md transition-shadow">
+            <div className="text-center space-y-2">
+              <div className="mx-auto p-2 rounded-lg bg-primary/20 w-fit">
+                <Building2 className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground text-sm truncate">{account.name}</p>
+                <p className="text-xs text-muted-foreground">{account.icon}</p>
+              </div>
+              <div className="pt-1">
+                <p className={`font-bold text-sm ${account.balance >= 0 ? 'text-success' : 'text-expense-red'}`}>
+                  {account.balance >= 0 ? '+' : ''}${account.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-muted-foreground">USD</p>
+              </div>
             </div>
-            <div>
-              <p className="font-medium text-foreground text-sm">{account.name}</p>
-              <p className="text-xs text-muted-foreground">{account.icon}</p>
+          </Card>
+        ))}
+        <Card className="p-4 border-dashed border-2 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate('/settings')}>
+          <div className="text-center space-y-2 h-full flex flex-col justify-center">
+            <div className="mx-auto p-2 rounded-lg bg-muted w-fit">
+              <Plus className="w-5 h-5 text-muted-foreground" />
             </div>
+            <p className="text-sm text-muted-foreground">Agregar Cuenta</p>
           </div>
-          <div className="text-right">
-            <p className={`font-bold text-sm ${account.balance >= 0 ? 'text-success' : 'text-expense-red'}`}>
-              {account.balance >= 0 ? '+' : ''}${account.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-xs text-muted-foreground">USD</p>
-          </div>
-        </div>
-      ))}
-      <Button 
-        variant="outline" 
-        size="sm" 
-        className="w-full" 
-        onClick={() => navigate('/settings')}
-      >
-        <Plus className="w-4 h-4 mr-2" />
-        Agregar Cuenta
-      </Button>
+        </Card>
+      </div>
     </div>
   )
 
