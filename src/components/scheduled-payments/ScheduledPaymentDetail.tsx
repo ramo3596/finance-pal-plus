@@ -28,6 +28,7 @@ interface PaymentOccurrence {
 
 export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: ScheduledPaymentDetailProps) => {
   const [occurrences, setOccurrences] = useState<PaymentOccurrence[]>([]);
+  const [confirmedPayments, setConfirmedPayments] = useState<Set<string>>(new Set());
   const { updateScheduledPayment } = useScheduledPayments();
   const { createTransaction } = useTransactions();
   const { tags } = useSettings();
@@ -44,11 +45,16 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
 
     // Generate past and future occurrences
     while (count < maxOccurrences && (payment.end_type !== 'date' || isBefore(currentDate, endDate))) {
+      const occurrenceId = `${payment.id}-${count}`;
+      
+      // Check if this occurrence was manually confirmed
+      const isManuallyConfirmed = confirmedPayments.has(occurrenceId);
+      
       occurrences.push({
-        id: `${payment.id}-${count}`,
+        id: occurrenceId,
         date: new Date(currentDate),
-        status: isBefore(currentDate, today) ? 'paid' : 'pending',
-        paidDate: isBefore(currentDate, today) ? currentDate : undefined,
+        status: isManuallyConfirmed ? 'paid' : (isBefore(currentDate, today) ? 'paid' : 'pending'),
+        paidDate: isManuallyConfirmed ? new Date() : (isBefore(currentDate, today) ? currentDate : undefined),
         amount: payment.amount
       });
 
@@ -83,7 +89,7 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
 
   useEffect(() => {
     setOccurrences(generateOccurrences());
-  }, [payment]);
+  }, [payment, confirmedPayments]);
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -155,14 +161,8 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
 
       await createTransaction(transactionData);
 
-      // Update occurrence status
-      setOccurrences(prev => 
-        prev.map(occ => 
-          occ.id === occurrence.id 
-            ? { ...occ, status: 'paid', paidDate: new Date() }
-            : occ
-        )
-      );
+      // Add to confirmed payments set to persist the state
+      setConfirmedPayments(prev => new Set(prev).add(occurrence.id));
 
       toast({
         title: "Pago confirmado",
