@@ -80,7 +80,7 @@ export function Dashboard() {
     to: new Date()
   })
   
-  const { transactions, cards, updateCardPosition, toggleCardVisibility } = useTransactions()
+  const { transactions, cards, updateCardPosition, toggleCardVisibility, saveCardPreferences } = useTransactions()
   const { accounts, categories, tags } = useSettings()
   const { scheduledPayments } = useScheduledPayments()
   
@@ -510,6 +510,19 @@ export function Dashboard() {
             </div>
           )
         })}
+        
+        {/* Save Button */}
+        <div className="flex justify-end pt-4 border-t">
+          <Button 
+            onClick={async () => {
+              await saveCardPreferences();
+              setIsCardManagerOpen(false);
+            }}
+            className="bg-primary hover:bg-primary/90"
+          >
+            Guardar Configuración
+          </Button>
+        </div>
       </div>
     )
   }

@@ -45,6 +45,34 @@ export const useTransactions = () => {
   ]);
   const [loading, setLoading] = useState(false);
 
+  // Fetch dashboard card preferences
+  const fetchCardPreferences = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('dashboard_card_preferences')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        // Convert database data to DashboardCard format
+        const savedCards = data.map(pref => ({
+          id: pref.card_id,
+          type: pref.card_type as DashboardCard['type'],
+          title: pref.title,
+          position: pref.position,
+          visible: pref.visible
+        }));
+        setCards(savedCards);
+      }
+    } catch (error) {
+      console.error('Error fetching card preferences:', error);
+    }
+  };
+
   const fetchTransactions = async () => {
     if (!user) return;
     
@@ -319,9 +347,43 @@ export const useTransactions = () => {
     ));
   };
 
+  const saveCardPreferences = async () => {
+    if (!user) return;
+    
+    try {
+      // Delete existing preferences for this user
+      await supabase
+        .from('dashboard_card_preferences')
+        .delete()
+        .eq('user_id', user.id);
+
+      // Insert new preferences
+      const preferences = cards.map(card => ({
+        user_id: user.id,
+        card_id: card.id,
+        card_type: card.type,
+        title: card.title,
+        position: card.position,
+        visible: card.visible
+      }));
+
+      const { error } = await supabase
+        .from('dashboard_card_preferences')
+        .insert(preferences);
+
+      if (error) throw error;
+      
+      toast.success('Configuración de tarjetas guardada exitosamente');
+    } catch (error) {
+      console.error('Error saving card preferences:', error);
+      toast.error('Error al guardar la configuración de tarjetas');
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchTransactions();
+      fetchCardPreferences();
     }
   }, [user]);
 
@@ -335,6 +397,7 @@ export const useTransactions = () => {
     deleteTransaction,
     updateCardPosition,
     toggleCardVisibility,
+    saveCardPreferences,
     refetch: fetchTransactions,
   };
 };
