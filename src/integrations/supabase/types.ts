@@ -164,6 +164,42 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_card_preferences: {
+        Row: {
+          card_id: string
+          card_type: string
+          created_at: string
+          id: string
+          position: number
+          title: string
+          updated_at: string
+          user_id: string
+          visible: boolean
+        }
+        Insert: {
+          card_id: string
+          card_type: string
+          created_at?: string
+          id?: string
+          position: number
+          title: string
+          updated_at?: string
+          user_id: string
+          visible?: boolean
+        }
+        Update: {
+          card_id?: string
+          card_type?: string
+          created_at?: string
+          id?: string
+          position?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+          visible?: boolean
+        }
+        Relationships: []
+      }
       debt_payments: {
         Row: {
           amount: number
