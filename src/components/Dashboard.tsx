@@ -41,11 +41,13 @@ import {
   sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { format, subDays, isAfter, isBefore, isEqual } from "date-fns"
+import { format, subDays, isAfter, isBefore, isEqual, subMonths, startOfMonth, endOfMonth } from "date-fns"
 import { es } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useNavigate } from "react-router-dom"
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 // Dashboard card types with new widgets
 export type DashboardCardType = 
@@ -57,7 +59,7 @@ export type DashboardCardType =
   | 'cash-flow'
   | 'period-comparison'
   | 'income-expense-by-tag'
-  | 'expenses-by-category'
+  | 'expenses-by-tag'
   | 'balance-per-account'
   | 'upcoming-payments'
   | 'income-expense-table'
@@ -467,6 +469,359 @@ export function Dashboard() {
     )
   }
 
+  // Nueva tarjeta: Tendencias de Saldo
+  const renderBalanceTrendsCard = () => {
+    // Generar datos de los últimos 30 días
+    const days = Array.from({ length: 30 }, (_, i) => {
+      const date = subDays(new Date(), 29 - i)
+      
+      // Calcular balance acumulado hasta esa fecha
+      const transactionsUntilDate = transactions.filter(t => 
+        new Date(t.transaction_date) <= date
+      )
+      
+      const balance = transactionsUntilDate.reduce((sum, t) => sum + t.amount, 0)
+      
+      return {
+        date: format(date, 'dd/MM'),
+        balance: balance + accounts.reduce((sum, acc) => sum + acc.balance, 0) - transactions.reduce((sum, t) => sum + t.amount, 0)
+      }
+    })
+
+    return (
+      <div className="h-80">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={days}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <XAxis dataKey="date" className="text-xs" />
+            <YAxis className="text-xs" />
+            <Tooltip 
+              formatter={(value: number) => [`$${value.toFixed(2)}`, 'Balance']}
+              labelFormatter={(label) => `Fecha: ${label}`}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="balance" 
+              stroke="hsl(var(--primary))" 
+              strokeWidth={2}
+              dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    )
+  }
+
+  // Nueva tarjeta: Comparación de Periodo
+  const renderPeriodComparisonCard = () => {
+    const currentPeriod = { from: dateRange.from, to: dateRange.to }
+    const periodDuration = Math.abs(dateRange.to.getTime() - dateRange.from.getTime())
+    const previousPeriod = {
+      from: new Date(dateRange.from.getTime() - periodDuration),
+      to: dateRange.from
+    }
+
+    const getCurrentPeriodData = () => {
+      const transactions = filteredTransactions
+      const income = transactions.filter(t => t.amount > 0 && t.type !== 'transfer').reduce((sum, t) => sum + t.amount, 0)
+      const expenses = Math.abs(transactions.filter(t => t.amount < 0 && t.type !== 'transfer').reduce((sum, t) => sum + Math.abs(t.amount), 0))
+      return { income, expenses, netFlow: income - expenses }
+    }
+
+    const getPreviousPeriodData = () => {
+      const previousTransactions = transactions.filter(transaction => {
+        const transactionDate = new Date(transaction.transaction_date)
+        return transactionDate >= previousPeriod.from && transactionDate <= previousPeriod.to
+      })
+      const income = previousTransactions.filter(t => t.amount > 0 && t.type !== 'transfer').reduce((sum, t) => sum + t.amount, 0)
+      const expenses = Math.abs(previousTransactions.filter(t => t.amount < 0 && t.type !== 'transfer').reduce((sum, t) => sum + Math.abs(t.amount), 0))
+      return { income, expenses, netFlow: income - expenses }
+    }
+
+    const current = getCurrentPeriodData()
+    const previous = getPreviousPeriodData()
+
+    const comparisonData = [
+      {
+        name: 'Periodo Anterior',
+        flujo: previous.netFlow,
+        ingresos: previous.income,
+        gastos: previous.expenses
+      },
+      {
+        name: 'Periodo Actual',
+        flujo: current.netFlow,
+        ingresos: current.income,
+        gastos: current.expenses
+      }
+    ]
+
+    return (
+      <div className="space-y-4">
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={comparisonData}>
+              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <XAxis dataKey="name" className="text-xs" />
+              <YAxis className="text-xs" />
+              <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+              <Legend />
+              <Bar dataKey="ingresos" fill="hsl(var(--success))" name="Ingresos" />
+              <Bar dataKey="gastos" fill="hsl(var(--expense-red))" name="Gastos" />
+              <Bar dataKey="flujo" fill="hsl(var(--primary))" name="Flujo Neto" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-4 text-center">
+          <div>
+            <p className="text-sm text-muted-foreground">Cambio en Flujo</p>
+            <p className={`font-bold ${current.netFlow >= previous.netFlow ? 'text-success' : 'text-expense-red'}`}>
+              ${(current.netFlow - previous.netFlow).toFixed(2)}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Cambio en Ingresos</p>
+            <p className={`font-bold ${current.income >= previous.income ? 'text-success' : 'text-expense-red'}`}>
+              ${(current.income - previous.income).toFixed(2)}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Cambio en Gastos</p>
+            <p className={`font-bold ${current.expenses <= previous.expenses ? 'text-success' : 'text-expense-red'}`}>
+              ${(current.expenses - previous.expenses).toFixed(2)}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Nueva tarjeta: Ingresos vs. Gastos por Etiqueta
+  const renderIncomeExpenseByTagCard = () => {
+    const tagData = tags.map(tag => {
+      const tagTransactions = filteredTransactions.filter(t => 
+        t.tags && t.tags.includes(tag.id) && t.type !== 'transfer'
+      )
+      
+      const income = tagTransactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0)
+      const expenses = Math.abs(tagTransactions.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0))
+      
+      return {
+        name: tag.name,
+        ingresos: income,
+        gastos: expenses,
+        neto: income - expenses
+      }
+    }).filter(item => item.ingresos > 0 || item.gastos > 0)
+    .sort((a, b) => Math.abs(b.neto) - Math.abs(a.neto))
+    .slice(0, 8)
+
+    return (
+      <div className="h-80">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={tagData} layout="horizontal">
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <XAxis type="number" className="text-xs" />
+            <YAxis dataKey="name" type="category" width={100} className="text-xs" />
+            <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+            <Legend />
+            <Bar dataKey="ingresos" fill="hsl(var(--success))" name="Ingresos" />
+            <Bar dataKey="gastos" fill="hsl(var(--expense-red))" name="Gastos" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    )
+  }
+
+  // Nueva tarjeta: Gastos por Etiqueta
+  const renderExpensesByTagCard = () => {
+    const expensesByTag = tags.map(tag => {
+      const tagExpenses = filteredTransactions
+        .filter(t => t.tags && t.tags.includes(tag.id) && t.amount < 0 && t.type !== 'transfer')
+        .reduce((sum, t) => sum + Math.abs(t.amount), 0)
+      
+      return {
+        tag: tag.name,
+        amount: tagExpenses,
+        percentage: totalExpenses > 0 ? (tagExpenses / totalExpenses) * 100 : 0,
+        color: tag.color || 'hsl(var(--expense-red))'
+      }
+    }).filter(item => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 10)
+
+    return (
+      <div className="space-y-4">
+        {expensesByTag.length > 0 ? (
+          expensesByTag.map((expense, index) => (
+            <div key={index} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: expense.color }}
+                  ></div>
+                  <span className="font-medium text-foreground">{expense.tag}</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-bold text-foreground">${expense.amount.toLocaleString()}</span>
+                  <span className="text-sm text-muted-foreground ml-2">({expense.percentage.toFixed(1)}%)</span>
+                </div>
+              </div>
+              <Progress value={expense.percentage} className="h-2" />
+            </div>
+          ))
+        ) : (
+          <p className="text-muted-foreground text-center py-4">No hay gastos por etiquetas en el periodo</p>
+        )}
+      </div>
+    )
+  }
+
+  // Nueva tarjeta: Saldo Por Cuenta
+  const renderBalancePerAccountCard = () => {
+    const accountsWithTransactions = accounts.map(account => {
+      const accountTransactions = filteredTransactions.filter(t => t.account_id === account.id)
+      const periodBalance = accountTransactions.reduce((sum, t) => sum + t.amount, 0)
+      
+      return {
+        ...account,
+        periodBalance,
+        transactionCount: accountTransactions.length
+      }
+    }).sort((a, b) => b.balance - a.balance)
+
+    return (
+      <div className="space-y-4">
+        {accountsWithTransactions.map((account) => (
+          <div key={account.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
+            <div className="flex items-center space-x-3">
+              <div 
+                className="w-4 h-4 rounded-full"
+                style={{ backgroundColor: account.color }}
+              ></div>
+              <div>
+                <p className="font-medium text-foreground">{account.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {account.transactionCount} transacciones en el periodo
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className={`font-bold text-lg ${account.balance >= 0 ? 'text-success' : 'text-expense-red'}`}>
+                ${account.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </p>
+              <p className={`text-sm ${account.periodBalance >= 0 ? 'text-success' : 'text-expense-red'}`}>
+                {account.periodBalance >= 0 ? '+' : ''}${account.periodBalance.toFixed(2)} en periodo
+              </p>
+            </div>
+          </div>
+        ))}
+        
+        <div className="mt-4 p-4 rounded-lg bg-primary/10 border border-primary/20">
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">Balance Total</p>
+            <p className="text-2xl font-bold text-primary">
+              ${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Nueva tarjeta: Tabla Ingresos y Gastos
+  const renderIncomeExpenseTableCard = () => {
+    const tableData = tags.map(tag => {
+      const tagTransactions = filteredTransactions.filter(t => 
+        t.tags && t.tags.includes(tag.id) && t.type !== 'transfer'
+      )
+      
+      const income = tagTransactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0)
+      const expenses = Math.abs(tagTransactions.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0))
+      const net = income - expenses
+      const transactionCount = tagTransactions.length
+      
+      return {
+        tag: tag.name,
+        income,
+        expenses,
+        net,
+        transactionCount,
+        color: tag.color
+      }
+    }).filter(item => item.transactionCount > 0)
+    .sort((a, b) => Math.abs(b.net) - Math.abs(a.net))
+
+    return (
+      <div className="space-y-4">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Etiqueta</TableHead>
+              <TableHead className="text-right">Ingresos</TableHead>
+              <TableHead className="text-right">Gastos</TableHead>
+              <TableHead className="text-right">Neto</TableHead>
+              <TableHead className="text-right">Transacciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tableData.map((row, index) => (
+              <TableRow key={index}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center space-x-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: row.color || 'hsl(var(--muted))' }}
+                    ></div>
+                    <span>{row.tag}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right text-success">
+                  ${row.income.toFixed(2)}
+                </TableCell>
+                <TableCell className="text-right text-expense-red">
+                  ${row.expenses.toFixed(2)}
+                </TableCell>
+                <TableCell className={`text-right font-bold ${row.net >= 0 ? 'text-success' : 'text-expense-red'}`}>
+                  {row.net >= 0 ? '+' : ''}${row.net.toFixed(2)}
+                </TableCell>
+                <TableCell className="text-right text-muted-foreground">
+                  {row.transactionCount}
+                </TableCell>
+              </TableRow>
+            ))}
+            {tableData.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  No hay datos para mostrar en el periodo seleccionado
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+        
+        {tableData.length > 0 && (
+          <div className="flex justify-between items-center pt-4 border-t">
+            <span className="text-sm font-medium text-muted-foreground">Totales:</span>
+            <div className="flex space-x-6 text-sm">
+              <span className="text-success">
+                Ingresos: ${tableData.reduce((sum, row) => sum + row.income, 0).toFixed(2)}
+              </span>
+              <span className="text-expense-red">
+                Gastos: ${tableData.reduce((sum, row) => sum + row.expenses, 0).toFixed(2)}
+              </span>
+              <span className={`font-bold ${(tableData.reduce((sum, row) => sum + row.net, 0)) >= 0 ? 'text-success' : 'text-expense-red'}`}>
+                Neto: ${tableData.reduce((sum, row) => sum + row.net, 0).toFixed(2)}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const renderCardManager = () => {
     const availableCards = [
       { id: 'overview', type: 'overview' as DashboardCardType, title: 'Resumen General' },
@@ -475,6 +830,12 @@ export function Dashboard() {
       { id: 'expenses', type: 'expenses' as DashboardCardType, title: 'Estructura de Gastos' },
       { id: 'cash-flow', type: 'cash-flow' as DashboardCardType, title: 'Flujo de Efectivo' },
       { id: 'upcoming-payments', type: 'upcoming-payments' as DashboardCardType, title: 'Próximos Pagos' },
+      { id: 'balance-trends', type: 'balance-trends' as DashboardCardType, title: 'Tendencias de Saldo' },
+      { id: 'period-comparison', type: 'period-comparison' as DashboardCardType, title: 'Comparación de Periodo' },
+      { id: 'income-expense-by-tag', type: 'income-expense-by-tag' as DashboardCardType, title: 'Ingresos vs. Gastos por Etiqueta' },
+      { id: 'expenses-by-tag', type: 'expenses-by-tag' as DashboardCardType, title: 'Gastos por Etiqueta' },
+      { id: 'balance-per-account', type: 'balance-per-account' as DashboardCardType, title: 'Saldo Por Cuenta' },
+      { id: 'income-expense-table', type: 'income-expense-table' as DashboardCardType, title: 'Tabla Ingresos y Gastos' },
     ]
 
     return (
@@ -683,6 +1044,42 @@ export function Dashboard() {
                   return (
                     <DashboardCard key={card.id} id={card.id} title={card.title}>
                       {renderUpcomingPaymentsCard()}
+                    </DashboardCard>
+                  )
+                case 'balance-trends':
+                  return (
+                    <DashboardCard key={card.id} id={card.id} title={card.title}>
+                      {renderBalanceTrendsCard()}
+                    </DashboardCard>
+                  )
+                case 'period-comparison':
+                  return (
+                    <DashboardCard key={card.id} id={card.id} title={card.title}>
+                      {renderPeriodComparisonCard()}
+                    </DashboardCard>
+                  )
+                case 'income-expense-by-tag':
+                  return (
+                    <DashboardCard key={card.id} id={card.id} title={card.title}>
+                      {renderIncomeExpenseByTagCard()}
+                    </DashboardCard>
+                  )
+                case 'expenses-by-tag':
+                  return (
+                    <DashboardCard key={card.id} id={card.id} title={card.title}>
+                      {renderExpensesByTagCard()}
+                    </DashboardCard>
+                  )
+                case 'balance-per-account':
+                  return (
+                    <DashboardCard key={card.id} id={card.id} title={card.title}>
+                      {renderBalancePerAccountCard()}
+                    </DashboardCard>
+                  )
+                case 'income-expense-table':
+                  return (
+                    <DashboardCard key={card.id} id={card.id} title={card.title}>
+                      {renderIncomeExpenseTableCard()}
                     </DashboardCard>
                   )
                 default:
