@@ -25,7 +25,7 @@ export interface Transaction {
 
 export interface DashboardCard {
   id: string;
-  type: 'accounts' | 'transactions' | 'expenses' | 'overview';
+  type: 'accounts' | 'transactions' | 'expenses' | 'overview' | 'cash-flow' | 'upcoming-payments' | 'balance-trends' | 'period-comparison' | 'income-expense-by-tag' | 'expenses-by-category' | 'balance-per-account' | 'income-expense-table';
   title: string;
   position: number;
   visible: boolean;
@@ -36,10 +36,12 @@ export const useTransactions = () => {
   const { refetch: refetchSettings } = useSettings();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [cards, setCards] = useState<DashboardCard[]>([
-    { id: 'overview', type: 'overview', title: 'Resumen', position: 0, visible: true },
+    { id: 'overview', type: 'overview', title: 'Resumen General', position: 0, visible: true },
     { id: 'accounts', type: 'accounts', title: 'Mis Cuentas', position: 1, visible: true },
     { id: 'transactions', type: 'transactions', title: 'Transacciones Recientes', position: 2, visible: true },
     { id: 'expenses', type: 'expenses', title: 'Estructura de Gastos', position: 3, visible: true },
+    { id: 'cash-flow', type: 'cash-flow', title: 'Flujo de Efectivo', position: 4, visible: false },
+    { id: 'upcoming-payments', type: 'upcoming-payments', title: 'Próximos Pagos', position: 5, visible: false },
   ]);
   const [loading, setLoading] = useState(false);
 
