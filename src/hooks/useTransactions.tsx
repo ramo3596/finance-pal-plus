@@ -40,13 +40,13 @@ export const useTransactions = () => {
     { id: 'accounts', type: 'accounts', title: 'Mis Cuentas', position: 1, visible: true },
     { id: 'transactions', type: 'transactions', title: 'Transacciones Recientes', position: 2, visible: true },
     { id: 'expenses', type: 'expenses', title: 'Estructura de Gastos', position: 3, visible: true },
-    { id: 'cash-flow', type: 'cash-flow', title: 'Flujo de Efectivo', position: 4, visible: false },
-    { id: 'upcoming-payments', type: 'upcoming-payments', title: 'Próximos Pagos', position: 5, visible: false },
+    { id: 'cash-flow', type: 'cash-flow', title: 'Flujo de Efectivo', position: 4, visible: true },
+    { id: 'upcoming-payments', type: 'upcoming-payments', title: 'Próximos Pagos', position: 5, visible: true },
     { id: 'balance-trends', type: 'balance-trends', title: 'Tendencias de Saldo', position: 6, visible: false },
     { id: 'period-comparison', type: 'period-comparison', title: 'Comparación de Periodo', position: 7, visible: false },
     { id: 'income-expense-by-tag', type: 'income-expense-by-tag', title: 'Ingresos vs. Gastos por Etiqueta', position: 8, visible: false },
     { id: 'expenses-by-tag', type: 'expenses-by-tag', title: 'Gastos por Etiqueta', position: 9, visible: false },
-    { id: 'balance-per-account', type: 'balance-per-account', title: 'Saldo Por Cuenta', position: 10, visible: false },
+    { id: 'balance-per-account', type: 'balance-per-account', title: 'Saldo Por Cuenta', position: 10, visible: true },
     { id: 'income-expense-table', type: 'income-expense-table', title: 'Tabla Ingresos y Gastos', position: 11, visible: false },
   ]);
   const [loading, setLoading] = useState(false);
