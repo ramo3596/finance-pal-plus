@@ -45,6 +45,7 @@ import { format, subDays, isAfter, isBefore, isEqual, subMonths, startOfMonth, e
 import { es } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useNavigate } from "react-router-dom"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -843,34 +844,39 @@ export function Dashboard() {
         <p className="text-sm text-muted-foreground">
           Selecciona qué tarjetas quieres mostrar en tu dashboard:
         </p>
-        {availableCards.map((card) => {
-          const currentCard = cards.find(c => c.id === card.id)
-          const isVisible = currentCard?.visible ?? false
-          
-          return (
-            <div key={card.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-              <span className="font-medium">{card.title}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => toggleCardVisibility(card.id)}
-                className="flex items-center gap-2"
-              >
-                {isVisible ? (
-                  <>
-                    <Eye className="w-4 h-4" />
-                    Visible
-                  </>
-                ) : (
-                  <>
-                    <EyeOff className="w-4 h-4" />
-                    Oculta
-                  </>
-                )}
-              </Button>
-            </div>
-          )
-        })}
+        
+        <ScrollArea className="h-60">
+          <div className="space-y-3 pr-4">
+            {availableCards.map((card) => {
+              const currentCard = cards.find(c => c.id === card.id)
+              const isVisible = currentCard?.visible ?? false
+              
+              return (
+                <div key={card.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <span className="font-medium">{card.title}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleCardVisibility(card.id)}
+                    className="flex items-center gap-2"
+                  >
+                    {isVisible ? (
+                      <>
+                        <Eye className="w-4 h-4" />
+                        Visible
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff className="w-4 h-4" />
+                        Oculta
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        </ScrollArea>
         
         {/* Save Button */}
         <div className="flex justify-end pt-4 border-t">
@@ -981,7 +987,7 @@ export function Dashboard() {
                 Configurar Tarjetas
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md max-h-[80vh]">
               <DialogHeader>
                 <DialogTitle>Personalizar Dashboard</DialogTitle>
               </DialogHeader>
