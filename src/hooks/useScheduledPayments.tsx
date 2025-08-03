@@ -84,6 +84,60 @@ export const useScheduledPayments = () => {
         .select('id, name')
         .in('id', contactIds) : { data: [] };
 
+      // Helper function to calculate the next payment date
+      const calculateNextPaymentDate = (payment: any): string => {
+        if (payment.frequency_type === 'once') {
+          return payment.start_date;
+        }
+
+        const startDate = new Date(payment.start_date);
+        const today = new Date();
+        let currentDate = new Date(startDate);
+        const interval = payment.recurrence_interval || 1;
+        const pattern = payment.recurrence_pattern || 'monthly';
+        const endDate = payment.end_type === 'date' && payment.end_date ? new Date(payment.end_date) : null;
+        const maxCount = payment.end_type === 'count' ? payment.end_count : null;
+        let count = 0;
+
+        // If start date is in the future, that's the next payment
+        if (startDate > today) {
+          return payment.start_date;
+        }
+
+        // Calculate future occurrences until we find the next one
+        while (currentDate <= today) {
+          count++;
+          
+          // Check if we've reached the end conditions
+          if (maxCount && count >= maxCount) {
+            return currentDate.toISOString();
+          }
+          if (endDate && currentDate >= endDate) {
+            return currentDate.toISOString();
+          }
+
+          // Move to next occurrence
+          switch (pattern) {
+            case 'daily':
+              currentDate = new Date(currentDate.getTime() + (interval * 24 * 60 * 60 * 1000));
+              break;
+            case 'weekly':
+              currentDate = new Date(currentDate.getTime() + (interval * 7 * 24 * 60 * 60 * 1000));
+              break;
+            case 'monthly':
+              currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + interval, currentDate.getDate());
+              break;
+            case 'yearly':
+              currentDate = new Date(currentDate.getFullYear() + interval, currentDate.getMonth(), currentDate.getDate());
+              break;
+            default:
+              currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + interval, currentDate.getDate());
+          }
+        }
+
+        return currentDate.toISOString();
+      };
+
       const formattedPayments = (data || []).map(payment => {
         const category = categories?.find(c => c.id === payment.category_id);
         const account = accounts?.find(a => a.id === payment.account_id);
@@ -99,6 +153,7 @@ export const useScheduledPayments = () => {
           account_name: account?.name,
           to_account_name: toAccount?.name,
           contact_name: contact?.name,
+          next_payment_date: calculateNextPaymentDate(payment),
         } as ScheduledPayment;
       });
 

@@ -69,9 +69,9 @@ const ScheduledPayments = () => {
   };
 
   const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('es-ES', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'EUR'
+      currency: 'USD'
     }).format(amount);
   };
 
