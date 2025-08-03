@@ -31,24 +31,26 @@ export interface DashboardCard {
   visible: boolean;
 }
 
+const defaultCards: DashboardCard[] = [
+  { id: 'overview', type: 'overview', title: 'Resumen General', position: 0, visible: true },
+  { id: 'accounts', type: 'accounts', title: 'Mis Cuentas', position: 1, visible: true },
+  { id: 'transactions', type: 'transactions', title: 'Transacciones Recientes', position: 2, visible: true },
+  { id: 'expenses', type: 'expenses', title: 'Estructura de Gastos', position: 3, visible: true },
+  { id: 'cash-flow', type: 'cash-flow', title: 'Flujo de Efectivo', position: 4, visible: true },
+  { id: 'upcoming-payments', type: 'upcoming-payments', title: 'Próximos Pagos', position: 5, visible: true },
+  { id: 'balance-trends', type: 'balance-trends', title: 'Tendencias de Saldo', position: 6, visible: false },
+  { id: 'period-comparison', type: 'period-comparison', title: 'Comparación de Periodo', position: 7, visible: false },
+  { id: 'income-expense-by-tag', type: 'income-expense-by-tag', title: 'Ingresos vs. Gastos por Etiqueta', position: 8, visible: false },
+  { id: 'expenses-by-tag', type: 'expenses-by-tag', title: 'Gastos por Etiqueta', position: 9, visible: false },
+  { id: 'balance-per-account', type: 'balance-per-account', title: 'Saldo Por Cuenta', position: 10, visible: true },
+  { id: 'income-expense-table', type: 'income-expense-table', title: 'Tabla Ingresos y Gastos', position: 11, visible: false },
+];
+
 export const useTransactions = () => {
   const { user } = useAuth();
   const { refetch: refetchSettings } = useSettings();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [cards, setCards] = useState<DashboardCard[]>([
-    { id: 'overview', type: 'overview', title: 'Resumen General', position: 0, visible: true },
-    { id: 'accounts', type: 'accounts', title: 'Mis Cuentas', position: 1, visible: true },
-    { id: 'transactions', type: 'transactions', title: 'Transacciones Recientes', position: 2, visible: true },
-    { id: 'expenses', type: 'expenses', title: 'Estructura de Gastos', position: 3, visible: true },
-    { id: 'cash-flow', type: 'cash-flow', title: 'Flujo de Efectivo', position: 4, visible: true },
-    { id: 'upcoming-payments', type: 'upcoming-payments', title: 'Próximos Pagos', position: 5, visible: true },
-    { id: 'balance-trends', type: 'balance-trends', title: 'Tendencias de Saldo', position: 6, visible: false },
-    { id: 'period-comparison', type: 'period-comparison', title: 'Comparación de Periodo', position: 7, visible: false },
-    { id: 'income-expense-by-tag', type: 'income-expense-by-tag', title: 'Ingresos vs. Gastos por Etiqueta', position: 8, visible: false },
-    { id: 'expenses-by-tag', type: 'expenses-by-tag', title: 'Gastos por Etiqueta', position: 9, visible: false },
-    { id: 'balance-per-account', type: 'balance-per-account', title: 'Saldo Por Cuenta', position: 10, visible: true },
-    { id: 'income-expense-table', type: 'income-expense-table', title: 'Tabla Ingresos y Gastos', position: 11, visible: false },
-  ]);
+  const [cards, setCards] = useState<DashboardCard[]>(defaultCards);
   const [loading, setLoading] = useState(false);
 
   // Fetch dashboard card preferences
@@ -64,7 +66,6 @@ export const useTransactions = () => {
       if (error) throw error;
       
       if (data && data.length > 0) {
-        // Convert database data to DashboardCard format
         const savedCards = data.map(pref => ({
           id: pref.card_id,
           type: pref.card_type as DashboardCard['type'],
@@ -72,7 +73,20 @@ export const useTransactions = () => {
           position: pref.position,
           visible: pref.visible
         }));
-        setCards(savedCards);
+        
+        const mergedCards = defaultCards.map(defaultCard => {
+          const savedCard = savedCards.find(sc => sc.id === defaultCard.id);
+          if (savedCard) {
+            return {
+              ...defaultCard,
+              position: savedCard.position,
+              visible: savedCard.visible,
+            };
+          }
+          return defaultCard;
+        });
+        
+        setCards(mergedCards);
       }
     } catch (error) {
       console.error('Error fetching card preferences:', error);
