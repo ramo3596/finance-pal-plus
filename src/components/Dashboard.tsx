@@ -987,11 +987,13 @@ export function Dashboard() {
                 Configurar Tarjetas
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[80vh]">
-              <DialogHeader>
+            <DialogContent className="max-w-md max-h-[80vh] flex flex-col overflow-hidden">
+              <DialogHeader className="flex-shrink-0">
                 <DialogTitle>Personalizar Dashboard</DialogTitle>
               </DialogHeader>
-              {renderCardManager()}
+              <div className="flex-1 overflow-hidden">
+                {renderCardManager()}
+              </div>
             </DialogContent>
           </Dialog>
 
