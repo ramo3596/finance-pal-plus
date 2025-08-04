@@ -77,24 +77,33 @@ export function useContacts() {
       // Fetch transaction totals for each contact
       const contactsWithTotals = await Promise.all(
         (contactsData || []).map(async (contact) => {
-          // Get expenses (where this contact is the beneficiary)
-          const { data: expenseData } = await supabase
+          // Get expenses (where this contact is the beneficiary - contact_id field)
+          const { data: expenseData, error: expenseError } = await supabase
             .from('transactions')
             .select('amount')
             .eq('user_id', user.id)
             .eq('contact_id', contact.id)
-            .in('type', ['expense']);
+            .eq('type', 'expense');
 
-          // Get income (where this contact is the payer)
-          const { data: incomeData } = await supabase
+          if (expenseError) {
+            console.error('Error fetching expense data for contact:', contact.id, expenseError);
+          }
+
+          // Get income (where this contact is the payer - payer_contact_id field)
+          const { data: incomeData, error: incomeError } = await supabase
             .from('transactions')
             .select('amount')
             .eq('user_id', user.id)
             .eq('payer_contact_id', contact.id)
-            .in('type', ['income']);
+            .eq('type', 'income');
 
+          if (incomeError) {
+            console.error('Error fetching income data for contact:', contact.id, incomeError);
+          }
+
+          // Calculate totals
           const totalExpenses = expenseData?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0;
-          const totalIncome = incomeData?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+          const totalIncome = incomeData?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0;
 
           return {
             ...contact,
