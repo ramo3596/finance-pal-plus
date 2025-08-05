@@ -49,6 +49,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useNavigate } from "react-router-dom"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { TransactionItem } from "@/components/shared/TransactionItem"
 
 // Dashboard card types with new widgets
 export type DashboardCardType = 
@@ -279,36 +280,16 @@ export function Dashboard() {
     return (
       <div className="space-y-4">
         {recentTransactions.length > 0 ? (
-          recentTransactions.map((transaction) => {
-            const transactionInfo = getTransactionInfo(transaction);
-            return (
-              <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                <div className="flex items-center space-x-3">
-                  <div 
-                    className="p-2 rounded-lg bg-primary/20 cursor-pointer hover:bg-primary/30 transition-colors" 
-                    onClick={() => {
-                      setSelectedTransaction(transaction);
-                      setIsEditTransactionOpen(true);
-                    }}
-                  >
-                    {getTransactionIcon(transaction, transactionInfo.category)}
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">{transactionInfo.title}</p>
-                    <p className="text-sm text-muted-foreground">{transactionInfo.subtitle}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`font-bold ${transaction.amount >= 0 ? 'text-success' : 'text-expense-red'}`}>
-                    {transaction.amount >= 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(transaction.transaction_date).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            );
-          })
+          recentTransactions.map((transaction) => (
+            <TransactionItem
+              key={transaction.id}
+              transaction={transaction}
+              onEdit={(transaction) => {
+                setSelectedTransaction(transaction);
+                setIsEditTransactionOpen(true);
+              }}
+            />
+          ))
         ) : (
           <p className="text-muted-foreground text-center py-4">No hay transacciones en el periodo</p>
         )}
