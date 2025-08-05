@@ -277,7 +277,7 @@ export function RecordsMainSection({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-sm">{transaction.description}</p>
+                            <p className="font-medium text-sm">{categoryData?.name || transaction.description}</p>
                             <p className="text-xs text-muted-foreground">
                               {transaction.type === 'transfer' ? (
                                 transaction.amount < 0 ? (
@@ -299,13 +299,21 @@ export function RecordsMainSection({
                                 accountName
                               )}
                             </p>
-                            {transaction.type !== 'transfer' && transaction.tags.length > 0 && (
-                              <p className="text-xs text-muted-foreground">
-                                {transaction.tags.map(tagName => {
+                            {transaction.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {transaction.tags.map((tagName) => {
                                   const tag = tags.find(t => t.name === tagName);
-                                  return tag?.name;
-                                }).filter(Boolean).join(', ')}
-                              </p>
+                                  return tag ? (
+                                    <span
+                                      key={tag.id}
+                                      className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded"
+                                      style={{ backgroundColor: tag.color }}
+                                    >
+                                      {tag.name}
+                                    </span>
+                                  ) : null;
+                                })}
+                              </div>
                             )}
                             {transaction.type === 'transfer' && transaction.beneficiary && (
                               <p className="text-xs text-muted-foreground">{transaction.beneficiary}</p>
@@ -313,28 +321,6 @@ export function RecordsMainSection({
                           </div>
                           
                           <div className="flex items-center space-x-2">
-                            {/* Tags */}
-                            <div className="flex space-x-1">
-                              {transaction.tags.slice(0, 2).map((tagName) => {
-                                const tag = tags.find(t => t.name === tagName);
-                                return tag ? (
-                                  <Badge 
-                                    key={tag.id}
-                                    variant="outline" 
-                                    style={{ backgroundColor: tag.color, color: 'white' }}
-                                    className="text-xs"
-                                  >
-                                    {tag.name}
-                                  </Badge>
-                                ) : null;
-                              })}
-                              {transaction.tags.length > 2 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{transaction.tags.length - 2}
-                                </Badge>
-                              )}
-                            </div>
-                            
                             {/* Amount */}
                             <span className={cn(
                               "text-sm font-bold min-w-[80px] text-right",
