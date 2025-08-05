@@ -69,6 +69,11 @@ export function AddTransaction({
   };
 
   const handleSubmit = async (createAnother = false) => {
+    if (!selectedAccount) {
+      alert('Debe seleccionar una cuenta');
+      return;
+    }
+
     try {
       const transactionData = {
         type: transactionType,
@@ -79,8 +84,8 @@ export function AddTransaction({
         description: beneficiary || `${transactionType} transaction`,
         beneficiary,
         note,
-        payment_method: paymentMethod,
-        location,
+        payment_method: paymentMethod || undefined,
+        location: location || undefined,
         tags: selectedTags,
         transaction_date: new Date(`${date}T${time}`).toISOString(),
       };
@@ -201,10 +206,12 @@ export function AddTransaction({
 
             <div className="space-y-2">
               <Label htmlFor="tags">Etiquetas</Label>
-              <Select value={selectedTags.join(',')} onValueChange={(value) => {
+              <Select value={selectedTags.length > 0 ? selectedTags[0] : ""} onValueChange={(value) => {
                 if (value) {
-                  const newTags = value.split(',');
-                  setSelectedTags(newTags);
+                  const selectedTag = tags.find(tag => tag.id === value);
+                  if (selectedTag && !selectedTags.includes(selectedTag.name)) {
+                    setSelectedTags([...selectedTags, selectedTag.name]);
+                  }
                 }
               }}>
                 <SelectTrigger>
@@ -224,6 +231,29 @@ export function AddTransaction({
                   ))}
                 </SelectContent>
               </Select>
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedTags.map((tagName, index) => {
+                    const tag = tags.find(t => t.name === tagName);
+                    return tag ? (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded"
+                        style={{ backgroundColor: tag.color, color: 'white' }}
+                      >
+                        {tag.name}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTags(selectedTags.filter((_, i) => i !== index))}
+                          className="ml-1 hover:bg-black/20 rounded-full w-4 h-4 flex items-center justify-center"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
