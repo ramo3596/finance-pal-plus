@@ -101,7 +101,7 @@ export function ContactCard({ contact }: ContactCardProps) {
               <TrendingDown className="h-3 w-3 mr-1" />
               <span>{formatCurrency(contact.totalExpenses)}</span>
             </div>
-            <div className="flex items-center text-green-600">
+            <div className="flex items-center" style={{ color: 'hsl(var(--success))' }}>
               <TrendingUp className="h-3 w-3 mr-1" />
               <span>{formatCurrency(contact.totalIncome)}</span>
             </div>
