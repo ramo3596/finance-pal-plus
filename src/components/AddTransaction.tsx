@@ -12,6 +12,7 @@ import { IncomeTab } from "./IncomeTab";
 import { TransferTab } from "./TransferTab";
 import { useSettings } from "@/hooks/useSettings";
 import { useTransactions } from "@/hooks/useTransactions";
+import { useContacts } from "@/hooks/useContacts";
 interface AddTransactionProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -29,6 +30,7 @@ export function AddTransaction({
   } = useSettings();
   
   const { createTransaction } = useTransactions();
+  const { contacts } = useContacts();
   
   const [transactionType, setTransactionType] = useState<"expense" | "income" | "transfer">("expense");
   const [amount, setAmount] = useState("0");
@@ -50,6 +52,7 @@ export function AddTransaction({
     return `${hours}:${minutes}`;
   });
   const [beneficiary, setBeneficiary] = useState("");
+  const [selectedContact, setSelectedContact] = useState("");
   const [note, setNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [location, setLocation] = useState("");
@@ -75,19 +78,35 @@ export function AddTransaction({
     }
 
     try {
+      // Set contact relationship based on transaction type
+      const contactData: any = {};
+      if (selectedContact) {
+        if (transactionType === 'expense') {
+          contactData.contact_id = selectedContact; // Beneficiary for expenses
+        } else if (transactionType === 'income') {
+          contactData.payer_contact_id = selectedContact; // Payer for income
+        } else if (transactionType === 'transfer') {
+          contactData.contact_id = selectedContact; // Can be beneficiary for transfers
+        }
+      }
+
+      const selectedContactObj = contacts.find(c => c.id === selectedContact);
+      const contactName = selectedContactObj?.name || beneficiary;
+
       const transactionData = {
         type: transactionType,
         amount: parseFloat(amount),
         account_id: selectedAccount,
         to_account_id: toAccount || undefined,
         category_id: selectedCategory || undefined,
-        description: beneficiary || `${transactionType} transaction`,
-        beneficiary,
+        description: contactName || `${transactionType} transaction`,
+        beneficiary: contactName,
         note,
         payment_method: paymentMethod || undefined,
         location: location || undefined,
         tags: selectedTags,
         transaction_date: new Date(`${date}T${time}`).toISOString(),
+        ...contactData,
       };
 
       await createTransaction(transactionData);
@@ -102,6 +121,7 @@ export function AddTransaction({
         setSelectedCategory("");
         setSelectedTags([]);
         setBeneficiary("");
+        setSelectedContact("");
         setNote("");
         setPaymentMethod("");
         setLocation("");
@@ -269,16 +289,39 @@ export function AddTransaction({
 
           {/* Additional Information */}
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="beneficiary">
-                {transactionType === "expense" ? "Beneficiario" : transactionType === "income" ? "Pagador" : "Beneficiario"}
-              </Label>
-              <Input 
-                id="beneficiary" 
-                placeholder={transactionType === "expense" ? "Nombre del beneficiario" : transactionType === "income" ? "Nombre del pagador" : "Nombre del beneficiario"} 
-                value={beneficiary} 
-                onChange={e => setBeneficiary(e.target.value)} 
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contact">
+                  {transactionType === "expense" ? "Beneficiario (Contacto)" : transactionType === "income" ? "Pagador (Contacto)" : "Contacto"}
+                </Label>
+                <Select value={selectedContact} onValueChange={setSelectedContact}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar contacto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contacts.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{contact.name}</span>
+                          <span className="text-xs text-muted-foreground">({contact.contact_type})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="beneficiary">
+                  {transactionType === "expense" ? "Beneficiario (Manual)" : transactionType === "income" ? "Pagador (Manual)" : "Nombre Manual"}
+                </Label>
+                <Input 
+                  id="beneficiary" 
+                  placeholder={transactionType === "expense" ? "O escribir nombre del beneficiario" : transactionType === "income" ? "O escribir nombre del pagador" : "O escribir nombre manual"} 
+                  value={beneficiary} 
+                  onChange={e => setBeneficiary(e.target.value)} 
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
