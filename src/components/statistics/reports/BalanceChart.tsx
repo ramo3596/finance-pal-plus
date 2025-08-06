@@ -19,35 +19,83 @@ export function BalanceChart({ transactions, filters }: BalanceChartProps) {
   const chartData = useMemo(() => {
     if (!filters.dateRange.from || !filters.dateRange.to) return [];
 
+    // Filter accounts based on user selection
+    const selectedAccountIds = filters.selectedAccounts.length > 0 
+      ? filters.selectedAccounts 
+      : accounts.map(a => a.id);
+
+    // Get initial balance from selected accounts
+    const initialBalance = accounts
+      .filter(account => selectedAccountIds.includes(account.id))
+      .reduce((sum, account) => sum + (account.balance || 0), 0);
+
     // Get all days in the range
     const days = eachDayOfInterval({
       start: filters.dateRange.from,
       end: filters.dateRange.to
     });
 
+    // Filter transactions based on selected accounts and date range
+    const filteredTransactions = transactions.filter(t => {
+      // Filter by account if specified
+      if (filters.selectedAccounts.length > 0) {
+        return filters.selectedAccounts.includes(t.account_id) ||
+               (t.to_account_id && filters.selectedAccounts.includes(t.to_account_id));
+      }
+      return true;
+    });
+
     // Calculate running balance for each day
     const data = days.map(day => {
       const dayStart = startOfDay(day);
       
-      // Get all transactions up to this day
-      const transactionsUpToDay = transactions.filter(t => {
+      // Get all transactions up to this day (including the day)
+      const transactionsUpToDay = filteredTransactions.filter(t => {
         const transactionDate = new Date(t.transaction_date);
         return transactionDate <= dayStart;
       });
 
-      // Calculate total balance
-      const balance = transactionsUpToDay.reduce((sum, t) => sum + t.amount, 0);
+      // Calculate balance from transactions
+      const transactionBalance = transactionsUpToDay.reduce((sum, t) => {
+        // For transfers, only count if both accounts are selected or no filter is applied
+        if (t.type === 'transfer' && t.to_account_id) {
+          if (filters.selectedAccounts.length > 0) {
+            const fromAccountSelected = filters.selectedAccounts.includes(t.account_id);
+            const toAccountSelected = filters.selectedAccounts.includes(t.to_account_id);
+            
+            if (fromAccountSelected && toAccountSelected) {
+              // Both accounts selected, transfer is neutral
+              return sum;
+            } else if (fromAccountSelected) {
+              // Only source account selected, it's an outflow
+              return sum - Math.abs(t.amount);
+            } else if (toAccountSelected) {
+              // Only destination account selected, it's an inflow
+              return sum + Math.abs(t.amount);
+            }
+            return sum;
+          }
+          // No filter applied, transfer is neutral
+          return sum;
+        }
+        
+        // For income and expense transactions
+        return sum + t.amount;
+      }, 0);
+
+      // Total balance = initial balance + transaction changes
+      const totalBalance = initialBalance + transactionBalance;
 
       return {
         date: format(day, 'dd/MM', { locale: es }),
         fullDate: format(day, 'dd MMMM yyyy', { locale: es }),
-        balance: balance,
-        formattedBalance: `$${balance.toFixed(2)}`
+        balance: totalBalance,
+        formattedBalance: `$${totalBalance.toFixed(2)}`
       };
     });
 
     return data;
-  }, [transactions, filters.dateRange]);
+  }, [transactions, filters.dateRange, filters.selectedAccounts, accounts]);
 
   const chartConfig = {
     balance: {
