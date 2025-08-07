@@ -88,7 +88,7 @@ export function TransactionItem({
                 accountName
               )}
             </p>
-            {transaction.tags.length > 0 && (
+            {Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {transaction.tags.map((tagName) => {
                   const tag = tags.find(t => t.name === tagName);
