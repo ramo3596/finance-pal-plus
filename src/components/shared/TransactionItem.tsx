@@ -88,22 +88,37 @@ export function TransactionItem({
                 accountName
               )}
             </p>
-            {Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {transaction.tags.map((tagName) => {
-                  const tag = tags.find(t => t.name === tagName);
-                  return tag ? (
-                    <span
-                      key={tag.id}
-                      className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded"
-                      style={{ backgroundColor: tag.color }}
-                    >
-                      {tag.name}
-                    </span>
-                  ) : null;
-                })}
-              </div>
-            )}
+            {(() => {
+              // Handle both array and string formats for tags
+              let tagsArray: string[] = [];
+              
+              if (Array.isArray(transaction.tags)) {
+                tagsArray = transaction.tags;
+              } else if (transaction.tags && typeof transaction.tags === 'string') {
+                const tagString = transaction.tags as string;
+                // If it's a string, split by common separators or treat as single tag
+                tagsArray = tagString.includes(',') 
+                  ? tagString.split(',').map(tag => tag.trim())
+                  : [tagString.trim()];
+              }
+              
+              return tagsArray.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {tagsArray.map((tagName, index) => {
+                    const tag = tags.find(t => t.name === tagName || t.id === tagName);
+                    return tag ? (
+                      <span
+                        key={tag.id || index}
+                        className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded"
+                        style={{ backgroundColor: tag.color }}
+                      >
+                        {tag.name}
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              );
+            })()}
             {transaction.type === 'transfer' && transaction.beneficiary && (
               <p className="text-xs text-muted-foreground">{transaction.beneficiary}</p>
             )}
