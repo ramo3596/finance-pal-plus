@@ -54,7 +54,7 @@ export function EditTransaction({
       setSelectedAccount(transaction.account_id || "");
       setToAccount(transaction.to_account_id || "");
       setSelectedCategory(transaction.category_id || "");
-      setSelectedTags(transaction.tags || []);
+      setSelectedTags(Array.isArray(transaction.tags) ? transaction.tags : []);
       
       const transactionDate = new Date(transaction.transaction_date);
       // Use getFullYear, getMonth, getDate to avoid timezone issues
@@ -215,7 +215,7 @@ export function EditTransaction({
 
             <div className="space-y-2">
               <Label htmlFor="tags">Etiquetas</Label>
-              <Select value={selectedTags.join(',')} onValueChange={(value) => {
+              <Select value={Array.isArray(selectedTags) ? selectedTags.join(',') : ''} onValueChange={(value) => {
                 if (value) {
                   const newTags = value.split(',');
                   setSelectedTags(newTags);
