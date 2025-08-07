@@ -21,11 +21,14 @@ import {
   Trash2,
   Upload,
   Save,
-  Loader2
+  Loader2,
+  RotateCcw,
+  CheckCircle2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/hooks/useSettings";
+import { supabase } from "@/integrations/supabase/client";
 
 // Import dialogs
 import { AddAccountDialog } from "@/components/settings/AddAccountDialog";
@@ -48,6 +51,12 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState("profile");
   const [showAddAccountDialog, setShowAddAccountDialog] = useState(false);
   const [editAccountId, setEditAccountId] = useState<string | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [profileData, setProfileData] = useState({
+    username: "",
+    email: "",
+    newPassword: ""
+  });
 
   // Handle URL parameters
   useEffect(() => {
@@ -111,7 +120,116 @@ export default function Settings() {
     createSubcategory,
     updateSubcategory,
     deleteSubcategory,
+    refetch,
   } = useSettings();
+
+  // Load profile data on component mount
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        username: user.email?.split('@')[0] || "",
+        email: user.email || "",
+        newPassword: ""
+      });
+      fetchUserProfile();
+    }
+  }, [user]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile) {
+        setProfileData(prev => ({
+          ...prev,
+          username: profile.username || prev.username
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setIsLoadingProfile(true);
+    try {
+      // Update profile in database
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          username: profileData.username,
+          updated_at: new Date().toISOString()
+        });
+
+      if (profileError) throw profileError;
+
+      // Update password if provided
+      if (profileData.newPassword) {
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: profileData.newPassword
+        });
+        
+        if (passwordError) throw passwordError;
+        
+        setProfileData(prev => ({ ...prev, newPassword: "" }));
+      }
+
+      toast({
+        title: "Perfil actualizado",
+        description: "Los cambios en tu perfil se han guardado exitosamente.",
+      });
+      
+      // Refresh profile data
+      await fetchUserProfile();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudieron guardar los cambios.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
+  const handleSyncConfiguration = async () => {
+    setIsLoadingProfile(true);
+    try {
+      // Force refresh all settings data
+      await refetch();
+      
+      // Enable all notification settings
+      await updateUserSettings({ 
+        wallet_reminder: true,
+        scheduled_payments: true,
+        debts: true,
+        income: true
+      });
+
+      toast({
+        title: "Configuración sincronizada",
+        description: "Todas las configuraciones han sido sincronizadas y habilitadas.",
+        duration: 3000,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error de sincronización",
+        description: error.message || "No se pudo sincronizar la configuración.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
 
   const handleSave = () => {
     toast({
@@ -170,9 +288,24 @@ export default function Settings() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Perfil de Usuario
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Perfil de Usuario
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSyncConfiguration}
+              disabled={isLoadingProfile}
+            >
+              {isLoadingProfile ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RotateCcw className="h-4 w-4 mr-2" />
+              )}
+              Sincronizar configuración
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -189,22 +322,43 @@ export default function Settings() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="username">Nombre de usuario</Label>
-              <Input id="username" defaultValue={user?.email?.split('@')[0]} />
+              <Input 
+                id="username" 
+                value={profileData.username}
+                onChange={(e) => setProfileData(prev => ({ ...prev, username: e.target.value }))}
+              />
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" defaultValue={user?.email} disabled />
+              <Input 
+                id="email" 
+                value={profileData.email}
+                disabled 
+              />
             </div>
           </div>
           
           <div>
             <Label htmlFor="password">Cambiar contraseña</Label>
-            <Input id="password" type="password" placeholder="Nueva contraseña" />
+            <Input 
+              id="password" 
+              type="password" 
+              placeholder="Nueva contraseña"
+              value={profileData.newPassword}
+              onChange={(e) => setProfileData(prev => ({ ...prev, newPassword: e.target.value }))}
+            />
           </div>
           
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button onClick={handleSave}>
-              <Save className="h-4 w-4 mr-2" />
+            <Button 
+              onClick={handleSaveProfile}
+              disabled={isLoadingProfile}
+            >
+              {isLoadingProfile ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
               Guardar cambios
             </Button>
             <Button variant="outline" onClick={handleSignOut}>
@@ -232,11 +386,15 @@ export default function Settings() {
                 <CreditCard className="h-5 w-5" />
                 Gestión de Cuentas
               </span>
-              <AddAccountDialog 
-                onAdd={createAccount} 
-                open={showAddAccountDialog}
-                onOpenChange={handleCloseAddAccountDialog}
-              />
+            <Button onClick={() => setShowAddAccountDialog(true)}>
+              <CreditCard className="h-4 w-4 mr-2" />
+              Agregar cuenta
+            </Button>
+            <AddAccountDialog 
+              onAdd={createAccount} 
+              open={showAddAccountDialog}
+              onOpenChange={handleCloseAddAccountDialog}
+            />
             </CardTitle>
           </CardHeader>
           <CardContent>
