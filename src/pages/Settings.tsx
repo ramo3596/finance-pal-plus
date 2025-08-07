@@ -44,6 +44,11 @@ import { EditTemplateDialog } from "@/components/settings/EditTemplateDialog";
 import { AddFilterDialog } from "@/components/settings/AddFilterDialog";
 import { EditFilterDialog } from "@/components/settings/EditFilterDialog";
 
+// Import draggable lists
+import { DraggableAccountList } from "@/components/settings/DraggableAccountList";
+import { DraggableCategoryList } from "@/components/settings/DraggableCategoryList";
+import { DraggableTagList } from "@/components/settings/DraggableTagList";
+
 export default function Settings() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
@@ -272,6 +277,23 @@ export default function Settings() {
     }
   };
 
+  // Reorder functions
+  const handleReorderAccounts = (newOrder: any[]) => {
+    // Here you could implement a backend call to save order if needed
+    // For now, we'll just update the local state
+    console.log('New account order:', newOrder);
+  };
+
+  const handleReorderCategories = (newOrder: any[]) => {
+    // Here you could implement a backend call to save order if needed
+    console.log('New category order:', newOrder);
+  };
+
+  const handleReorderTags = (newOrder: any[]) => {
+    // Here you could implement a backend call to save order if needed
+    console.log('New tag order:', newOrder);
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -398,37 +420,18 @@ export default function Settings() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {accounts.map((account) => (
-                <div key={account.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ backgroundColor: account.color + '20' }}>
-                      {account.icon}
-                    </div>
-                    <div>
-                      <h3 className="font-medium">{account.name}</h3>
-                      <p className="text-sm text-muted-foreground">Saldo: ${account.balance?.toFixed(2) || '0.00'}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <EditAccountDialog 
-                      account={account} 
-                      onUpdate={updateAccount}
-                      open={editAccountId === account.id}
-                      onOpenChange={() => editAccountId === account.id ? handleCloseEditAccountDialog() : null}
-                    />
-                    <Button variant="destructive" size="sm" onClick={() => handleDeleteAccount(account.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              {accounts.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  No hay cuentas configuradas. Agrega tu primera cuenta.
-                </p>
-              )}
-            </div>
+            {accounts.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                No hay cuentas configuradas. Agrega tu primera cuenta.
+              </p>
+            ) : (
+              <DraggableAccountList
+                accounts={accounts}
+                onUpdate={updateAccount}
+                onDelete={handleDeleteAccount}
+                onReorder={handleReorderAccounts}
+              />
+            )}
           </CardContent>
         </Card>
         
@@ -458,73 +461,25 @@ export default function Settings() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {categories.map((category) => (
-              <div key={category.id} className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ backgroundColor: category.color + '20' }}>
-                      {category.icon}
-                    </div>
-                    <div>
-                      <h3 className="font-medium">{category.name}</h3>
-                      <Badge variant="secondary">{category.nature}</Badge>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <AddSubcategoryDialog 
-                      categoryId={category.id} 
-                      categoryName={category.name}
-                      onAdd={createSubcategory} 
-                    />
-                    <EditCategoryDialog category={category} onUpdate={updateCategory} />
-                    <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(category.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                
-                {/* Subcategorías */}
-                {category.subcategories && category.subcategories.length > 0 && (
-                  <div className="ml-13 space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Subcategorías:</p>
-                    <div className="space-y-2">
-                      {category.subcategories.map((subcategory) => (
-                        <div key={subcategory.id} className="flex items-center justify-between p-3 bg-muted rounded">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm" style={{ backgroundColor: category.color + '20' }}>
-                              {category.icon}
-                            </div>
-                            <span className="font-medium">{subcategory.name}</span>
-                          </div>
-                          <div className="flex gap-1">
-                            <EditSubcategoryDialog subcategory={subcategory} onUpdate={updateSubcategory} />
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                              onClick={() => {
-                                if (confirm("¿Estás seguro de que quieres eliminar esta subcategoría?")) {
-                                  deleteSubcategory(subcategory.id);
-                                }
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-            {categories.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                No hay categorías configuradas. Agrega tu primera categoría.
-              </p>
-            )}
-          </div>
+          {categories.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              No hay categorías configuradas. Agrega tu primera categoría.
+            </p>
+          ) : (
+            <DraggableCategoryList
+              categories={categories}
+              onUpdate={updateCategory}
+              onDelete={handleDeleteCategory}
+              onReorder={handleReorderCategories}
+              onCreateSubcategory={createSubcategory}
+              onUpdateSubcategory={updateSubcategory}
+              onDeleteSubcategory={async (id) => {
+                if (confirm("¿Estás seguro de que quieres eliminar esta subcategoría?")) {
+                  await deleteSubcategory(id);
+                }
+              }}
+            />
+          )}
         </CardContent>
       </Card>
     </div>
@@ -543,27 +498,18 @@ export default function Settings() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {tags.map((tag) => (
-              <div key={tag.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: tag.color }}></div>
-                  <span className="font-medium">{tag.name}</span>
-                </div>
-                <div className="flex gap-2">
-                  <EditTagDialog tag={tag} onUpdate={updateTag} />
-                  <Button variant="destructive" size="sm" onClick={() => handleDeleteTag(tag.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {tags.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                No hay etiquetas configuradas. Agrega tu primera etiqueta.
-              </p>
-            )}
-          </div>
+          {tags.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              No hay etiquetas configuradas. Agrega tu primera etiqueta.
+            </p>
+          ) : (
+            <DraggableTagList
+              tags={tags}
+              onUpdate={updateTag}
+              onDelete={handleDeleteTag}
+              onReorder={handleReorderTags}
+            />
+          )}
         </CardContent>
       </Card>
     </div>
