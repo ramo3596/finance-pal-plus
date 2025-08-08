@@ -524,15 +524,29 @@ export default function Settings() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="max-h-96 overflow-y-auto space-y-4">
             {templates.map((template) => (
               <div key={template.id} className="border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h3 className="font-medium">{template.name}</h3>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium truncate">{template.name}</h3>
                     <p className="text-sm text-muted-foreground">${template.amount.toFixed(2)} - {template.type}</p>
+                    {template.tags && template.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {template.tags.map((tag) => (
+                          <span 
+                            key={tag.id}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+                            style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                          >
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }}></div>
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 ml-4">
                     <EditTemplateDialog 
                       template={template} 
                       onUpdate={updateTemplate}

@@ -54,6 +54,7 @@ export interface Template {
   created_at?: string;
   updated_at?: string;
   tags?: Tag[];
+  tag_ids?: string[];
 }
 
 export interface Filter {
@@ -121,11 +122,22 @@ export const useSettings = () => {
       .eq('user_id', user.id)
       .order('display_order', { ascending: true });
       
-      // Fetch templates
+      // Fetch templates with tags
       const { data: templatesData } = await supabase
         .from('templates')
-        .select('*')
+        .select(`
+          *,
+          tags:template_tags(
+            tag:tags(*)
+          )
+        `)
         .eq('user_id', user.id);
+
+      // Process templates data to flatten tags
+      const processedTemplates = templatesData?.map(template => ({
+        ...template,
+        tags: template.tags?.map((t: any) => t.tag) || []
+      })) || [];
       
       // Fetch filters
       const { data: filtersData } = await supabase
@@ -143,7 +155,7 @@ export const useSettings = () => {
       setAccounts(accountsData || []);
       setCategories(categoriesData || []);
       setTags(tagsData || []);
-      setTemplates(templatesData || []);
+      setTemplates(processedTemplates);
       setFilters(filtersData || []);
       setUserSettings(settingsData);
     } catch (error) {
@@ -469,50 +481,146 @@ export const useSettings = () => {
   const createTemplate = async (template: Omit<Template, 'id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
     
-    const { data, error } = await supabase
-      .from('templates')
-      .insert([{ ...template, user_id: user.id }])
-      .select()
-      .single();
+    try {
+      // Handle tag_ids separately
+      const { tag_ids, ...templateData } = template;
+      
+      const { data, error } = await supabase
+        .from('templates')
+        .insert([{ ...templateData, user_id: user.id }])
+        .select()
+        .single();
 
-    if (error) {
+      if (error) {
+        console.error('Template creation error:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo crear la plantilla.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Handle template tags if any
+      if (tag_ids && tag_ids.length > 0) {
+        const templateTagInserts = tag_ids.map(tagId => ({
+          template_id: data.id,
+          tag_id: tagId
+        }));
+
+        const { error: tagError } = await supabase
+          .from('template_tags')
+          .insert(templateTagInserts);
+
+        if (tagError) {
+          console.error('Template tags error:', tagError);
+        }
+      }
+
+      // Fetch template with tags for state update
+      const { data: templateWithTags } = await supabase
+        .from('templates')
+        .select(`
+          *,
+          tags:template_tags(
+            tag:tags(*)
+          )
+        `)
+        .eq('id', data.id)
+        .single();
+
+      const processedTemplate = {
+        ...templateWithTags,
+        tags: templateWithTags?.tags?.map((t: any) => t.tag) || []
+      };
+
+      setTemplates(prev => [...prev, processedTemplate]);
+      toast({
+        title: "Éxito",
+        description: "Plantilla creada exitosamente.",
+      });
+    } catch (err) {
+      console.error('Unexpected error creating template:', err);
       toast({
         title: "Error",
-        description: "No se pudo crear la plantilla.",
+        description: "Error inesperado al crear la plantilla.",
         variant: "destructive",
       });
-      return;
     }
-
-    setTemplates(prev => [...prev, data]);
-    toast({
-      title: "Éxito",
-      description: "Plantilla creada exitosamente.",
-    });
   };
 
   const updateTemplate = async (id: string, updates: Partial<Template>) => {
-    const { data, error } = await supabase
-      .from('templates')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
+    try {
+      // Handle tag_ids separately
+      const { tag_ids, ...templateUpdates } = updates;
+      
+      const { data, error } = await supabase
+        .from('templates')
+        .update(templateUpdates)
+        .eq('id', id)
+        .select()
+        .single();
 
-    if (error) {
+      if (error) {
+        toast({
+          title: "Error",
+          description: "No se pudo actualizar la plantilla.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Handle template tags if tag_ids is provided
+      if (tag_ids !== undefined) {
+        // Delete existing template tags
+        await supabase
+          .from('template_tags')
+          .delete()
+          .eq('template_id', id);
+
+        // Insert new template tags if any
+        if (tag_ids.length > 0) {
+          const templateTagInserts = tag_ids.map(tagId => ({
+            template_id: id,
+            tag_id: tagId
+          }));
+
+          await supabase
+            .from('template_tags')
+            .insert(templateTagInserts);
+        }
+      }
+
+      // Fetch updated template with tags
+      const { data: templateWithTags } = await supabase
+        .from('templates')
+        .select(`
+          *,
+          tags:template_tags(
+            tag:tags(*)
+          )
+        `)
+        .eq('id', id)
+        .single();
+
+      const processedTemplate = {
+        ...templateWithTags,
+        tags: templateWithTags?.tags?.map((t: any) => t.tag) || []
+      };
+
+      setTemplates(prev => prev.map(item => item.id === id ? processedTemplate : item));
+      toast({
+        title: "Éxito",
+        description: "Plantilla actualizada exitosamente.",
+      });
+    } catch (err) {
+      console.error('Error updating template:', err);
       toast({
         title: "Error",
-        description: "No se pudo actualizar la plantilla.",
+        description: "Error inesperado al actualizar la plantilla.",
         variant: "destructive",
       });
-      return;
     }
-
-    setTemplates(prev => prev.map(item => item.id === id ? data : item));
-    toast({
-      title: "Éxito",
-      description: "Plantilla actualizada exitosamente.",
-    });
   };
 
   const deleteTemplate = async (id: string) => {
