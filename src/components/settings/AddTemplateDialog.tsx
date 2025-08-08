@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { Template } from "@/hooks/useSettings";
+import { PaymentMethodSelect } from "@/components/shared/PaymentMethodSelect";
+import { useContacts } from "@/hooks/useContacts";
 
 interface AddTemplateDialogProps {
   onAdd: (template: Omit<Template, 'id' | 'created_at' | 'updated_at'>) => void;
@@ -17,6 +19,7 @@ interface AddTemplateDialogProps {
 
 export function AddTemplateDialog({ onAdd, accounts, categories, tags }: AddTemplateDialogProps) {
   const [open, setOpen] = useState(false);
+  const { contacts } = useContacts();
   const [formData, setFormData] = useState({
     name: "",
     amount: 0,
@@ -127,26 +130,39 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags }: AddTemp
           </div>
           <div>
             <Label htmlFor="payment_method">Método de pago</Label>
-            <Select value={formData.payment_method} onValueChange={(value) => setFormData({ ...formData, payment_method: value })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-               <SelectContent>
-                 <SelectItem value="Dinero en efectivo">Dinero en efectivo</SelectItem>
-                 <SelectItem value="Tarjeta de Débito">Tarjeta de Débito</SelectItem>
-                 <SelectItem value="Tarjeta de crédito">Tarjeta de crédito</SelectItem>
-                 <SelectItem value="Cupón">Cupón</SelectItem>
-                 <SelectItem value="Pago por móvil">Pago por móvil</SelectItem>
-                 <SelectItem value="Pago por web">Pago por web</SelectItem>
-               </SelectContent>
-            </Select>
+            <PaymentMethodSelect 
+              value={formData.payment_method} 
+              onValueChange={(value) => setFormData({ ...formData, payment_method: value })}
+            />
           </div>
           <div>
-            <Label htmlFor="beneficiary">Beneficiario (opcional)</Label>
+            <Label htmlFor="beneficiary">Beneficiario</Label>
+            <Select 
+              value={formData.beneficiary} 
+              onValueChange={(value) => {
+                const contact = contacts.find(c => c.id === value);
+                setFormData({ ...formData, beneficiary: contact?.name || value });
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar contacto o escribir manual" />
+              </SelectTrigger>
+              <SelectContent>
+                {contacts.map((contact) => (
+                  <SelectItem key={contact.id} value={contact.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{contact.name}</span>
+                      <span className="text-xs text-muted-foreground">({contact.contact_type})</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input
-              id="beneficiary"
+              placeholder="O escribir nombre manual"
               value={formData.beneficiary}
               onChange={(e) => setFormData({ ...formData, beneficiary: e.target.value })}
+              className="mt-2"
             />
           </div>
           <div>
