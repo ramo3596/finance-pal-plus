@@ -109,12 +109,15 @@ export default function Settings() {
     createAccount,
     updateAccount,
     deleteAccount,
+    reorderAccounts,
     createCategory,
     updateCategory,
     deleteCategory,
+    reorderCategories,
     createTag,
     updateTag,
     deleteTag,
+    reorderTags,
     createTemplate,
     updateTemplate,
     deleteTemplate,
@@ -279,19 +282,15 @@ export default function Settings() {
 
   // Reorder functions
   const handleReorderAccounts = (newOrder: any[]) => {
-    // Here you could implement a backend call to save order if needed
-    // For now, we'll just update the local state
-    console.log('New account order:', newOrder);
+    reorderAccounts(newOrder);
   };
 
   const handleReorderCategories = (newOrder: any[]) => {
-    // Here you could implement a backend call to save order if needed
-    console.log('New category order:', newOrder);
+    reorderCategories(newOrder);
   };
 
   const handleReorderTags = (newOrder: any[]) => {
-    // Here you could implement a backend call to save order if needed
-    console.log('New tag order:', newOrder);
+    reorderTags(newOrder);
   };
 
   if (loading) {
@@ -408,15 +407,7 @@ export default function Settings() {
                 <CreditCard className="h-5 w-5" />
                 Gestión de Cuentas
               </span>
-            <Button onClick={() => setShowAddAccountDialog(true)}>
-              <CreditCard className="h-4 w-4 mr-2" />
-              Agregar cuenta
-            </Button>
-            <AddAccountDialog 
-              onAdd={createAccount} 
-              open={showAddAccountDialog}
-              onOpenChange={handleCloseAddAccountDialog}
-            />
+              <AddAccountDialog onAdd={createAccount} />
             </CardTitle>
           </CardHeader>
           <CardContent>

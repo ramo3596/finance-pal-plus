@@ -97,26 +97,29 @@ export const useSettings = () => {
     
     setLoading(true);
     try {
-      // Fetch accounts
-      const { data: accountsData } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('user_id', user.id);
+    // Fetch accounts ordered by display_order
+    const { data: accountsData } = await supabase
+      .from('accounts')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('display_order', { ascending: true });
       
-      // Fetch categories with subcategories
+      // Fetch categories with subcategories ordered by display_order
       const { data: categoriesData } = await supabase
         .from('categories')
         .select(`
           *,
           subcategories (*)
         `)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .order('display_order', { ascending: true });
       
-      // Fetch tags
-      const { data: tagsData } = await supabase
-        .from('tags')
-        .select('*')
-        .eq('user_id', user.id);
+    // Fetch tags ordered by display_order
+    const { data: tagsData } = await supabase
+      .from('tags')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('display_order', { ascending: true });
       
       // Fetch templates
       const { data: templatesData } = await supabase
@@ -633,6 +636,91 @@ export const useSettings = () => {
     });
   };
 
+  // Reorder operations
+  const reorderAccounts = async (newOrder: Account[]) => {
+    try {
+      // Update display_order for each account
+      const updates = newOrder.map((account, index) => 
+        supabase
+          .from('accounts')
+          .update({ display_order: index })
+          .eq('id', account.id)
+      );
+      
+      await Promise.all(updates);
+      
+      // Update local state
+      setAccounts(newOrder);
+      
+      toast({
+        title: "Éxito",
+        description: "Orden de cuentas actualizado.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el orden de las cuentas.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const reorderCategories = async (newOrder: Category[]) => {
+    try {
+      // Update display_order for each category
+      const updates = newOrder.map((category, index) => 
+        supabase
+          .from('categories')
+          .update({ display_order: index })
+          .eq('id', category.id)
+      );
+      
+      await Promise.all(updates);
+      
+      // Update local state
+      setCategories(newOrder);
+      
+      toast({
+        title: "Éxito",
+        description: "Orden de categorías actualizado.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el orden de las categorías.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const reorderTags = async (newOrder: Tag[]) => {
+    try {
+      // Update display_order for each tag
+      const updates = newOrder.map((tag, index) => 
+        supabase
+          .from('tags')
+          .update({ display_order: index })
+          .eq('id', tag.id)
+      );
+      
+      await Promise.all(updates);
+      
+      // Update local state
+      setTags(newOrder);
+      
+      toast({
+        title: "Éxito",
+        description: "Orden de etiquetas actualizado.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el orden de las etiquetas.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     // Data
     accounts,
@@ -647,11 +735,13 @@ export const useSettings = () => {
     createAccount,
     updateAccount,
     deleteAccount,
+    reorderAccounts,
     
     // Category operations
     createCategory,
     updateCategory,
     deleteCategory,
+    reorderCategories,
     
     // Subcategory operations
     createSubcategory,
@@ -662,6 +752,7 @@ export const useSettings = () => {
     createTag,
     updateTag,
     deleteTag,
+    reorderTags,
     
     // Template operations
     createTemplate,

@@ -20,9 +20,11 @@ export type Database = {
           balance: number | null
           color: string
           created_at: string | null
+          display_order: number | null
           icon: string
           id: string
           name: string
+          payment_method_id: string | null
           updated_at: string | null
           user_id: string
         }
@@ -31,9 +33,11 @@ export type Database = {
           balance?: number | null
           color: string
           created_at?: string | null
+          display_order?: number | null
           icon: string
           id?: string
           name: string
+          payment_method_id?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -42,9 +46,11 @@ export type Database = {
           balance?: number | null
           color?: string
           created_at?: string | null
+          display_order?: number | null
           icon?: string
           id?: string
           name?: string
+          payment_method_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -54,6 +60,7 @@ export type Database = {
         Row: {
           color: string
           created_at: string | null
+          display_order: number | null
           icon: string
           id: string
           name: string
@@ -64,6 +71,7 @@ export type Database = {
         Insert: {
           color: string
           created_at?: string | null
+          display_order?: number | null
           icon: string
           id?: string
           name: string
@@ -74,6 +82,7 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string | null
+          display_order?: number | null
           icon?: string
           id?: string
           name?: string
@@ -541,6 +550,7 @@ export type Database = {
         Row: {
           color: string
           created_at: string | null
+          display_order: number | null
           id: string
           name: string
           updated_at: string | null
@@ -549,6 +559,7 @@ export type Database = {
         Insert: {
           color: string
           created_at?: string | null
+          display_order?: number | null
           id?: string
           name: string
           updated_at?: string | null
@@ -557,6 +568,7 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string | null
+          display_order?: number | null
           id?: string
           name?: string
           updated_at?: string | null
@@ -668,7 +680,7 @@ export type Database = {
           note: string | null
           payer_contact_id: string | null
           payment_method: string | null
-          tags: string[] | null
+          tags: string | null
           to_account_id: string | null
           transaction_date: string
           type: string
@@ -688,7 +700,7 @@ export type Database = {
           note?: string | null
           payer_contact_id?: string | null
           payment_method?: string | null
-          tags?: string[] | null
+          tags?: string | null
           to_account_id?: string | null
           transaction_date?: string
           type: string
@@ -708,7 +720,7 @@ export type Database = {
           note?: string | null
           payer_contact_id?: string | null
           payment_method?: string | null
-          tags?: string[] | null
+          tags?: string | null
           to_account_id?: string | null
           transaction_date?: string
           type?: string
