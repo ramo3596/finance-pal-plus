@@ -96,16 +96,31 @@ export function TransactionItem({
                 tagsArray = transaction.tags;
               } else if (transaction.tags && typeof transaction.tags === 'string') {
                 const tagString = transaction.tags as string;
-                // If it's a string, split by common separators or treat as single tag
-                tagsArray = tagString.includes(',') 
-                  ? tagString.split(',').map(tag => tag.trim())
-                  : [tagString.trim()];
+                // If it's a string that looks like JSON array, try to parse it
+                if (tagString.startsWith('[') && tagString.endsWith(']')) {
+                  try {
+                    const parsed = JSON.parse(tagString);
+                    if (Array.isArray(parsed)) {
+                      tagsArray = parsed;
+                    } else {
+                      tagsArray = [tagString.trim()];
+                    }
+                  } catch {
+                    tagsArray = [tagString.trim()];
+                  }
+                } else {
+                  // If it's a regular string, split by common separators or treat as single tag
+                  tagsArray = tagString.includes(',') 
+                    ? tagString.split(',').map(tag => tag.trim())
+                    : [tagString.trim()];
+                }
               }
               
               return tagsArray.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {tagsArray.map((tagName, index) => {
-                    const tag = tags.find(t => t.name === tagName || t.id === tagName);
+                    // First try to find by name, then by ID as fallback
+                    const tag = tags.find(t => t.name === tagName) || tags.find(t => t.id === tagName);
                     return tag ? (
                       <span
                         key={tag.id || index}
@@ -114,7 +129,15 @@ export function TransactionItem({
                       >
                         {tag.name}
                       </span>
-                    ) : null;
+                    ) : (
+                      // If tag is not found in the settings, still show it with a default color
+                      <span
+                        key={index}
+                        className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded bg-gray-500"
+                      >
+                        {tagName}
+                      </span>
+                    );
                   })}
                 </div>
               );
