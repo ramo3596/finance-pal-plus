@@ -85,9 +85,9 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories, t
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Gasto">Gasto</SelectItem>
-                <SelectItem value="Ingreso">Ingreso</SelectItem>
-                <SelectItem value="Transferencia">Transferencia</SelectItem>
+                <SelectItem value="Gastos">Gasto</SelectItem>
+                <SelectItem value="Ingresos">Ingreso</SelectItem>
+                <SelectItem value="Transferencias">Transferencia</SelectItem>
               </SelectContent>
             </Select>
           </div>
