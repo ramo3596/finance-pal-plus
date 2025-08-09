@@ -67,7 +67,35 @@ export function AddTransaction({
       setPaymentMethod(template.payment_method || "");
       setBeneficiary(template.beneficiary || "");
       setNote(template.note || "");
-      setTransactionType(template.type.toLowerCase() as "expense" | "income" | "transfer");
+      
+      // Handle transaction type mapping
+      let mappedType: "expense" | "income" | "transfer";
+      if (template.type === "Gastos") {
+        mappedType = "expense";
+      } else if (template.type === "Ingresos") {
+        mappedType = "income";
+      } else if (template.type === "Transferencias") {
+        mappedType = "transfer";
+      } else {
+        // Fallback for other formats
+        mappedType = template.type.toLowerCase() as "expense" | "income" | "transfer";
+      }
+      setTransactionType(mappedType);
+      
+      // Apply template tags if they exist
+      if (template.tags && template.tags.length > 0) {
+        setSelectedTags(template.tags.map(tag => tag.name));
+      }
+      
+      // Try to find and apply contact based on beneficiary name
+      if (template.beneficiary && contacts.length > 0) {
+        const matchingContact = contacts.find(c => 
+          c.name.toLowerCase() === template.beneficiary?.toLowerCase()
+        );
+        if (matchingContact) {
+          setSelectedContact(matchingContact.id);
+        }
+      }
     }
   };
 
