@@ -64,7 +64,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags }: AddTemp
           Agregar plantilla
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Agregar Nueva Plantilla</DialogTitle>
         </DialogHeader>

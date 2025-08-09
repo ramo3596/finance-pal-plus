@@ -53,7 +53,7 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories, t
           <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Plantilla</DialogTitle>
         </DialogHeader>
