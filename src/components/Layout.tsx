@@ -21,7 +21,7 @@ export function Layout({ children }: LayoutProps) {
       <div className="min-h-screen flex w-full bg-background">
         <FinancialSidebar />
         <main className="flex-1 overflow-hidden">
-          <div className="flex justify-between items-center p-3 md:p-4 border-b">
+          <div className="flex justify-between items-center p-4 border-b">
             <SidebarTrigger />
             <div className="flex items-center gap-2">
               <NotificationDropdown />
@@ -29,7 +29,6 @@ export function Layout({ children }: LayoutProps) {
                 variant="outline"
                 size="sm"
                 onClick={handleSignOut}
-                className="hidden md:inline-flex"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out

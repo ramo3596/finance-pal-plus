@@ -22,7 +22,7 @@ export function RecordsHeader({ filters, onFilterChange }: RecordsHeaderProps) {
         <div className="flex items-center gap-4">
           <Button 
             onClick={() => setShowAddTransaction(true)}
-            className="bg-primary hover:bg-primary/90 hidden md:inline-flex"
+            className="bg-primary hover:bg-primary/90"
           >
             <Plus className="h-4 w-4 mr-2" />
             Nueva Transacción

@@ -13,7 +13,6 @@ import { DebtCard } from "@/components/debts/DebtCard"
 import { AddDebtDialog } from "@/components/debts/AddDebtDialog"
 import { AddPaymentDialog } from "@/components/debts/AddPaymentDialog"
 import { DebtHistoryDialog } from "@/components/debts/DebtHistoryDialog"
-import { FloatingActionButton } from "@/components/shared/FloatingActionButton"
 
 export default function Debts() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -175,8 +174,6 @@ export default function Debts() {
           </>
         )}
       </div>
-
-      <FloatingActionButton label="Nueva Deuda" onClick={() => setIsAddDebtOpen(true)} />
     </Layout>
   )
 }

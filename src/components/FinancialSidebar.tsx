@@ -45,10 +45,10 @@ export function FinancialSidebar() {
 
   return (
     <Sidebar
-      className={open ? "w-64 md:w-72" : "w-12 md:w-14"}
+      className={open ? "w-72" : "w-14"}
       collapsible="icon"
     >
-      <SidebarTrigger className="m-3 md:m-4 self-end" />
+      <SidebarTrigger className="m-4 self-end" />
 
       <SidebarContent className="px-2">
         <SidebarGroup className="space-y-1">
@@ -58,7 +58,7 @@ export function FinancialSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild className="h-12">
                     <NavLink to={item.url} end className={getNavClassName}>
-                      <item.icon className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
+                      <item.icon className="h-5 w-5 shrink-0" />
                       {open && <span className="ml-3">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
