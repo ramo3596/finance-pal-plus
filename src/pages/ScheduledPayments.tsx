@@ -12,6 +12,7 @@ import { EditScheduledPaymentDialog } from '@/components/scheduled-payments/Edit
 import { ScheduledPaymentDetail } from '@/components/scheduled-payments/ScheduledPaymentDetail';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { FloatingActionButton } from '@/components/shared/FloatingActionButton';
 
 const ScheduledPayments = () => {
   const { scheduledPayments, loading, deleteScheduledPayment } = useScheduledPayments();
@@ -267,6 +268,8 @@ const ScheduledPayments = () => {
           payment={selectedPayment}
         />
       </div>
+
+      <FloatingActionButton label="Nuevo Pago" onClick={() => setIsAddDialogOpen(true)} />
     </Layout>
   );
 };

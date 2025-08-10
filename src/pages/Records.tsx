@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { RecordsHeader } from "@/components/records/RecordsHeader";
 import { RecordsFilters } from "@/components/records/RecordsFilters";
@@ -7,7 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTransactions } from "@/hooks/useTransactions";
 import { Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { AddTransaction } from "@/components/AddTransaction";
+import { FloatingActionButton } from "@/components/shared/FloatingActionButton";
 
 export interface RecordsFilters {
   searchTerm: string;
@@ -48,6 +49,7 @@ const Records = () => {
   });
 
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
+  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -113,6 +115,9 @@ const Records = () => {
             />
           </div>
         </div>
+
+        <AddTransaction open={isAddTransactionOpen} onOpenChange={setIsAddTransactionOpen} />
+        <FloatingActionButton label="Nueva Transacción" onClick={() => setIsAddTransactionOpen(true)} />
       </div>
     </Layout>
   );

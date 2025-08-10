@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Dashboard } from "@/components/Dashboard";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader } from "lucide-react";
+import { Loader, Plus } from "lucide-react";
 
 const Index = () => {
   const { user, loading } = useAuth();
