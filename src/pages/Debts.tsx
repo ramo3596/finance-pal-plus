@@ -13,6 +13,8 @@ import { DebtCard } from "@/components/debts/DebtCard"
 import { AddDebtDialog } from "@/components/debts/AddDebtDialog"
 import { AddPaymentDialog } from "@/components/debts/AddPaymentDialog"
 import { DebtHistoryDialog } from "@/components/debts/DebtHistoryDialog"
+import { FloatingActionButton } from "@/components/shared/FloatingActionButton"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 export default function Debts() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -27,6 +29,7 @@ export default function Debts() {
   const { debts, loading } = useDebts()
   const { contacts } = useContacts()
   const { accounts } = useSettings()
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -87,11 +90,13 @@ export default function Debts() {
               />
             </div>
             
-            {/* New Debt Button */}
-            <Button onClick={() => setIsAddDebtOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nueva Deuda
-            </Button>
+            {/* New Debt Button - Hide on mobile */}
+            {!isMobile && (
+              <Button onClick={() => setIsAddDebtOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nueva Deuda
+              </Button>
+            )}
           </div>
         </div>
 
@@ -174,6 +179,10 @@ export default function Debts() {
           </>
         )}
       </div>
+
+      <FloatingActionButton 
+        onClick={() => setIsAddDebtOpen(true)}
+      />
     </Layout>
   )
 }

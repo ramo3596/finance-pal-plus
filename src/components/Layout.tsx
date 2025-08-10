@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { LogOut } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { NotificationDropdown } from "@/components/NotificationDropdown"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface LayoutProps {
   children: React.ReactNode
@@ -11,6 +12,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { signOut } = useAuth();
+  const isMobile = useIsMobile();
 
   const handleSignOut = async () => {
     await signOut();
@@ -25,17 +27,19 @@ export function Layout({ children }: LayoutProps) {
             <SidebarTrigger />
             <div className="flex items-center gap-2">
               <NotificationDropdown />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSignOut}
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
+              {!isMobile && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              )}
             </div>
           </div>
-          <div className="p-4">
+          <div className={isMobile ? "p-2" : "p-4"}>
             {children}
           </div>
         </main>

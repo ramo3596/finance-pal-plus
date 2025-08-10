@@ -4,11 +4,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import { RecordsFilters as RecordsFiltersType } from "@/pages/Records";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface RecordsFiltersProps {
   filters: RecordsFiltersType;
@@ -17,6 +21,8 @@ interface RecordsFiltersProps {
 
 export function RecordsFilters({ filters, onFilterChange }: RecordsFiltersProps) {
   const { accounts, categories, tags, filters: savedFilters } = useSettings();
+  const isMobile = useIsMobile();
+  const [isOpen, setIsOpen] = useState(!isMobile);
 
   const transactionTypes = [
     { id: "expense", label: "Gastos" },
@@ -69,6 +75,55 @@ export function RecordsFilters({ filters, onFilterChange }: RecordsFiltersProps)
       : filters.selectedPaymentMethods.filter(m => m !== methodId);
     onFilterChange({ selectedPaymentMethods: newSelected });
   };
+
+  if (isMobile) {
+    return (
+      <Card className="h-fit">
+        <CardHeader className="pb-4">
+          <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="flex w-full items-center justify-between p-0">
+                <div className="flex items-center gap-2">
+                  <Search className="h-5 w-5" />
+                  <span className="text-lg font-semibold">Búsqueda y Filtros</span>
+                </div>
+                {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="space-y-4 pt-4">
+                {/* Search */}
+                <div className="space-y-2">
+                  <Label htmlFor="search">Buscar</Label>
+                  <Input
+                    id="search"
+                    placeholder="Buscar transacciones..."
+                    value={filters.searchTerm}
+                    onChange={(e) => onFilterChange({ searchTerm: e.target.value })}
+                    className="w-full"
+                  />
+                </div>
+
+                <Separator />
+
+                {/* Filter Section Header */}
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  <span className="font-semibold text-sm uppercase tracking-wide">FILTRAR</span>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </CardHeader>
+        {isOpen && (
+          <CardContent className="space-y-6 pt-0">
+            {/* Rest of filters content */}
+            {/* ... rest of the filter content ... */}
+          </CardContent>
+        )}
+      </Card>
+    );
+  }
 
   return (
     <Card className="h-fit">

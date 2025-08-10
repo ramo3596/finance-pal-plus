@@ -8,6 +8,9 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { FloatingActionButton } from "@/components/shared/FloatingActionButton";
+import { AddTransaction } from "@/components/AddTransaction";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface RecordsFilters {
   searchTerm: string;
@@ -26,6 +29,7 @@ const Records = () => {
   const { user, loading: authLoading } = useAuth();
   const { transactions, loading: transactionsLoading } = useTransactions();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const [filters, setFilters] = useState<RecordsFilters>(() => {
     // Set default date range to last 30 days
@@ -48,6 +52,7 @@ const Records = () => {
   });
 
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
+  const [showAddTransaction, setShowAddTransaction] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -95,8 +100,8 @@ const Records = () => {
           onFilterChange={handleFilterChange}
         />
         
-        <div className="flex gap-6">
-          <div className="w-80 flex-shrink-0">
+        <div className={isMobile ? "space-y-4" : "flex gap-6"}>
+          <div className={isMobile ? "" : "w-80 flex-shrink-0"}>
             <RecordsFilters 
               filters={filters}
               onFilterChange={handleFilterChange}
@@ -114,6 +119,15 @@ const Records = () => {
           </div>
         </div>
       </div>
+
+      <FloatingActionButton 
+        onClick={() => setShowAddTransaction(true)}
+      />
+
+      <AddTransaction
+        open={showAddTransaction}
+        onOpenChange={setShowAddTransaction}
+      />
     </Layout>
   );
 };

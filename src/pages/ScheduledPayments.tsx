@@ -10,6 +10,8 @@ import { useScheduledPayments, ScheduledPayment } from '@/hooks/useScheduledPaym
 import { AddScheduledPaymentDialog } from '@/components/scheduled-payments/AddScheduledPaymentDialog';
 import { EditScheduledPaymentDialog } from '@/components/scheduled-payments/EditScheduledPaymentDialog';
 import { ScheduledPaymentDetail } from '@/components/scheduled-payments/ScheduledPaymentDetail';
+import { FloatingActionButton } from '@/components/shared/FloatingActionButton';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -20,6 +22,7 @@ const ScheduledPayments = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<ScheduledPayment | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const filteredPayments = scheduledPayments.filter(payment => {
     const matchesSearch = payment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -129,10 +132,12 @@ const ScheduledPayments = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold text-foreground">Pagos programados</h1>
-          <Button onClick={() => setIsAddDialogOpen(true)} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Añadir Pago Programado
-          </Button>
+          {!isMobile && (
+            <Button onClick={() => setIsAddDialogOpen(true)} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Añadir Pago Programado
+            </Button>
+          )}
         </div>
 
         {/* Filters and Search */}
@@ -265,6 +270,10 @@ const ScheduledPayments = () => {
           open={isEditDialogOpen} 
           onOpenChange={handleEditDialogClose}
           payment={selectedPayment}
+        />
+
+        <FloatingActionButton 
+          onClick={() => setIsAddDialogOpen(true)}
         />
       </div>
     </Layout>

@@ -23,6 +23,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 const menuItems = [
   { title: "Inicio", url: "/", icon: Home },
@@ -37,6 +38,7 @@ const menuItems = [
 
 export function FinancialSidebar() {
   const { open } = useSidebar()
+  const isMobile = useIsMobile()
 
   const getNavClassName = ({ isActive }: { isActive: boolean }) =>
     isActive 
@@ -45,7 +47,7 @@ export function FinancialSidebar() {
 
   return (
     <Sidebar
-      className={open ? "w-72" : "w-14"}
+      className={isMobile ? (open ? "w-64" : "w-12") : (open ? "w-72" : "w-14")}
       collapsible="icon"
     >
       <SidebarTrigger className="m-4 self-end" />
@@ -56,9 +58,9 @@ export function FinancialSidebar() {
             <SidebarMenu className="space-y-1">
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="h-12">
+                  <SidebarMenuButton asChild className={isMobile ? "h-10" : "h-12"}>
                     <NavLink to={item.url} end className={getNavClassName}>
-                      <item.icon className="h-5 w-5 shrink-0" />
+                      <item.icon className={isMobile ? "h-4 w-4 shrink-0" : "h-5 w-5 shrink-0"} />
                       {open && <span className="ml-3">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
