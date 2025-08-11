@@ -46,7 +46,7 @@ export function TransactionItem({
   return (
     <div className={cn(
       "flex items-center space-x-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors",
-      isMobile ? "w-full mx-0" : ""
+      isMobile ? "w-screen -mx-2" : ""
     )}>
       {showCheckbox && (
         <Checkbox 
