@@ -39,7 +39,7 @@ export function Layout({ children }: LayoutProps) {
               )}
             </div>
           </div>
-          <div className={isMobile ? "p-2 w-full" : "p-4"}>
+          <div className={isMobile ? "w-full" : "p-4"}>
             {children}
           </div>
         </main>
