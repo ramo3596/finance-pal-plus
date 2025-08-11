@@ -50,6 +50,7 @@ import { useNavigate } from "react-router-dom"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { TransactionItem } from "@/components/shared/TransactionItem"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 // Dashboard card types with new widgets
 export type DashboardCardType = 
@@ -73,6 +74,7 @@ interface DateRange {
 
 export function Dashboard() {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false)
   const [isEditTransactionOpen, setIsEditTransactionOpen] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
@@ -180,37 +182,37 @@ export function Dashboard() {
 
   const renderAccountsCard = () => (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-4 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         {accounts.map((account) => (
           <Card 
             key={account.id} 
-            className="p-6 hover:shadow-lg transition-all duration-200 cursor-pointer relative overflow-hidden min-h-[120px] border-none"
+            className="p-3 md:p-6 hover:shadow-lg transition-all duration-200 cursor-pointer relative overflow-hidden min-h-[80px] md:min-h-[120px] border-none"
             style={{
               backgroundColor: account.color || '#6b7280'
             }}
             onClick={() => navigate(`/settings?tab=accounts&edit=${account.id}`)}
           >
-            <div className="text-center space-y-3 relative z-10">
+            <div className="text-center space-y-1 md:space-y-3 relative z-10">
               <div>
-                <p className="font-semibold text-lg truncate text-white drop-shadow-sm">
+                <p className="font-semibold text-sm md:text-lg truncate text-white drop-shadow-sm">
                   {account.name}
                 </p>
               </div>
-              <div className="pt-2">
-                <p className="font-bold text-xl text-white drop-shadow-sm">
+              <div className="pt-1 md:pt-2">
+                <p className="font-bold text-sm md:text-xl text-white drop-shadow-sm">
                   {account.balance >= 0 ? '+' : ''}${account.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-sm text-white/90 drop-shadow-sm">USD</p>
+                <p className="text-xs md:text-sm text-white/90 drop-shadow-sm">USD</p>
               </div>
             </div>
           </Card>
         ))}
-        <Card className="p-6 border-dashed border-2 hover:border-primary/50 transition-colors cursor-pointer min-h-[120px]" onClick={() => navigate('/settings?tab=accounts&add=true')}>
-          <div className="text-center space-y-3 h-full flex flex-col justify-center">
-            <div className="mx-auto p-3 rounded-lg bg-muted w-fit">
-              <Plus className="w-6 h-6 text-muted-foreground" />
+        <Card className="p-3 md:p-6 border-dashed border-2 hover:border-primary/50 transition-colors cursor-pointer min-h-[80px] md:min-h-[120px]" onClick={() => navigate('/settings?tab=accounts&add=true')}>
+          <div className="text-center space-y-1 md:space-y-3 h-full flex flex-col justify-center">
+            <div className="mx-auto p-2 md:p-3 rounded-lg bg-muted w-fit">
+              <Plus className="w-4 h-4 md:w-6 md:h-6 text-muted-foreground" />
             </div>
-            <p className="text-base text-muted-foreground">Agregar Cuenta</p>
+            <p className="text-sm md:text-base text-muted-foreground">Agregar Cuenta</p>
           </div>
         </Card>
       </div>
@@ -996,7 +998,7 @@ export function Dashboard() {
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={sortedCards.map(card => card.id)} strategy={horizontalListSortingStrategy}>
-          <div className="space-y-6">
+          <div className={cn("space-y-6", isMobile ? "w-full" : "")}>
             {sortedCards.map((card) => {
               switch (card.type) {
                 case 'overview':

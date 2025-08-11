@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GripVertical } from 'lucide-react';
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DashboardCardProps {
   id: string;
@@ -12,6 +13,7 @@ interface DashboardCardProps {
 }
 
 export function DashboardCard({ id, title, children, className = "" }: DashboardCardProps) {
+  const isMobile = useIsMobile();
   const {
     attributes,
     listeners,
@@ -30,7 +32,7 @@ export function DashboardCard({ id, title, children, className = "" }: Dashboard
     <Card 
       ref={setNodeRef} 
       style={style} 
-      className={`${className} ${isDragging ? 'opacity-50' : ''}`}
+      className={`${className} ${isDragging ? 'opacity-50' : ''} ${isMobile ? 'mx-0' : ''}`}
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="flex items-center gap-2">

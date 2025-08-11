@@ -5,6 +5,7 @@ import { AddTransaction } from "@/components/AddTransaction";
 import { useState } from "react";
 import { RecordsFilters } from "@/pages/Records";
 import { EnhancedDateSelector } from "./EnhancedDateSelector";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface RecordsHeaderProps {
   filters: RecordsFilters;
@@ -13,6 +14,7 @@ interface RecordsHeaderProps {
 
 export function RecordsHeader({ filters, onFilterChange }: RecordsHeaderProps) {
   const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const isMobile = useIsMobile();
 
   return (
     <>
@@ -20,13 +22,15 @@ export function RecordsHeader({ filters, onFilterChange }: RecordsHeaderProps) {
         <h1 className="text-3xl font-bold">Registros</h1>
         
         <div className="flex items-center gap-4">
-          <Button 
-            onClick={() => setShowAddTransaction(true)}
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Transacción
-          </Button>
+          {!isMobile && (
+            <Button 
+              onClick={() => setShowAddTransaction(true)}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Transacción
+            </Button>
+          )}
           
           {/* Enhanced Date Range Filter */}
           <EnhancedDateSelector

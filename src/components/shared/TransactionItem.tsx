@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -29,6 +30,7 @@ export function TransactionItem({
   onDelete
 }: TransactionItemProps) {
   const { categories, accounts, tags } = useSettings();
+  const isMobile = useIsMobile();
 
   const getCategoryData = (categoryId: string) => {
     return categories.find(cat => cat.id === categoryId);
@@ -42,7 +44,10 @@ export function TransactionItem({
   const accountName = getAccountName(transaction.account_id);
 
   return (
-    <div className="flex items-center space-x-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+    <div className={cn(
+      "flex items-center space-x-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors",
+      isMobile ? "w-full mx-0" : ""
+    )}>
       {showCheckbox && (
         <Checkbox 
           checked={isSelected}
