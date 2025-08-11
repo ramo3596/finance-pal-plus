@@ -32,7 +32,7 @@ export function DashboardCard({ id, title, children, className = "" }: Dashboard
     <Card 
       ref={setNodeRef} 
       style={style} 
-      className={`${className} ${isDragging ? 'opacity-50' : ''} ${isMobile ? 'mx-0' : ''}`}
+      className={`${className} ${isDragging ? 'opacity-50' : ''} ${isMobile ? 'w-screen -mx-2' : ''}`}
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="flex items-center gap-2">

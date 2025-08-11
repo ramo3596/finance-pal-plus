@@ -998,7 +998,7 @@ export function Dashboard() {
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={sortedCards.map(card => card.id)} strategy={horizontalListSortingStrategy}>
-          <div className={cn("space-y-6", isMobile ? "w-full" : "")}>
+          <div className={cn("space-y-6", isMobile ? "w-screen -mx-2" : "")}>
             {sortedCards.map((card) => {
               switch (card.type) {
                 case 'overview':
