@@ -343,22 +343,25 @@ export const useTransactions = () => {
     }
   };
 
-  const updateCardPosition = (cardId: string, newPosition: number) => {
+  const updateCardPosition = (cardId: string, newIndex: number) => {
+    let updatedCards: DashboardCard[] = [];
     setCards(prev => {
-      const card = prev.find(c => c.id === cardId);
-      if (!card) return prev;
+      const oldIndex = prev.findIndex(c => c.id === cardId);
+      if (oldIndex === -1) return prev;
       
-      const otherCards = prev.filter(c => c.id !== cardId);
-      const updatedCards = otherCards.map(c => {
-        if (c.position >= newPosition) {
-          return { ...c, position: c.position + 1 };
-        }
-        return c;
-      });
+      // Usar arrayMove para reordenar correctamente
+      const reorderedCards = [...prev];
+      const [movedCard] = reorderedCards.splice(oldIndex, 1);
+      reorderedCards.splice(newIndex, 0, movedCard);
       
-      return [...updatedCards, { ...card, position: newPosition }]
-        .sort((a, b) => a.position - b.position);
+      // Actualizar las posiciones basándose en el nuevo orden
+      updatedCards = reorderedCards.map((card, index) => ({
+        ...card,
+        position: index
+      }));
+      return updatedCards;
     });
+    return updatedCards;
   };
 
   const toggleCardVisibility = (cardId: string) => {
@@ -367,7 +370,7 @@ export const useTransactions = () => {
     ));
   };
 
-  const saveCardPreferences = async () => {
+  const saveCardPreferences = async (cardsToSave?: DashboardCard[]) => {
     if (!user) return;
     
     try {
@@ -377,8 +380,11 @@ export const useTransactions = () => {
         .delete()
         .eq('user_id', user.id);
 
+      // Use provided cards or current state
+      const cardsData = cardsToSave || cards;
+      
       // Insert new preferences
-      const preferences = cards.map(card => ({
+      const preferences = cardsData.map(card => ({
         user_id: user.id,
         card_id: card.id,
         card_type: card.type,

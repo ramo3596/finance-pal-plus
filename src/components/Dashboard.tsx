@@ -116,7 +116,7 @@ export function Dashboard() {
   const netFlow = totalIncome - totalExpenses
   const recentTransactions = filteredTransactions.slice(0, 5)
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
     if (over && active.id !== over.id) {
@@ -124,7 +124,9 @@ export function Dashboard() {
       const newIndex = cards.findIndex((card) => card.id === over.id)
       
       if (oldIndex !== -1 && newIndex !== -1) {
-        updateCardPosition(active.id as string, newIndex)
+        const updatedCards = updateCardPosition(active.id as string, newIndex)
+        // Guardar automáticamente usando las tarjetas actualizadas
+        await saveCardPreferences(updatedCards)
       }
     }
   }
