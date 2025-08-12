@@ -23,6 +23,7 @@ import {
 import { AddTransaction } from "./AddTransaction"
 import { EditTransaction } from "./EditTransaction"
 import { DashboardCard } from "./DashboardCard"
+import { AddAccountDialog } from "./settings/AddAccountDialog"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useSettings } from "@/hooks/useSettings"
 import { useScheduledPayments } from "@/hooks/useScheduledPayments"
@@ -79,6 +80,7 @@ export function Dashboard() {
   const [isEditTransactionOpen, setIsEditTransactionOpen] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
   const [isCardManagerOpen, setIsCardManagerOpen] = useState(false)
+  const [isAddAccountOpen, setIsAddAccountOpen] = useState(false)
   
   // Date range filter state
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -87,7 +89,7 @@ export function Dashboard() {
   })
   
   const { transactions, cards, updateCardPosition, toggleCardVisibility, saveCardPreferences } = useTransactions()
-  const { accounts, categories, tags } = useSettings()
+  const { accounts, categories, tags, createAccount } = useSettings()
   const { scheduledPayments } = useScheduledPayments()
   
   // Sensors for drag and drop
@@ -211,7 +213,7 @@ export function Dashboard() {
             </div>
           </Card>
         ))}
-        <Card className={cn("border-dashed border-2 hover:border-primary/50 transition-colors cursor-pointer", isMobile ? "p-2 min-h-[60px] rounded-lg" : "p-3 md:p-6 min-h-[80px] md:min-h-[120px] rounded-lg")} onClick={() => navigate('/settings?tab=accounts&add=true')}>
+        <Card className={cn("border-dashed border-2 hover:border-primary/50 transition-colors cursor-pointer", isMobile ? "p-2 min-h-[60px] rounded-lg" : "p-3 md:p-6 min-h-[80px] md:min-h-[120px] rounded-lg")} onClick={() => setIsAddAccountOpen(true)}>
           <div className={cn("text-center h-full flex flex-col justify-center", isMobile ? "space-y-0.5" : "space-y-1 md:space-y-3")}>
             <div className={cn("mx-auto rounded-lg bg-muted w-fit", isMobile ? "p-1" : "p-2 md:p-3")}>
               <Plus className={cn("text-muted-foreground", isMobile ? "w-3 h-3" : "w-4 h-4 md:w-6 md:h-6")} />
@@ -1096,6 +1098,16 @@ export function Dashboard() {
         open={isEditTransactionOpen} 
         onOpenChange={setIsEditTransactionOpen}
         transaction={selectedTransaction}
+      />
+
+      {/* Add Account Modal */}
+      <AddAccountDialog 
+        open={isAddAccountOpen}
+        onOpenChange={setIsAddAccountOpen}
+        onAdd={async (accountData) => {
+          await createAccount(accountData)
+          setIsAddAccountOpen(false)
+        }}
       />
     </div>
   )

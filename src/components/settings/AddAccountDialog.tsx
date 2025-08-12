@@ -45,12 +45,6 @@ export function AddAccountDialog({ onAdd, open: externalOpen, onOpenChange }: Ad
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Agregar cuenta
-        </Button>
-      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Agregar Nueva Cuenta</DialogTitle>
