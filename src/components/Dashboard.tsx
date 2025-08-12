@@ -134,7 +134,7 @@ export function Dashboard() {
   const sortedCards = [...cards].sort((a, b) => a.position - b.position).filter(card => card.visible)
 
   const renderOverviewCard = () => (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 w-full">
       <Card className="bg-gradient-to-br from-primary/20 to-primary/5 border-primary/20">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">Balance Total</CardTitle>
@@ -184,7 +184,7 @@ export function Dashboard() {
 
   const renderAccountsCard = () => (
     <div className="space-y-4">
-      <div className="grid grid-cols-4 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 w-full">
         {accounts.map((account) => (
           <Card 
             key={account.id} 
@@ -364,7 +364,7 @@ export function Dashboard() {
 
   const renderCashFlowCard = () => (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
         <Card className="bg-success/10 border-success/20">
           <CardContent className="p-4">
             <div className="text-center">
@@ -880,7 +880,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-background min-h-screen">
+    <div className={cn("space-y-6 bg-background min-h-screen", isMobile ? "py-6" : "p-6")}>
       {/* Header with date filter */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
@@ -1000,7 +1000,7 @@ export function Dashboard() {
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={sortedCards.map(card => card.id)} strategy={horizontalListSortingStrategy}>
-          <div className={cn("space-y-6", isMobile ? "w-screen" : "")}>
+          <div className={cn("space-y-6", isMobile ? "w-full" : "")}>
             {sortedCards.map((card) => {
               switch (card.type) {
                 case 'overview':
