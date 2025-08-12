@@ -184,37 +184,39 @@ export function Dashboard() {
 
   const renderAccountsCard = () => (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 w-full">
+      <div className={cn("grid w-full", isMobile ? "grid-cols-3 gap-1" : "grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4")}>
         {accounts.map((account) => (
           <Card 
             key={account.id} 
-            className="p-3 md:p-6 hover:shadow-lg transition-all duration-200 cursor-pointer relative overflow-hidden min-h-[80px] md:min-h-[120px] border-none"
+            className={cn("hover:shadow-lg transition-all duration-200 cursor-pointer relative overflow-hidden border-none", isMobile ? "p-2 min-h-[60px] rounded-lg" : "p-3 md:p-6 min-h-[80px] md:min-h-[120px] rounded-lg")}
             style={{
               backgroundColor: account.color || '#6b7280'
             }}
             onClick={() => navigate(`/settings?tab=accounts&edit=${account.id}`)}
           >
-            <div className="text-center space-y-1 md:space-y-3 relative z-10">
+            <div className={cn("text-center relative z-10", isMobile ? "space-y-0.5 h-full flex flex-col justify-center" : "space-y-1 md:space-y-3")}>
               <div>
-                <p className="font-semibold text-sm md:text-lg truncate text-white drop-shadow-sm">
+                <p className={cn("font-semibold truncate text-white drop-shadow-sm", isMobile ? "text-xs" : "text-sm md:text-lg")}>
                   {account.name}
                 </p>
               </div>
-              <div className="pt-1 md:pt-2">
-                <p className="font-bold text-sm md:text-xl text-white drop-shadow-sm">
+              <div className={isMobile ? "pt-0.5" : "pt-1 md:pt-2"}>
+                <p className={cn("font-bold text-white drop-shadow-sm", isMobile ? "text-xs" : "text-sm md:text-xl")}>
                   {account.balance >= 0 ? '+' : ''}${account.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-xs md:text-sm text-white/90 drop-shadow-sm">USD</p>
+                {!isMobile && (
+                  <p className="text-xs md:text-sm text-white/90 drop-shadow-sm">USD</p>
+                )}
               </div>
             </div>
           </Card>
         ))}
-        <Card className="p-3 md:p-6 border-dashed border-2 hover:border-primary/50 transition-colors cursor-pointer min-h-[80px] md:min-h-[120px]" onClick={() => navigate('/settings?tab=accounts&add=true')}>
-          <div className="text-center space-y-1 md:space-y-3 h-full flex flex-col justify-center">
-            <div className="mx-auto p-2 md:p-3 rounded-lg bg-muted w-fit">
-              <Plus className="w-4 h-4 md:w-6 md:h-6 text-muted-foreground" />
+        <Card className={cn("border-dashed border-2 hover:border-primary/50 transition-colors cursor-pointer", isMobile ? "p-2 min-h-[60px] rounded-lg" : "p-3 md:p-6 min-h-[80px] md:min-h-[120px] rounded-lg")} onClick={() => navigate('/settings?tab=accounts&add=true')}>
+          <div className={cn("text-center h-full flex flex-col justify-center", isMobile ? "space-y-0.5" : "space-y-1 md:space-y-3")}>
+            <div className={cn("mx-auto rounded-lg bg-muted w-fit", isMobile ? "p-1" : "p-2 md:p-3")}>
+              <Plus className={cn("text-muted-foreground", isMobile ? "w-3 h-3" : "w-4 h-4 md:w-6 md:h-6")} />
             </div>
-            <p className="text-sm md:text-base text-muted-foreground">Agregar Cuenta</p>
+            <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm md:text-base")}>Agregar Cuenta</p>
           </div>
         </Card>
       </div>
