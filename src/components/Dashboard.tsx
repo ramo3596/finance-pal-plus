@@ -26,6 +26,7 @@ import { DashboardCard } from "./DashboardCard"
 import { AddAccountDialog } from "./settings/AddAccountDialog"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useSettings } from "@/hooks/useSettings"
+import { AccountManagerDialog } from "./settings/AccountManagerDialog"
 import { useScheduledPayments } from "@/hooks/useScheduledPayments"
 import {
   DndContext,
@@ -81,6 +82,13 @@ export function Dashboard() {
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
   const [isCardManagerOpen, setIsCardManagerOpen] = useState(false)
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false)
+  const [isAccountManagerOpen, setIsAccountManagerOpen] = useState(false)
+  const [editingAccount, setEditingAccount] = useState<{
+    id: string;
+    name: string;
+    balance: number;
+    color?: string;
+  } | null>(null)
   
   // Date range filter state
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -89,7 +97,7 @@ export function Dashboard() {
   })
   
   const { transactions, cards, updateCardPosition, toggleCardVisibility, saveCardPreferences } = useTransactions()
-  const { accounts, categories, tags, createAccount } = useSettings()
+  const { accounts, categories, tags, createAccount, updateAccount, deleteAccount, reorderAccounts } = useSettings()
   const { scheduledPayments } = useScheduledPayments()
   
   // Sensors for drag and drop
@@ -117,6 +125,18 @@ export function Dashboard() {
     .reduce((sum, t) => sum + Math.abs(t.amount), 0))
   const netFlow = totalIncome - totalExpenses
   const recentTransactions = filteredTransactions.slice(0, 5)
+
+  const handleEditAccount = (account: { id: string; name: string; balance: number; color?: string }) => {
+    setEditingAccount(account);
+    setIsAccountManagerOpen(false);
+    navigate(`/settings?tab=accounts&edit=${account.id}`);
+  };
+  
+  const handleDeleteAccount = async (accountId: string) => {
+    if (confirm('¿Estás seguro de que quieres eliminar esta cuenta?')) {
+      await deleteAccount(accountId);
+    }
+  };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
@@ -987,13 +1007,15 @@ export function Dashboard() {
           </Dialog>
 
           {/* Add Transaction Button */}
-          <Button 
-            className="bg-primary hover:bg-primary/90"
-            onClick={() => setIsAddTransactionOpen(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nueva Transacción
-          </Button>
+          {!isMobile && (
+            <Button 
+              className="bg-primary hover:bg-primary/90"
+              onClick={() => setIsAddTransactionOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva Transacción
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1015,7 +1037,13 @@ export function Dashboard() {
                   )
                 case 'accounts':
                   return (
-                    <DashboardCard key={card.id} id={card.id} title={card.title}>
+                    <DashboardCard 
+                      key={card.id} 
+                      id={card.id} 
+                      title={card.title}
+                      showEditButton={true}
+                      onEditClick={() => setIsAccountManagerOpen(true)}
+                    >
                       {renderAccountsCard()}
                     </DashboardCard>
                   )
@@ -1108,6 +1136,16 @@ export function Dashboard() {
           await createAccount(accountData)
           setIsAddAccountOpen(false)
         }}
+      />
+
+      {/* Account Manager Modal */}
+      <AccountManagerDialog
+        open={isAccountManagerOpen}
+        onOpenChange={setIsAccountManagerOpen}
+        accounts={accounts}
+        onReorderAccounts={reorderAccounts}
+        onEditAccount={handleEditAccount}
+        onDeleteAccount={handleDeleteAccount}
       />
     </div>
   )

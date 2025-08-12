@@ -2,7 +2,8 @@ import { ReactNode } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GripVertical } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { GripVertical, Settings } from 'lucide-react';
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DashboardCardProps {
@@ -10,9 +11,18 @@ interface DashboardCardProps {
   title: string;
   children: ReactNode;
   className?: string;
+  showEditButton?: boolean;
+  onEditClick?: () => void;
 }
 
-export function DashboardCard({ id, title, children, className = "" }: DashboardCardProps) {
+export function DashboardCard({ 
+  id, 
+  title, 
+  children, 
+  className = "",
+  showEditButton = false,
+  onEditClick
+}: DashboardCardProps) {
   const isMobile = useIsMobile();
   const {
     attributes,
@@ -45,6 +55,15 @@ export function DashboardCard({ id, title, children, className = "" }: Dashboard
           </div>
           <span>{title}</span>
         </CardTitle>
+        {showEditButton && isMobile && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onEditClick}
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {children}
