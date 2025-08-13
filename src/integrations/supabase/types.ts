@@ -528,7 +528,7 @@ export type Database = {
         Insert: {
           category_id: string
           created_at?: string | null
-          icon: string
+          icon?: string
           id?: string
           name: string
         }
