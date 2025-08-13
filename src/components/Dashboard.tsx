@@ -310,12 +310,8 @@ export function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="relative z-10 h-full flex items-center space-x-2">
-                <div className="flex-shrink-0 text-lg md:text-xl">
-                  {account.icon}
-                </div>
-                
-                <div className="flex-1 min-w-0">
+              <div className="relative z-10 h-full flex items-center justify-center">
+                <div className="text-center">
                   <div>
                     <p className="font-semibold truncate text-white drop-shadow-sm text-sm md:text-base">
                       {account.name}
