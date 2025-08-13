@@ -64,7 +64,22 @@ export function AddTransaction({
       setAmount(template.amount.toString());
       setSelectedAccount(template.account_id || "");
       setSelectedCategory(template.category_id || "");
-      setPaymentMethod(template.payment_method || "");
+      
+      // Map payment method from template to Select values
+      const paymentMethodMapping: { [key: string]: string } = {
+        "Dinero en efectivo": "cash",
+        "Tarjeta de débito": "debit",
+        "Tarjeta de crédito": "credit",
+        "Transferencia bancaria": "transfer",
+        "Cupón": "coupon",
+        "Pago por móvil": "mobile",
+        "Pago por web": "web"
+      };
+      
+      const mappedPaymentMethod = template.payment_method ? 
+        paymentMethodMapping[template.payment_method] || template.payment_method : "";
+      setPaymentMethod(mappedPaymentMethod);
+      
       setBeneficiary(template.beneficiary || "");
       setNote(template.note || "");
       
@@ -87,13 +102,19 @@ export function AddTransaction({
         setSelectedTags(template.tags.map(tag => tag.name));
       }
       
+      // Enhanced contact synchronization
+      // First, clear any existing contact selection
+      setSelectedContact("");
+      
       // Try to find and apply contact based on beneficiary name
       if (template.beneficiary && contacts.length > 0) {
         const matchingContact = contacts.find(c => 
-          c.name.toLowerCase() === template.beneficiary?.toLowerCase()
+          c.name.toLowerCase().trim() === template.beneficiary?.toLowerCase().trim()
         );
         if (matchingContact) {
           setSelectedContact(matchingContact.id);
+          // Also update the beneficiary field to ensure consistency
+          setBeneficiary(matchingContact.name);
         }
       }
     }
