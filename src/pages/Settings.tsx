@@ -708,7 +708,70 @@ export default function Settings() {
           <p className="text-muted-foreground">Gestiona todas las configuraciones de tu aplicación financiera</p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        {/* Mobile Navigation - Vertical List */}
+        <div className="block md:hidden mb-6">
+          <div className="space-y-2">
+            <Button
+              variant={activeTab === "profile" ? "default" : "outline"}
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => setActiveTab("profile")}
+            >
+              <User className="h-5 w-5" />
+              <span>Perfil</span>
+            </Button>
+            <Button
+              variant={activeTab === "accounts" ? "default" : "outline"}
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => setActiveTab("accounts")}
+            >
+              <CreditCard className="h-5 w-5" />
+              <span>Cuentas</span>
+            </Button>
+            <Button
+              variant={activeTab === "categories" ? "default" : "outline"}
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => setActiveTab("categories")}
+            >
+              <FolderOpen className="h-5 w-5" />
+              <span>Categorías</span>
+            </Button>
+            <Button
+              variant={activeTab === "tags" ? "default" : "outline"}
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => setActiveTab("tags")}
+            >
+              <Tag className="h-5 w-5" />
+              <span>Etiquetas</span>
+            </Button>
+            <Button
+              variant={activeTab === "templates" ? "default" : "outline"}
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => setActiveTab("templates")}
+            >
+              <FileText className="h-5 w-5" />
+              <span>Plantillas</span>
+            </Button>
+            <Button
+              variant={activeTab === "filters" ? "default" : "outline"}
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => setActiveTab("filters")}
+            >
+              <Filter className="h-5 w-5" />
+              <span>Filtros</span>
+            </Button>
+            <Button
+              variant={activeTab === "notifications" ? "default" : "outline"}
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => setActiveTab("notifications")}
+            >
+              <Bell className="h-5 w-5" />
+              <span>Notificaciones</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Desktop Navigation - Horizontal Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full hidden md:block">
           <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7 mb-6">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
@@ -740,34 +803,48 @@ export default function Settings() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="profile">
-            <ProfileSection />
-          </TabsContent>
+          {/* Desktop Tabs Content */}
+          <div className="hidden md:block">
+            <TabsContent value="profile">
+              <ProfileSection />
+            </TabsContent>
 
-          <TabsContent value="accounts">
-            <AccountsSection />
-          </TabsContent>
+            <TabsContent value="accounts">
+              <AccountsSection />
+            </TabsContent>
 
-          <TabsContent value="categories">
-            <CategoriesSection />
-          </TabsContent>
+            <TabsContent value="categories">
+              <CategoriesSection />
+            </TabsContent>
 
-          <TabsContent value="tags">
-            <TagsSection />
-          </TabsContent>
+            <TabsContent value="tags">
+              <TagsSection />
+            </TabsContent>
 
-          <TabsContent value="templates">
-            <TemplatesSection />
-          </TabsContent>
+            <TabsContent value="templates">
+              <TemplatesSection />
+            </TabsContent>
 
-          <TabsContent value="filters">
-            <FiltersSection />
-          </TabsContent>
+            <TabsContent value="filters">
+              <FiltersSection />
+            </TabsContent>
 
-          <TabsContent value="notifications">
-            <NotificationsSection />
-          </TabsContent>
+            <TabsContent value="notifications">
+              <NotificationsSection />
+            </TabsContent>
+          </div>
         </Tabs>
+
+        {/* Mobile Content */}
+        <div className="block md:hidden">
+          {activeTab === "profile" && <ProfileSection />}
+          {activeTab === "accounts" && <AccountsSection />}
+          {activeTab === "categories" && <CategoriesSection />}
+          {activeTab === "tags" && <TagsSection />}
+          {activeTab === "templates" && <TemplatesSection />}
+          {activeTab === "filters" && <FiltersSection />}
+          {activeTab === "notifications" && <NotificationsSection />}
+        </div>
       </div>
     </Layout>
   );
