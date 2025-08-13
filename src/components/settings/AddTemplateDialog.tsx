@@ -138,10 +138,12 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags }: AddTemp
           <div>
             <Label htmlFor="beneficiary">Beneficiario</Label>
             <Select 
-              value={formData.beneficiary} 
+              value={contacts.find(c => c.name === formData.beneficiary)?.id || ""} 
               onValueChange={(value) => {
                 const contact = contacts.find(c => c.id === value);
-                setFormData({ ...formData, beneficiary: contact?.name || value });
+                if (contact) {
+                  setFormData({ ...formData, beneficiary: contact.name });
+                }
               }}
             >
               <SelectTrigger>
