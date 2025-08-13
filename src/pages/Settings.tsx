@@ -558,7 +558,7 @@ export default function Settings() {
                             className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
                             style={{ backgroundColor: selectedCategory.color }}
                           >
-                            {selectedCategory.icon}
+                            {subcategory.icon || '📦'}
                           </div>
                           <span className="font-medium">{subcategory.name}</span>
                         </div>
