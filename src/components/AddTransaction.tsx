@@ -103,8 +103,9 @@ export function AddTransaction({
       }
       
       // Enhanced contact synchronization
-      // First, clear any existing contact selection
+      // First, clear any existing contact selection and beneficiary field
       setSelectedContact("");
+      setBeneficiary("");
       
       // Try to find and apply contact based on beneficiary name
       if (template.beneficiary && contacts.length > 0) {
@@ -113,8 +114,10 @@ export function AddTransaction({
         );
         if (matchingContact) {
           setSelectedContact(matchingContact.id);
-          // Also update the beneficiary field to ensure consistency
-          setBeneficiary(matchingContact.name);
+          // Keep beneficiary field empty - it's only for new contacts
+        } else {
+          // If no matching contact found, put the name in the manual field
+          setBeneficiary(template.beneficiary);
         }
       }
     }
