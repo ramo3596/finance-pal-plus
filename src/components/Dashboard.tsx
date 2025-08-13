@@ -96,6 +96,9 @@ export function Dashboard() {
     to: new Date()
   })
   
+  // Account selection filter state
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
+  
   const { transactions, cards, updateCardPosition, toggleCardVisibility, saveCardPreferences } = useTransactions()
   const { accounts, categories, tags, createAccount, updateAccount, deleteAccount, reorderAccounts } = useSettings()
   const { scheduledPayments } = useScheduledPayments()
@@ -108,15 +111,44 @@ export function Dashboard() {
     })
   )
 
-  // Filter transactions by date range
+  // Account selection functions
+  const handleAccountSelect = (accountId: string) => {
+    setSelectedAccountIds(prev => {
+      if (prev.includes(accountId)) {
+        return prev.filter(id => id !== accountId)
+      } else {
+        return [...prev, accountId]
+      }
+    })
+  }
+  
+  const handleSelectAllAccounts = () => {
+    setSelectedAccountIds(accounts.map(account => account.id))
+  }
+  
+  const handleClearAccountSelection = () => {
+    setSelectedAccountIds([])
+  }
+  
+  // Filter transactions by date range and selected accounts
   const filteredTransactions = transactions.filter(transaction => {
     const transactionDate = new Date(transaction.transaction_date)
-    return (isAfter(transactionDate, dateRange.from) || isEqual(transactionDate, dateRange.from)) &&
-           (isBefore(transactionDate, dateRange.to) || isEqual(transactionDate, dateRange.to))
+    const dateInRange = (isAfter(transactionDate, dateRange.from) || isEqual(transactionDate, dateRange.from)) &&
+                       (isBefore(transactionDate, dateRange.to) || isEqual(transactionDate, dateRange.to))
+    
+    // If no accounts are selected, show all transactions
+    if (selectedAccountIds.length === 0) {
+      return dateInRange
+    }
+    
+    // Filter by selected accounts
+    return dateInRange && selectedAccountIds.includes(transaction.account_id)
   })
 
   // Calculate metrics based on filtered data
-  const totalBalance = accounts.reduce((sum, account) => sum + account.balance, 0)
+  const totalBalance = selectedAccountIds.length > 0 
+    ? accounts.filter(account => selectedAccountIds.includes(account.id)).reduce((sum, account) => sum + account.balance, 0)
+    : accounts.reduce((sum, account) => sum + account.balance, 0)
   const totalIncome = filteredTransactions
     .filter(t => t.amount > 0 && t.type !== 'transfer')
     .reduce((sum, t) => sum + t.amount, 0)
@@ -206,16 +238,64 @@ export function Dashboard() {
 
   const renderAccountsCard = () => (
     <div className="space-y-4">
+      {/* Account selection controls */}
+      {selectedAccountIds.length > 0 && (
+        <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium">
+              {selectedAccountIds.length} cuenta{selectedAccountIds.length !== 1 ? 's' : ''} seleccionada{selectedAccountIds.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            {selectedAccountIds.length < accounts.length && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSelectAllAccounts}
+                className="text-xs"
+              >
+                Seleccionar todas
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearAccountSelection}
+              className="text-xs"
+            >
+              Limpiar selección
+            </Button>
+          </div>
+        </div>
+      )}
+      
       <div className={cn("grid w-full", isMobile ? "grid-cols-3 gap-1" : "grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-3")}>
-        {accounts.map((account) => (
-          <Card 
-            key={account.id} 
-            className={cn("hover:shadow-lg transition-all duration-200 cursor-pointer relative overflow-hidden border-none", isMobile ? "p-1.5 min-h-[50px] rounded-lg" : "p-1.5 md:p-2 min-h-[50px] md:min-h-[65px] rounded-lg")}
-            style={{
-              backgroundColor: account.color || '#6b7280'
-            }}
-            onClick={() => navigate(`/settings?tab=accounts&edit=${account.id}`)}
-          >
+        {accounts.map((account) => {
+          const isSelected = selectedAccountIds.includes(account.id)
+          return (
+            <Card 
+              key={account.id} 
+              className={cn(
+                "hover:shadow-lg transition-all duration-200 cursor-pointer relative overflow-hidden",
+                isMobile ? "p-1.5 min-h-[50px] rounded-lg" : "p-1.5 md:p-2 min-h-[50px] md:min-h-[65px] rounded-lg",
+                isSelected ? "ring-2 ring-primary ring-offset-2" : "border-none"
+              )}
+              style={{
+                backgroundColor: account.color || '#6b7280',
+                opacity: selectedAccountIds.length > 0 && !isSelected ? 0.6 : 1
+              }}
+              onClick={() => handleAccountSelect(account.id)}>
+            {/* Selection indicator */}
+            {isSelected && (
+              <div className="absolute top-1 right-1 z-20">
+                <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+                  <svg className="w-2.5 h-2.5 text-primary-foreground" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            )}
+            
             {isMobile ? (
               <div className="text-center relative z-10 space-y-0.5 h-full flex flex-col justify-center">
                 <div>
@@ -250,7 +330,8 @@ export function Dashboard() {
               </div>
             )}
           </Card>
-        ))}
+          )
+        })}
         <Card className={cn("border-dashed border-2 hover:border-primary/50 transition-colors cursor-pointer", isMobile ? "p-1.5 min-h-[50px] rounded-lg" : "p-1.5 md:p-2 min-h-[50px] md:min-h-[65px] rounded-lg")} onClick={() => setIsAddAccountOpen(true)}>
           <div className={cn("text-center h-full flex flex-col justify-center", isMobile ? "space-y-0.5" : "space-y-1 md:space-y-1.5")}>
             <div className={cn("mx-auto rounded-lg bg-muted w-fit", isMobile ? "p-1" : "p-1 md:p-1.5")}>
@@ -709,7 +790,11 @@ export function Dashboard() {
 
   // Nueva tarjeta: Saldo Por Cuenta
   const renderBalancePerAccountCard = () => {
-    const accountsWithTransactions = accounts.map(account => {
+    const accountsToShow = selectedAccountIds.length > 0 
+      ? accounts.filter(account => selectedAccountIds.includes(account.id))
+      : accounts
+      
+    const accountsWithTransactions = accountsToShow.map(account => {
       const accountTransactions = filteredTransactions.filter(t => t.account_id === account.id)
       const periodBalance = accountTransactions.reduce((sum, t) => sum + t.amount, 0)
       
