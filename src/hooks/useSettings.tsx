@@ -30,6 +30,7 @@ export interface Subcategory {
   id: string;
   name: string;
   category_id: string;
+  icon: string;
   created_at?: string;
 }
 
@@ -152,8 +153,17 @@ export const useSettings = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
+      // Process categories to ensure subcategories have icons
+      const processedCategories = categoriesData?.map(category => ({
+        ...category,
+        subcategories: category.subcategories?.map((subcategory: any) => ({
+          ...subcategory,
+          icon: subcategory.icon || '📦' // Default icon if not present
+        })) || []
+      })) || [];
+
       setAccounts(accountsData || []);
-      setCategories(categoriesData || []);
+      setCategories(processedCategories);
       setTags(tagsData || []);
       setTemplates(processedTemplates);
       setFilters(filtersData || []);

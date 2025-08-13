@@ -439,42 +439,157 @@ export default function Settings() {
     );
   };
 
-  const CategoriesSection = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <FolderOpen className="h-5 w-5" />
-              Administrar Categorías
-            </span>
-            <AddCategoryDialog onAdd={createCategory} />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {categories.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No hay categorías configuradas. Agrega tu primera categoría.
-            </p>
-          ) : (
-            <DraggableCategoryList
-              categories={categories}
-              onUpdate={updateCategory}
-              onDelete={handleDeleteCategory}
-              onReorder={handleReorderCategories}
-              onCreateSubcategory={createSubcategory}
-              onUpdateSubcategory={updateSubcategory}
-              onDeleteSubcategory={async (id) => {
-                if (confirm("¿Estás seguro de que quieres eliminar esta subcategoría?")) {
-                  await deleteSubcategory(id);
-                }
-              }}
-            />
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+  const CategoriesSection = () => {
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+    const selectedCategory = categories.find(cat => cat.id === selectedCategoryId);
+    const subcategories = selectedCategory?.subcategories || [];
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <FolderOpen className="h-5 w-5" />
+            <h2 className="text-xl font-semibold">Administrar Categorías</h2>
+          </div>
+          <AddCategoryDialog onAdd={createCategory} />
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Panel Izquierdo - Categorías Principales */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Categorías Principales</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {categories.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  No hay categorías configuradas. Agrega tu primera categoría.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {categories.map((category) => (
+                    <div
+                      key={category.id}
+                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                        selectedCategoryId === category.id
+                          ? 'bg-primary/10 border-primary'
+                          : 'hover:bg-muted/50'
+                      }`}
+                      onClick={() => setSelectedCategoryId(category.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                            style={{ backgroundColor: category.color }}
+                          >
+                            {category.icon}
+                          </div>
+                          <span className="font-medium">{category.name}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {category.subcategories?.length || 0} subcategorías
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <EditCategoryDialog
+                            category={category}
+                            onUpdate={updateCategory}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCategory(category.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Panel Derecho - Subcategorías */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center justify-between">
+                <span>
+                  {selectedCategory ? `Subcategorías de "${selectedCategory.name}"` : 'Subcategorías'}
+                </span>
+                {selectedCategory && (
+                   <AddSubcategoryDialog
+                     categoryId={selectedCategory.id}
+                     categoryName={selectedCategory.name}
+                     onAdd={createSubcategory}
+                   />
+                 )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!selectedCategory ? (
+                <div className="text-center text-muted-foreground py-12">
+                  <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Selecciona una categoría del panel izquierdo para ver sus subcategorías</p>
+                </div>
+              ) : subcategories.length === 0 ? (
+                <div className="text-center text-muted-foreground py-12">
+                  <p className="mb-4">Esta categoría no tiene subcategorías.</p>
+                  <AddSubcategoryDialog
+                     categoryId={selectedCategory.id}
+                     categoryName={selectedCategory.name}
+                     onAdd={createSubcategory}
+                   />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {subcategories.map((subcategory) => (
+                    <div
+                      key={subcategory.id}
+                      className="p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                            style={{ backgroundColor: selectedCategory.color }}
+                          >
+                            {selectedCategory.icon}
+                          </div>
+                          <span className="font-medium">{subcategory.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <EditSubcategoryDialog
+                            subcategory={subcategory}
+                            onUpdate={updateSubcategory}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              if (confirm("¿Estás seguro de que quieres eliminar esta subcategoría?")) {
+                                await deleteSubcategory(subcategory.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  };
 
   const TagsSection = () => (
     <div className="space-y-6">

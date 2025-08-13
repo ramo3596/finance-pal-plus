@@ -521,18 +521,21 @@ export type Database = {
         Row: {
           category_id: string
           created_at: string | null
+          icon: string
           id: string
           name: string
         }
         Insert: {
           category_id: string
           created_at?: string | null
+          icon: string
           id?: string
           name: string
         }
         Update: {
           category_id?: string
           created_at?: string | null
+          icon?: string
           id?: string
           name?: string
         }

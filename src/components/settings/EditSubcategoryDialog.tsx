@@ -15,11 +15,13 @@ export function EditSubcategoryDialog({ subcategory, onUpdate }: EditSubcategory
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: subcategory.name,
+    icon: subcategory.icon
   });
 
   useEffect(() => {
     setFormData({
       name: subcategory.name,
+      icon: subcategory.icon
     });
   }, [subcategory]);
 
@@ -48,6 +50,16 @@ export function EditSubcategoryDialog({ subcategory, onUpdate }: EditSubcategory
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="icon">Icono</Label>
+            <Input
+              id="icon"
+              value={formData.icon}
+              onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+              placeholder="Ej: 🏠, 🚗, 🍕"
             />
           </div>
           

@@ -21,20 +21,24 @@ interface AddSubcategoryDialogProps {
 
 export function AddSubcategoryDialog({ categoryId, categoryName, onAdd }: AddSubcategoryDialogProps) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    icon: ""
+  });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!formData.name.trim()) return;
 
     setLoading(true);
     try {
       await onAdd({
-        name: name.trim(),
+        name: formData.name.trim(),
+        icon: formData.icon || "📦",
         category_id: categoryId,
       });
-      setName("");
+      setFormData({ name: "", icon: "" });
       setOpen(false);
     } finally {
       setLoading(false);
@@ -61,17 +65,26 @@ export function AddSubcategoryDialog({ categoryId, categoryName, onAdd }: AddSub
             <Label htmlFor="name">Nombre de la subcategoría</Label>
             <Input
               id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Ej: Supermercado, Gasolina, etc."
               required
+            />
+          </div>
+          <div>
+            <Label htmlFor="icon">Icono</Label>
+            <Input
+              id="icon"
+              value={formData.icon}
+              onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+              placeholder="Ej: 🏪, ⛽, 🍕 (opcional)"
             />
           </div>
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !name.trim()}>
+            <Button type="submit" disabled={loading || !formData.name.trim()}>
               {loading ? "Creando..." : "Crear subcategoría"}
             </Button>
           </div>
