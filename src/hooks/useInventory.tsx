@@ -72,8 +72,8 @@ export function useInventory() {
         .from('products')
         .select(`
           *,
-          categories:category_id(id, name, icon, color),
-          subcategories:subcategory_id(id, name, icon)
+          category:categories!category_id(id, name, icon, color),
+          subcategory:subcategories!subcategory_id(id, name, icon)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -82,8 +82,8 @@ export function useInventory() {
 
       const formattedProducts: Product[] = (data || []).map((product: any) => ({
         ...product,
-        category: product.categories,
-        subcategory: product.subcategories,
+        category: product.category,
+        subcategory: product.subcategory,
       }));
 
       setProducts(formattedProducts);

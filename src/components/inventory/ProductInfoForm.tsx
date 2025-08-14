@@ -1,0 +1,270 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Upload, Scan } from "lucide-react";
+import { useInventory } from "@/hooks/useInventory";
+import { useSettings } from "@/hooks/useSettings";
+import { toast } from "@/hooks/use-toast";
+
+const productSchema = z.object({
+  name: z.string().min(1, "El nombre es obligatorio"),
+  description: z.string().optional(),
+  barcode: z.string().optional(),
+  quantity: z.number().min(0, "La cantidad debe ser mayor o igual a 0"),
+  price: z.number().min(0, "El precio debe ser mayor o igual a 0"),
+  cost: z.number().min(0, "El costo debe ser mayor o igual a 0"),
+  category_id: z.string().optional(),
+  subcategory_id: z.string().optional(),
+});
+
+type ProductFormData = z.infer<typeof productSchema>;
+
+interface ProductInfoFormProps {
+  onSuccess: () => void;
+}
+
+export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const { createProduct } = useInventory();
+  const { categories, tags } = useSettings();
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      quantity: 0,
+      price: 0,
+      cost: 0,
+    },
+  });
+
+  const selectedCategoryData = categories.find(cat => cat.id === selectedCategory);
+  const subcategories = selectedCategoryData?.subcategories || [];
+
+  const onSubmit = async (data: ProductFormData) => {
+    try {
+      await createProduct({
+        name: data.name,
+        description: data.description,
+        barcode: data.barcode,
+        quantity: data.quantity,
+        price: data.price,
+        cost: data.cost,
+        category_id: data.category_id,
+        subcategory_id: data.subcategory_id,
+        tags: selectedTags,
+      });
+      onSuccess();
+    } catch (error) {
+      console.error('Error creating product:', error);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {/* Image Upload */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-center h-32 border-2 border-dashed border-muted-foreground/25 rounded-md">
+            <div className="text-center">
+              <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+              <Button type="button" variant="outline" size="sm">
+                Cargar imagen
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Basic Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="barcode">Código de barras</Label>
+          <div className="flex space-x-2">
+            <Input
+              id="barcode"
+              placeholder="Código de barras"
+              {...register("barcode")}
+            />
+            <Button type="button" variant="outline" size="icon">
+              <Scan className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="name">Nombre del producto *</Label>
+          <Input
+            id="name"
+            placeholder="Nombre del producto"
+            {...register("name")}
+          />
+          {errors.name && (
+            <p className="text-sm text-destructive">{errors.name.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="quantity">Cantidad disponible *</Label>
+          <Input
+            id="quantity"
+            type="number"
+            placeholder="0"
+            {...register("quantity", { valueAsNumber: true })}
+          />
+          {errors.quantity && (
+            <p className="text-sm text-destructive">{errors.quantity.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="price">Precio</Label>
+          <Input
+            id="price"
+            type="number"
+            step="0.01"
+            placeholder="0.00"
+            {...register("price", { valueAsNumber: true })}
+          />
+          {errors.price && (
+            <p className="text-sm text-destructive">{errors.price.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="cost">Costo</Label>
+          <Input
+            id="cost"
+            type="number"
+            step="0.01"
+            placeholder="0.00"
+            {...register("cost", { valueAsNumber: true })}
+          />
+          {errors.cost && (
+            <p className="text-sm text-destructive">{errors.cost.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Categoría</Label>
+          <Select
+            value={selectedCategory}
+            onValueChange={(value) => {
+              setSelectedCategory(value);
+              setValue("category_id", value);
+              setValue("subcategory_id", ""); // Reset subcategory
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar categoría" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  <div className="flex items-center space-x-2">
+                    <span>{category.icon}</span>
+                    <span>{category.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Subcategory (conditional) */}
+      {subcategories.length > 0 && (
+        <div className="space-y-2">
+          <Label>Subcategoría</Label>
+          <Select onValueChange={(value) => setValue("subcategory_id", value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar subcategoría" />
+            </SelectTrigger>
+            <SelectContent>
+              {subcategories.map((subcategory) => (
+                <SelectItem key={subcategory.id} value={subcategory.id}>
+                  <div className="flex items-center space-x-2">
+                    <span>{subcategory.icon}</span>
+                    <span>{subcategory.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Tags */}
+      <div className="space-y-2">
+        <Label>Etiquetas</Label>
+        <Select onValueChange={(value) => {
+          if (!selectedTags.includes(value)) {
+            setSelectedTags([...selectedTags, value]);
+          }
+        }}>
+          <SelectTrigger>
+            <SelectValue placeholder="Seleccionar etiquetas" />
+          </SelectTrigger>
+          <SelectContent>
+            {tags.filter(tag => !selectedTags.includes(tag.name)).map((tag) => (
+              <SelectItem key={tag.id} value={tag.name}>
+                <div className="flex items-center space-x-2">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: tag.color }}
+                  />
+                  <span>{tag.name}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        {selectedTags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {selectedTags.map((tag, index) => (
+              <div key={index} className="flex items-center space-x-1 bg-secondary text-secondary-foreground px-2 py-1 rounded text-sm">
+                <span>{tag}</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTags(selectedTags.filter((_, i) => i !== index))}
+                  className="hover:text-destructive"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Description */}
+      <div className="space-y-2">
+        <Label htmlFor="description">Descripción</Label>
+        <Textarea
+          id="description"
+          placeholder="Descripción detallada del producto"
+          {...register("description")}
+        />
+      </div>
+
+      {/* Submit Button */}
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? "Creando..." : "Crear producto"}
+      </Button>
+    </form>
+  );
+}

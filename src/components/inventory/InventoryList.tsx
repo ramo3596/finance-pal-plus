@@ -1,0 +1,141 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useInventory } from "@/hooks/useInventory";
+import { Edit, Trash2, Package } from "lucide-react";
+
+interface InventoryListProps {
+  filters: {
+    category: string;
+    tags: string[];
+    search: string;
+  };
+}
+
+export function InventoryList({ filters }: InventoryListProps) {
+  const { products, loading } = useInventory();
+
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = filters.search === "" || 
+      product.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+      product.description?.toLowerCase().includes(filters.search.toLowerCase());
+    
+    const matchesCategory = filters.category === "" || product.category_id === filters.category;
+    
+    return matchesSearch && matchesCategory;
+  });
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[...Array(6)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                <div className="w-full h-32 bg-muted rounded-md" />
+                <div className="h-4 bg-muted rounded w-3/4" />
+                <div className="h-3 bg-muted rounded w-1/2" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (filteredProducts.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium mb-2">No hay productos</h3>
+          <p className="text-muted-foreground">
+            {filters.search || filters.category 
+              ? "No se encontraron productos con los filtros aplicados"
+              : "Agrega tu primer producto al inventario"
+            }
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {filteredProducts.map((product) => (
+        <Card key={product.id} className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
+            <div className="space-y-3">
+              {/* Product Image */}
+              <div className="w-full h-32 bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                {product.image_url ? (
+                  <img 
+                    src={product.image_url} 
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Package className="h-8 w-8 text-muted-foreground" />
+                )}
+              </div>
+
+              {/* Product Info */}
+              <div>
+                <h3 className="font-medium text-sm line-clamp-2">{product.name}</h3>
+                {product.category && (
+                  <div className="flex items-center space-x-1 mt-1">
+                    <span className="text-xs">{product.category.icon}</span>
+                    <span className="text-xs text-muted-foreground">{product.category.name}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Quantity and Price */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Cantidad:</span>
+                  <span className="font-medium">{product.quantity}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Precio:</span>
+                  <span className="font-medium">${product.price.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Costo:</span>
+                  <span className="font-medium">${product.cost.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Tags */}
+              {product.tags && product.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {product.tags.slice(0, 2).map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                  {product.tags.length > 2 && (
+                    <Badge variant="secondary" className="text-xs">
+                      +{product.tags.length - 2}
+                    </Badge>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex space-x-2 pt-2">
+                <Button size="sm" variant="outline" className="flex-1">
+                  <Edit className="h-3 w-3 mr-1" />
+                  Editar
+                </Button>
+                <Button size="sm" variant="outline" className="text-destructive hover:text-destructive">
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
