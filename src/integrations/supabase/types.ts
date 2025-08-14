@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -683,6 +683,7 @@ export type Database = {
           note: string | null
           payer_contact_id: string | null
           payment_method: string | null
+          subcategory_id: string | null
           tags: string | null
           to_account_id: string | null
           transaction_date: string
@@ -703,6 +704,7 @@ export type Database = {
           note?: string | null
           payer_contact_id?: string | null
           payment_method?: string | null
+          subcategory_id?: string | null
           tags?: string | null
           to_account_id?: string | null
           transaction_date?: string
@@ -723,6 +725,7 @@ export type Database = {
           note?: string | null
           payer_contact_id?: string | null
           payment_method?: string | null
+          subcategory_id?: string | null
           tags?: string | null
           to_account_id?: string | null
           transaction_date?: string
@@ -743,6 +746,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
             referencedColumns: ["id"]
           },
           {

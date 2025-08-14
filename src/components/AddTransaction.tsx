@@ -153,6 +153,7 @@ export function AddTransaction({
         account_id: selectedAccount,
         to_account_id: toAccount || undefined,
         category_id: selectedCategory || undefined,
+        subcategory_id: selectedSubcategory || undefined,
         description: contactName || `${transactionType} transaction`,
         beneficiary: contactName,
         note,
