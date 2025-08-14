@@ -12,6 +12,7 @@ export interface Transaction {
   account_id: string;
   to_account_id?: string;
   category_id?: string;
+  subcategory_id?: string;
   description: string;
   beneficiary?: string;
   note?: string;

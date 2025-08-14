@@ -36,12 +36,24 @@ export function TransactionItem({
     return categories.find(cat => cat.id === categoryId);
   };
 
+  const getSubcategoryData = (categoryId: string, subcategoryId: string) => {
+    const category = categories.find(cat => cat.id === categoryId);
+    return category?.subcategories?.find(sub => sub.id === subcategoryId);
+  };
+
   const getAccountName = (accountId: string) => {
     return accounts.find(acc => acc.id === accountId)?.name || 'Cuenta';
   };
 
   const categoryData = getCategoryData(transaction.category_id);
+  const subcategoryData = transaction.subcategory_id && transaction.category_id 
+    ? getSubcategoryData(transaction.category_id, transaction.subcategory_id)
+    : null;
   const accountName = getAccountName(transaction.account_id);
+
+  // Use subcategory icon if available, otherwise use category icon
+  const displayIcon = subcategoryData?.icon || categoryData?.icon;
+  const displayName = subcategoryData?.name || categoryData?.name || transaction.description;
 
   return (
     <div className={cn(
@@ -55,14 +67,14 @@ export function TransactionItem({
         />
       )}
       
-      {/* Category Icon */}
+      {/* Category/Subcategory Icon */}
       <div className="flex items-center space-x-2">
-        {categoryData && (
+        {(categoryData || subcategoryData) && (
           <div 
             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-            style={{ backgroundColor: categoryData.color }}
+            style={{ backgroundColor: categoryData?.color || '#6b7280' }}
           >
-            {categoryData.icon}
+            {displayIcon}
           </div>
         )}
       </div>
@@ -71,7 +83,7 @@ export function TransactionItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium text-sm">{categoryData?.name || transaction.description}</p>
+            <p className="font-medium text-sm">{displayName}</p>
             <p className="text-xs text-muted-foreground">
               {transaction.type === 'transfer' ? (
                 transaction.amount < 0 ? (
