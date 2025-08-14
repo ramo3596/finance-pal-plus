@@ -37,6 +37,7 @@ export function AddTransaction({
   const [selectedAccount, setSelectedAccount] = useState("");
   const [toAccount, setToAccount] = useState(""); // For transfers
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [date, setDate] = useState(() => {
     const now = new Date();
@@ -64,6 +65,7 @@ export function AddTransaction({
       setAmount(template.amount.toString());
       setSelectedAccount(template.account_id || "");
       setSelectedCategory(template.category_id || "");
+      setSelectedSubcategory(""); // Reset subcategory when template is applied
       
       // Map payment method from template to Select values
       const paymentMethodMapping: { [key: string]: string } = {
@@ -171,6 +173,7 @@ export function AddTransaction({
         setSelectedAccount("");
         setToAccount("");
         setSelectedCategory("");
+        setSelectedSubcategory("");
         setSelectedTags([]);
         setBeneficiary("");
         setSelectedContact("");
@@ -259,7 +262,10 @@ export function AddTransaction({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Categoría</Label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <Select value={selectedCategory} onValueChange={(value) => {
+                setSelectedCategory(value);
+                setSelectedSubcategory(""); // Reset subcategory when category changes
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar categoría" />
                 </SelectTrigger>
@@ -274,6 +280,31 @@ export function AddTransaction({
                   ))}
                 </SelectContent>
               </Select>
+              
+              {/* Subcategory selector - only show if category is selected and has subcategories */}
+              {selectedCategory && (() => {
+                const selectedCat = categories.find(c => c.id === selectedCategory);
+                return selectedCat?.subcategories && selectedCat.subcategories.length > 0 ? (
+                  <div className="mt-2">
+                    <Label htmlFor="subcategory">Subcategoría</Label>
+                    <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar subcategoría" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedCat.subcategories.map((subcategory) => (
+                          <SelectItem key={subcategory.id} value={subcategory.id}>
+                            <div className="flex items-center gap-2">
+                              <span>{subcategory.icon}</span>
+                              <span>{subcategory.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null;
+              })()}
             </div>
 
             <div className="space-y-2">
