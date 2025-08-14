@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom"
 import {
   Home,
   List,
+  Package,
   TrendingUp,
   BarChart3,
   Calendar,
@@ -28,6 +29,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 const menuItems = [
   { title: "Inicio", url: "/", icon: Home },
   { title: "Registros", url: "/records", icon: List },
+  { title: "Inventario", url: "/inventory", icon: Package },
   { title: "Inversiones", url: "/investments", icon: TrendingUp },
   { title: "Estadística", url: "/statistics", icon: BarChart3 },
   { title: "Pagos programados", url: "/scheduled-payments", icon: Calendar },
