@@ -189,7 +189,7 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
         
         // 1. Create debt (no money movement)
         await createDebt({
-          type: "loan", // Loan = money we owe (debt)
+          type: "debt", // Debt = money we owe to supplier
           initial_amount: data.total_amount,
           current_balance: data.total_amount,
           description: data.concept || `Compra de productos - ${supplier?.name}`,
