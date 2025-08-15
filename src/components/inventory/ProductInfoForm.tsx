@@ -63,8 +63,8 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
         quantity: data.quantity,
         price: data.price,
         cost: data.cost,
-        category_id: data.category_id,
-        subcategory_id: data.subcategory_id,
+        category_id: data.category_id || null,
+        subcategory_id: data.subcategory_id || null,
         tags: selectedTags,
       });
       onSuccess();

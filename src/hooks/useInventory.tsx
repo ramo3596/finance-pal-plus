@@ -70,11 +70,7 @@ export function useInventory() {
       setLoading(true);
       const { data, error } = await supabase
         .from('products')
-        .select(`
-          *,
-          category:categories!category_id(id, name, icon, color),
-          subcategory:subcategories!subcategory_id(id, name, icon)
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -82,8 +78,6 @@ export function useInventory() {
 
       const formattedProducts: Product[] = (data || []).map((product: any) => ({
         ...product,
-        category: product.category,
-        subcategory: product.subcategory,
       }));
 
       setProducts(formattedProducts);
