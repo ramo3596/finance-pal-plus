@@ -172,7 +172,7 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
               <SelectValue placeholder="Seleccionar categoría" />
             </SelectTrigger>
             <SelectContent>
-              {categories.map((category) => (
+              {categories.filter(category => category.id && category.id.trim() !== '').map((category) => (
                 <SelectItem key={category.id} value={category.id}>
                   <div className="flex items-center space-x-2">
                     <span>{category.icon}</span>
@@ -194,7 +194,7 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
               <SelectValue placeholder="Seleccionar subcategoría" />
             </SelectTrigger>
             <SelectContent>
-              {subcategories.map((subcategory) => (
+              {subcategories.filter(subcategory => subcategory.id && subcategory.id.trim() !== '').map((subcategory) => (
                 <SelectItem key={subcategory.id} value={subcategory.id}>
                   <div className="flex items-center space-x-2">
                     <span>{subcategory.icon}</span>
@@ -219,7 +219,7 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
             <SelectValue placeholder="Seleccionar etiquetas" />
           </SelectTrigger>
           <SelectContent>
-            {tags.filter(tag => !selectedTags.includes(tag.name)).map((tag) => (
+            {tags.filter(tag => tag.name && tag.name.trim() !== '' && !selectedTags.includes(tag.name)).map((tag) => (
               <SelectItem key={tag.id} value={tag.name}>
                 <div className="flex items-center space-x-2">
                   <div 
