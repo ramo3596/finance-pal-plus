@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Upload, Scan } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Upload, Scan, X } from "lucide-react";
 import { useInventory } from "@/hooks/useInventory";
 import { useSettings } from "@/hooks/useSettings";
 import { toast } from "@/hooks/use-toast";
@@ -35,6 +36,10 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const { createProduct } = useInventory();
   const { categories, tags } = useSettings();
 
@@ -71,6 +76,65 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
     setImageUrl(event.target.value);
   };
 
+  const startCamera = async () => {
+    try {
+      setIsScanning(true);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment', // Usar cámara trasera si está disponible
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+      
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo acceder a la cámara. Verifica los permisos.",
+        variant: "destructive"
+      });
+      setIsScanning(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setIsScanning(false);
+  };
+
+  const handleScannerOpen = () => {
+    setIsScannerOpen(true);
+    setTimeout(() => {
+      startCamera();
+    }, 100);
+  };
+
+  const handleScannerClose = () => {
+    stopCamera();
+    setIsScannerOpen(false);
+  };
+
+  const handleManualBarcodeInput = () => {
+    const barcode = prompt('Ingresa el código de barras manualmente:');
+    if (barcode) {
+      setValue('barcode', barcode);
+      toast({
+        title: "Código agregado",
+        description: `Código de barras: ${barcode}`
+      });
+    }
+    handleScannerClose();
+  };
+
   const onSubmit = async (data: ProductFormData) => {
     try {
       await createProduct({
@@ -92,7 +156,8 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {/* Image Upload */}
       <Card>
         <CardContent className="p-4">
@@ -144,7 +209,7 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
               placeholder="Código de barras"
               {...register("barcode")}
             />
-            <Button type="button" variant="outline" size="icon">
+            <Button type="button" variant="outline" size="icon" onClick={handleScannerOpen}>
               <Scan className="h-4 w-4" />
             </Button>
           </div>
@@ -308,8 +373,65 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
 
       {/* Submit Button */}
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? "Creando..." : "Crear producto"}
-      </Button>
-    </form>
+          {isSubmitting ? "Creando..." : "Crear producto"}
+        </Button>
+      </form>
+
+      {/* Modal del escáner de código de barras */}
+      <Dialog open={isScannerOpen} onOpenChange={handleScannerClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              Escáner de código de barras
+              <Button variant="ghost" size="icon" onClick={handleScannerClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {isScanning ? (
+              <div className="relative">
+                <video
+                  ref={videoRef}
+                  className="w-full h-64 bg-black rounded-lg"
+                  autoPlay
+                  playsInline
+                  muted
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="border-2 border-white border-dashed w-48 h-32 rounded-lg"></div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+                <p className="text-gray-500">Iniciando cámara...</p>
+              </div>
+            )}
+            
+            <div className="flex space-x-2">
+              <Button 
+                onClick={handleManualBarcodeInput} 
+                variant="outline" 
+                className="flex-1"
+              >
+                Ingresar manualmente
+              </Button>
+              <Button 
+                onClick={handleScannerClose} 
+                variant="secondary" 
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+            </div>
+            
+            <p className="text-sm text-gray-600 text-center">
+              Coloca el código de barras dentro del marco para escanearlo
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
