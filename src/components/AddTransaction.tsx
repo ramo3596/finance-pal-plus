@@ -310,8 +310,8 @@ export function AddTransaction({
 
             <div className="space-y-2">
               <Label htmlFor="tags">Etiquetas</Label>
-              <Select value={selectedTags.length > 0 ? selectedTags[0] : ""} onValueChange={(value) => {
-                if (value) {
+              <Select value={selectedTags.length > 0 ? selectedTags[0] : "none"} onValueChange={(value) => {
+                if (value && value !== "none") {
                   const selectedTag = tags.find(tag => tag.id === value);
                   if (selectedTag && !selectedTags.includes(selectedTag.name)) {
                     setSelectedTags([...selectedTags, selectedTag.name]);
@@ -322,7 +322,7 @@ export function AddTransaction({
                   <SelectValue placeholder="Seleccionar etiquetas" />
                 </SelectTrigger>
                 <SelectContent>
-                  {tags.map((tag) => (
+                  {tags.filter(tag => tag.id && tag.id.trim() !== '').map((tag) => (
                     <SelectItem key={tag.id} value={tag.id}>
                       <div className="flex items-center gap-2">
                         <div 
