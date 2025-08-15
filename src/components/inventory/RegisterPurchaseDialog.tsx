@@ -20,18 +20,36 @@ import { ProductSelectionDialog } from "./ProductSelectionDialog";
 import { toast } from "@/hooks/use-toast";
 import { ShoppingCart } from "lucide-react";
 
-const purchaseSchema = z.object({
+// Schema for paid transactions
+const paidPurchaseSchema = z.object({
+  date: z.string().min(1, "La fecha es obligatoria"),
+  category_id: z.string().min(1, "La categoría es obligatoria"),
+  subcategory_id: z.string().optional(),
+  total_amount: z.number().min(0.01, "El valor total debe ser mayor a 0"),
+  supplier_id: z.string().min(1, "El proveedor es obligatorio"),
+  account_id: z.string().min(1, "La cuenta es obligatoria"),
+  payment_method: z.string().min(1, "La forma de pago es obligatoria"),
+  concept: z.string().optional(),
+});
+
+// Schema for debt transactions
+const debtPurchaseSchema = z.object({
   date: z.string().min(1, "La fecha es obligatoria"),
   category_id: z.string().min(1, "La categoría es obligatoria"),
   subcategory_id: z.string().optional(),
   total_amount: z.number().min(0.01, "El valor total debe ser mayor a 0"),
   supplier_id: z.string().min(1, "El proveedor es obligatorio"),
   account_id: z.string().optional(),
-  payment_method: z.string().min(1, "La forma de pago es obligatoria"),
+  payment_method: z.string().optional(),
   concept: z.string().optional(),
 });
 
-type PurchaseFormData = z.infer<typeof purchaseSchema>;
+// Dynamic schema based on transaction type
+const getPurchaseSchema = (transactionType: "paid" | "debt") => {
+  return transactionType === "paid" ? paidPurchaseSchema : debtPurchaseSchema;
+};
+
+type PurchaseFormData = z.infer<typeof paidPurchaseSchema>;
 
 interface RegisterPurchaseDialogProps {
   open: boolean;
@@ -56,6 +74,14 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
   const { createDebt } = useDebts();
   const { updateProduct } = useInventory();
 
+  const form = useForm<PurchaseFormData>({
+    resolver: zodResolver(getPurchaseSchema(transactionType)),
+    defaultValues: {
+      date: new Date().toISOString().split('T')[0],
+      total_amount: 0,
+    },
+  });
+
   const {
     register,
     handleSubmit,
@@ -63,13 +89,17 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
     watch,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<PurchaseFormData>({
-    resolver: zodResolver(purchaseSchema),
-    defaultValues: {
-      date: new Date().toISOString().split('T')[0],
-      total_amount: 0,
-    },
-  });
+  } = form;
+
+  // Update form resolver when transaction type changes
+  useEffect(() => {
+    form.clearErrors();
+    // Clear account and payment method when switching to debt
+    if (transactionType === "debt") {
+      setValue("account_id", "");
+      setValue("payment_method", "");
+    }
+  }, [transactionType, form, setValue]);
 
   const selectedCategoryData = categories.find(cat => cat.id === selectedCategory);
   const subcategories = selectedCategoryData?.subcategories || [];
@@ -83,6 +113,7 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
   }, [selectedProducts, setValue, totalAmount]);
 
   const onSubmit = async (data: PurchaseFormData) => {
+    // Validate products selection
     if (selectedProducts.length === 0) {
       toast({
         title: "Error",
@@ -92,52 +123,96 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
       return;
     }
 
-    try {
-      // Update inventory quantities
-      for (const item of selectedProducts) {
-        await updateProduct(item.product.id, {
-          quantity: item.product.quantity + item.quantity,
-          cost: item.cost,
+    // Additional validation for debt transactions
+    if (transactionType === "debt") {
+      if (!data.supplier_id) {
+        toast({
+          title: "Error",
+          description: "El proveedor es obligatorio para registrar una deuda",
+          variant: "destructive",
         });
+        return;
       }
+    }
 
+    // Additional validation for paid transactions
+    if (transactionType === "paid") {
+      if (!data.account_id) {
+        toast({
+          title: "Error",
+          description: "La cuenta es obligatoria para transacciones pagadas",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!data.payment_method) {
+        toast({
+          title: "Error",
+          description: "La forma de pago es obligatoria para transacciones pagadas",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    try {
       const supplier = suppliers.find(s => s.id === data.supplier_id);
       const category = categories.find(c => c.id === data.category_id);
 
       if (transactionType === "paid") {
-        // Create transaction
+        // For paid transactions: Create transaction AND update inventory
+        
+        // 1. Create transaction first
         await createTransaction({
           type: "expense",
           amount: data.total_amount,
           description: data.concept || `Compra de productos - ${supplier?.name}`,
           category_id: data.category_id,
           subcategory_id: data.subcategory_id,
-          account_id: data.account_id || accounts[0]?.id,
-          payment_method: data.payment_method,
+          account_id: data.account_id!,
+          payment_method: data.payment_method!,
           transaction_date: data.date,
           tags: ["Inventario"],
           beneficiary: supplier?.name,
           note: `Productos: ${selectedProducts.map(p => `${p.product.name} (${p.quantity})`).join(', ')}`,
         });
+
+        // 2. Update inventory quantities
+        for (const item of selectedProducts) {
+          await updateProduct(item.product.id, {
+            quantity: item.product.quantity + item.quantity,
+            cost: item.cost,
+          });
+        }
       } else {
-        // Create debt
+        // For debt transactions: Create debt AND update inventory (NO transaction)
+        
+        // 1. Create debt (no money movement)
         await createDebt({
           type: "loan", // Loan = money we owe (debt)
           initial_amount: data.total_amount,
           current_balance: data.total_amount,
           description: data.concept || `Compra de productos - ${supplier?.name}`,
           contact_id: data.supplier_id,
-          account_id: data.account_id || accounts[0]?.id,
+          account_id: accounts[0]?.id || "", // Optional for debts
           status: "active",
           debt_date: data.date,
         });
+
+        // 2. Update inventory quantities (inventory increases even though it's a debt)
+        for (const item of selectedProducts) {
+          await updateProduct(item.product.id, {
+            quantity: item.product.quantity + item.quantity,
+            cost: item.cost,
+          });
+        }
       }
 
       toast({
         title: "Éxito",
         description: transactionType === "paid" 
           ? "Compra registrada y transacción creada" 
-          : "Compra registrada y deuda creada",
+          : "Compra registrada como deuda - El inventario se ha actualizado sin afectar las cuentas",
       });
 
       // Reset form
@@ -308,40 +383,56 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
                   )}
                 </div>
 
-                {/* Account */}
-                <div className="space-y-2">
-                  <Label>Cuenta</Label>
-                  <Select onValueChange={(value) => setValue("account_id", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar cuenta" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accounts.filter(account => account.id && account.id.trim() !== '').map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          <div className="flex items-center space-x-2">
-                            <span>{account.icon}</span>
-                            <span>{account.name}</span>
-                            <span className="text-muted-foreground">
-                              ${account.balance.toFixed(2)}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Account - Only show for paid transactions */}
+                {transactionType === "paid" && (
+                  <div className="space-y-2">
+                    <Label>Cuenta *</Label>
+                    <Select onValueChange={(value) => setValue("account_id", value)} value={watch("account_id") || ""}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar cuenta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accounts.filter(account => account.id && account.id.trim() !== '').map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            <div className="flex items-center space-x-2">
+                              <span>{account.icon}</span>
+                              <span>{account.name}</span>
+                              <span className="text-muted-foreground">
+                                ${account.balance.toFixed(2)}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.account_id && (
+                      <p className="text-sm text-destructive">{errors.account_id.message}</p>
+                    )}
+                  </div>
+                )}
 
-                {/* Payment Method */}
-                <div className="space-y-2">
-                  <Label>Forma de pago *</Label>
-                  <PaymentMethodSelect
-                    value={watch("payment_method") || ""}
-                    onValueChange={(value) => setValue("payment_method", value)}
-                  />
-                  {errors.payment_method && (
-                    <p className="text-sm text-destructive">{errors.payment_method.message}</p>
-                  )}
-                </div>
+                {/* Payment Method - Only show for paid transactions */}
+                {transactionType === "paid" && (
+                  <div className="space-y-2">
+                    <Label>Forma de pago *</Label>
+                    <PaymentMethodSelect
+                      value={watch("payment_method") || ""}
+                      onValueChange={(value) => setValue("payment_method", value)}
+                    />
+                    {errors.payment_method && (
+                      <p className="text-sm text-destructive">{errors.payment_method.message}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Information message for debt transactions */}
+                {transactionType === "debt" && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                    <p className="text-sm text-blue-800">
+                      <strong>Nota:</strong> Al registrar como deuda, el inventario se actualizará pero no se afectarán las cuentas financieras. El movimiento de dinero se registrará cuando se pague la deuda.
+                    </p>
+                  </div>
+                )}
 
                 {/* Concept */}
                 <div className="space-y-2">
