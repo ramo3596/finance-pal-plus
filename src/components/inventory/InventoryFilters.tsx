@@ -18,7 +18,8 @@ export function InventoryFilters({ filters, onFilterChange }: InventoryFiltersPr
   const { categories, tags } = useSettings();
 
   const handleCategoryChange = (category: string) => {
-    onFilterChange({ ...filters, category });
+    const actualCategory = category === "all" ? "" : category;
+    onFilterChange({ ...filters, category: actualCategory });
   };
 
   const handleSearchChange = (search: string) => {
@@ -44,13 +45,13 @@ export function InventoryFilters({ filters, onFilterChange }: InventoryFiltersPr
 
           <div className="space-y-2">
             <Label>Categoría</Label>
-            <Select value={filters.category} onValueChange={handleCategoryChange}>
+            <Select value={filters.category || "all"} onValueChange={handleCategoryChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Todas las categorías" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas las categorías</SelectItem>
-                {categories.map((category) => (
+                <SelectItem value="all">Todas las categorías</SelectItem>
+                {categories.filter(category => category.id && category.id.trim() !== '').map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm">{category.icon}</span>
@@ -69,7 +70,7 @@ export function InventoryFilters({ filters, onFilterChange }: InventoryFiltersPr
                 <SelectValue placeholder="Filtrar por etiquetas" />
               </SelectTrigger>
               <SelectContent>
-                {tags.map((tag) => (
+                {tags.filter(tag => tag.id && tag.id.trim() !== '').map((tag) => (
                   <SelectItem key={tag.id} value={tag.id}>
                     <div className="flex items-center space-x-2">
                       <div 
