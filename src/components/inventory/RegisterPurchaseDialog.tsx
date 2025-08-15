@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Autocomplete } from "@/components/ui/autocomplete";
 import { useSettings } from "@/hooks/useSettings";
 import { useContacts } from "@/hooks/useContacts";
 import { useTransactions } from "@/hooks/useTransactions";
@@ -293,24 +294,15 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
                 {/* Supplier */}
                 <div className="space-y-2">
                   <Label>Proveedor *</Label>
-                  <Select onValueChange={(value) => setValue("supplier_id", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar proveedor" />
-                    </SelectTrigger>
-                     <SelectContent>
-                       {suppliers.length === 0 ? (
-                         <SelectItem value="no-suppliers" disabled>
-                           No hay proveedores disponibles
-                         </SelectItem>
-                       ) : (
-                         suppliers.filter(supplier => supplier.id && supplier.id.trim() !== '').map((supplier) => (
-                           <SelectItem key={supplier.id} value={supplier.id}>
-                             {supplier.name}
-                           </SelectItem>
-                         ))
-                       )}
-                     </SelectContent>
-                  </Select>
+                  <Autocomplete
+                    options={suppliers.filter(supplier => supplier.id && supplier.id.trim() !== '').map(supplier => ({
+                      id: supplier.id,
+                      name: supplier.name
+                    }))}
+                    value={watch("supplier_id")}
+                    onValueChange={(value) => setValue("supplier_id", value)}
+                    placeholder="Buscar proveedor..."
+                  />
                   {errors.supplier_id && (
                     <p className="text-sm text-destructive">{errors.supplier_id.message}</p>
                   )}
