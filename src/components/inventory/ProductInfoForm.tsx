@@ -127,52 +127,26 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
         type: "LiveStream",
         target: videoRef.current,
         constraints: {
-          width: 800,
-          height: 600,
+          width: 640,
+          height: 480,
           facingMode: "environment"
-        },
-        area: {
-          top: "20%",
-          right: "20%",
-          left: "20%",
-          bottom: "20%"
         }
       },
-      frequency: 10,
       decoder: {
         readers: [
           "code_128_reader",
           "ean_reader",
           "ean_8_reader",
           "code_39_reader",
-          "code_39_vin_reader",
-          "codabar_reader",
           "upc_reader",
-          "upc_e_reader",
-          "i2of5_reader"
-        ],
-        debug: {
-          showCanvas: true,
-          showPatches: true,
-          showFoundPatches: true,
-          showSkeleton: true,
-          showLabels: true,
-          showPatchLabels: true,
-          showRemainingPatchLabels: true,
-          boxFromPatches: {
-            showTransformed: true,
-            showTransformedBox: true,
-            showBB: true
-          }
-        }
+          "upc_e_reader"
+        ]
       },
       locate: true,
       locator: {
-        patchSize: "large",
-        halfSample: false
-      },
-      numOfWorkers: 2,
-      multiple: false
+        patchSize: "medium",
+        halfSample: true
+      }
     }, (err) => {
       if (err) {
         console.error('Error initializing Quagga:', err);
@@ -187,31 +161,17 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
       Quagga.start();
     });
 
-    // Mejorar la detección con múltiples intentos
-    let detectionCount = 0;
-    let lastDetectedCode = '';
-    
     Quagga.onDetected((result) => {
       const code = result.codeResult.code;
-      console.log('Código detectado:', code, 'Calidad:', result.codeResult.quality);
+      console.log('Código detectado:', code);
       
-      if (code && result.codeResult.quality > 75) {
-        if (code === lastDetectedCode) {
-          detectionCount++;
-        } else {
-          detectionCount = 1;
-          lastDetectedCode = code;
-        }
-        
-        // Confirmar detección después de 2 lecturas consecutivas del mismo código
-        if (detectionCount >= 2) {
-          setValue('barcode', code);
-          toast({
-            title: "Código detectado",
-            description: `Código de barras: ${code}`
-          });
-          handleScannerClose();
-        }
+      if (code) {
+        setValue('barcode', code);
+        toast({
+          title: "Código detectado",
+          description: `Código de barras: ${code}`
+        });
+        handleScannerClose();
       }
     });
   };
@@ -506,40 +466,23 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
               <div className="relative">
                 <video
                   ref={videoRef}
-                  className="w-full h-80 bg-black rounded-lg"
+                  className="w-full h-64 bg-black rounded-lg"
                   autoPlay
                   playsInline
                   muted
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="relative">
-                    {/* Marco de enfoque principal */}
-                    <div className="border-4 border-red-500 w-64 h-20 rounded-lg bg-transparent shadow-lg">
-                      {/* Esquinas del marco */}
-                      <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-white rounded-tl-lg"></div>
-                      <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-white rounded-tr-lg"></div>
-                      <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-white rounded-bl-lg"></div>
-                      <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-white rounded-br-lg"></div>
-                    </div>
-                    {/* Línea de escaneo animada */}
-                    <div className="absolute top-0 left-0 w-full h-full overflow-hidden rounded-lg">
-                      <div className="absolute w-full h-0.5 bg-red-400 animate-pulse" style={{top: '50%', transform: 'translateY(-50%)'}}></div>
-                    </div>
-                  </div>
+                  <div className="border-2 border-white border-dashed w-48 h-32 rounded-lg"></div>
                 </div>
-                {/* Instrucciones */}
                 <div className="absolute bottom-4 left-0 right-0 text-center">
                   <p className="text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded-full mx-auto inline-block">
-                    Coloca el código dentro del marco rojo
+                    Apunta la cámara al código de barras
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-80 bg-gray-100 rounded-lg">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p className="text-gray-500">Iniciando cámara...</p>
-                </div>
+              <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+                <p className="text-gray-500">Iniciando cámara...</p>
               </div>
             )}
             
