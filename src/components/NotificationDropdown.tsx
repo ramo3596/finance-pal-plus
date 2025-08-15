@@ -7,10 +7,12 @@ import { Separator } from "@/components/ui/separator";
 import { useNotifications } from "@/hooks/useNotifications";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 
 export function NotificationDropdown() {
   const { notifications, loading, markAsRead, markAllAsRead, getUnreadCount } = useNotifications();
   const unreadCount = getUnreadCount();
+  const navigate = useNavigate();
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -123,7 +125,12 @@ export function NotificationDropdown() {
           <>
             <Separator />
             <div className="p-2">
-              <Button variant="ghost" size="sm" className="w-full text-xs">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full text-xs"
+                onClick={() => navigate('/notifications')}
+              >
                 Ver todas las notificaciones
               </Button>
             </div>

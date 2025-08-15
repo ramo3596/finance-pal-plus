@@ -143,6 +143,10 @@ export const useNotifications = () => {
     setNotifications(prev => prev.map(n => ({ ...n, isNew: false })));
   };
 
+  const deleteNotification = (notificationId: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== notificationId));
+  };
+
   const getUnreadCount = () => {
     return notifications.filter(n => n.isNew).length;
   };
@@ -158,6 +162,7 @@ export const useNotifications = () => {
     loading,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
     getUnreadCount,
     refetch: generateNotifications,
   };
