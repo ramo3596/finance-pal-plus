@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import { Upload, Scan, X } from "lucide-react";
 import { useInventory } from "@/hooks/useInventory";
 import { useSettings } from "@/hooks/useSettings";
 import { toast } from "@/hooks/use-toast";
+import Quagga from "quagga";
 
 const productSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio"),
@@ -91,6 +92,11 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.play();
+        
+        // Inicializar QuaggaJS
+        setTimeout(() => {
+          initQuagga();
+        }, 500);
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
@@ -108,7 +114,61 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    Quagga.stop();
     setIsScanning(false);
+  };
+
+  const initQuagga = () => {
+    if (!videoRef.current) return;
+
+    Quagga.init({
+      inputStream: {
+        name: "Live",
+        type: "LiveStream",
+        target: videoRef.current,
+        constraints: {
+          width: 640,
+          height: 480,
+          facingMode: "environment"
+        }
+      },
+      decoder: {
+        readers: [
+          "code_128_reader",
+          "ean_reader",
+          "ean_8_reader",
+          "code_39_reader",
+          "code_39_vin_reader",
+          "codabar_reader",
+          "upc_reader",
+          "upc_e_reader",
+          "i2of5_reader"
+        ]
+      },
+      locate: true,
+      locator: {
+        patchSize: "medium",
+        halfSample: true
+      }
+    }, (err) => {
+      if (err) {
+        console.error('Error initializing Quagga:', err);
+        return;
+      }
+      Quagga.start();
+    });
+
+    Quagga.onDetected((result) => {
+      const code = result.codeResult.code;
+      if (code) {
+        setValue('barcode', code);
+        toast({
+          title: "Código detectado",
+          description: `Código de barras: ${code}`
+        });
+        handleScannerClose();
+      }
+    });
   };
 
   const handleScannerOpen = () => {
@@ -134,6 +194,13 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
     }
     handleScannerClose();
   };
+
+  // Limpiar QuaggaJS al desmontar el componente
+  useEffect(() => {
+    return () => {
+      Quagga.stop();
+    };
+  }, []);
 
   const onSubmit = async (data: ProductFormData) => {
     try {
