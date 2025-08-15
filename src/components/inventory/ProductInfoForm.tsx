@@ -22,6 +22,7 @@ const productSchema = z.object({
   cost: z.number().min(0, "El costo debe ser mayor o igual a 0"),
   category_id: z.string().optional(),
   subcategory_id: z.string().optional(),
+  image_url: z.string().url("URL de imagen inválida").optional().or(z.literal("")),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -33,6 +34,7 @@ interface ProductInfoFormProps {
 export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const { createProduct } = useInventory();
   const { categories, tags } = useSettings();
 
@@ -54,6 +56,21 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
   const selectedCategoryData = categories.find(cat => cat.id === selectedCategory);
   const subcategories = selectedCategoryData?.subcategories || [];
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageUrlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setImageUrl(event.target.value);
+  };
+
   const onSubmit = async (data: ProductFormData) => {
     try {
       await createProduct({
@@ -66,6 +83,7 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
         category_id: data.category_id || null,
         subcategory_id: data.subcategory_id || null,
         tags: selectedTags,
+        image_url: imageUrl,
       });
       onSuccess();
     } catch (error) {
@@ -78,11 +96,38 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
       {/* Image Upload */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center justify-center h-32 border-2 border-dashed border-muted-foreground/25 rounded-md">
-            <div className="text-center">
-              <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-              <Button type="button" variant="outline" size="sm">
-                Cargar imagen
+          <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-muted-foreground/25 rounded-md">
+            {imageUrl ? (
+              <img src={imageUrl} alt="Product Preview" className="max-h-full max-w-full object-contain" />
+            ) : (
+              <div className="text-center">
+                <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground mb-2">Arrastra y suelta una imagen aquí, o haz clic para seleccionar</p>
+                <Input
+                  id="image_upload"
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                />
+                <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('image_upload')?.click()}>
+                  Cargar desde local
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="mt-4 space-y-2">
+            <Label htmlFor="image_url_input">URL de Imagen</Label>
+            <div className="flex space-x-2">
+              <Input
+                id="image_url_input"
+                placeholder="O pega una URL de imagen aquí"
+                value={imageUrl || ''}
+                onChange={handleImageUrlChange}
+                className="flex-1"
+              />
+              <Button type="button" variant="outline" onClick={() => setImageUrl(null)}>
+                Limpiar
               </Button>
             </div>
           </div>
