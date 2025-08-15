@@ -98,14 +98,14 @@ export function InventoryList({ filters, onEditProduct, onDeleteProduct }: Inven
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Cantidad:</span>
                   <div className="flex items-center space-x-2">
-                    <span className="font-medium">{product.quantity}</span>
-                    <span className={`text-xs px-2 py-1 rounded ${
+                    <span className={`text-xs px-2 py-1 rounded flex-shrink-0 ${
                       product.quantity > 0 
                         ? 'bg-green-100 text-green-700' 
                         : 'bg-red-100 text-red-700'
                     }`}>
                       {product.quantity > 0 ? 'Disponibles' : 'No disponible'}
                     </span>
+                    <span className="font-medium">{product.quantity}</span>
                   </div>
                 </div>
                 <div className="flex justify-between text-sm">
