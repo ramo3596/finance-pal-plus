@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useInventory } from "@/hooks/useInventory";
 import { Edit, Trash2, Package } from "lucide-react";
+import { Product } from "@/hooks/useInventory";
 
 interface InventoryListProps {
   filters: {
@@ -10,9 +11,11 @@ interface InventoryListProps {
     tags: string[];
     search: string;
   };
+  onEditProduct: (product: Product) => void;
+  onDeleteProduct: (product: Product) => void;
 }
 
-export function InventoryList({ filters }: InventoryListProps) {
+export function InventoryList({ filters, onEditProduct, onDeleteProduct }: InventoryListProps) {
   const { products, loading } = useInventory();
 
   const filteredProducts = products.filter((product) => {
@@ -124,11 +127,21 @@ export function InventoryList({ filters }: InventoryListProps) {
 
               {/* Action Buttons */}
               <div className="flex space-x-2 pt-2">
-                <Button size="sm" variant="outline" className="flex-1">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => onEditProduct(product)}
+                >
                   <Edit className="h-3 w-3 mr-1" />
                   Editar
                 </Button>
-                <Button size="sm" variant="outline" className="text-destructive hover:text-destructive">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => onDeleteProduct(product)}
+                >
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
