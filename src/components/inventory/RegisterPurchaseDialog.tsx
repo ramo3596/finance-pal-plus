@@ -72,7 +72,7 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
 
   const selectedCategoryData = categories.find(cat => cat.id === selectedCategory);
   const subcategories = selectedCategoryData?.subcategories || [];
-  const suppliers = contacts.filter(contact => contact.contact_type === "empresa"); // Use "empresa" for suppliers
+  const suppliers = contacts.filter(contact => contact.contact_type === "empresa"); // Filter only empresa type contacts for suppliers
 
   const totalAmount = selectedProducts.reduce((sum, item) => sum + (item.quantity * item.cost), 0);
 
@@ -297,13 +297,19 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar proveedor" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.filter(supplier => supplier.id && supplier.id.trim() !== '').map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
-                          {supplier.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                     <SelectContent>
+                       {suppliers.length === 0 ? (
+                         <SelectItem value="no-suppliers" disabled>
+                           No hay proveedores disponibles
+                         </SelectItem>
+                       ) : (
+                         suppliers.filter(supplier => supplier.id && supplier.id.trim() !== '').map((supplier) => (
+                           <SelectItem key={supplier.id} value={supplier.id}>
+                             {supplier.name}
+                           </SelectItem>
+                         ))
+                       )}
+                     </SelectContent>
                   </Select>
                   {errors.supplier_id && (
                     <p className="text-sm text-destructive">{errors.supplier_id.message}</p>
