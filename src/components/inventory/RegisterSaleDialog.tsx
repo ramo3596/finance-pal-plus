@@ -163,8 +163,23 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
     try {
       const customer = customers.find(c => c.id === data.customer_id);
       
-      // Find the "Ventas" category automatically
-      const ventasCategory = categories.find(cat => cat.name.toLowerCase() === 'ventas');
+      // Find the "Ventas" subcategory in any category and get its parent category
+      let ventasCategory = null;
+      let ventasSubcategory = null;
+      
+      for (const category of categories) {
+        const foundSubcategory = category.subcategories?.find(sub => sub.name.toLowerCase() === 'ventas');
+        if (foundSubcategory) {
+          ventasSubcategory = foundSubcategory;
+          ventasCategory = category; // Use the parent category of the subcategory
+          break;
+        }
+      }
+      
+      // If no "Ventas" subcategory found, fallback to finding a "Ventas" category
+      if (!ventasCategory) {
+        ventasCategory = categories.find(cat => cat.name.toLowerCase() === 'ventas');
+      }
 
       if (saleType === "paid") {
         // For paid sales: Create income transaction AND update inventory
@@ -175,6 +190,7 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
           amount: totalAmount,
           description: data.description || `Venta de productos - ${customer?.name}`,
           category_id: ventasCategory?.id,
+          subcategory_id: ventasSubcategory?.id,
           account_id: data.account_id!,
           payment_method: data.payment_method!,
           transaction_date: data.date,
