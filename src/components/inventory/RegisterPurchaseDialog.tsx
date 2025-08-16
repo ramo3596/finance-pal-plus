@@ -168,11 +168,11 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
           amount: data.total_amount,
           description: data.concept || `Compra de productos - ${supplier?.name}`,
           category_id: data.category_id,
-          subcategory_id: data.subcategory_id,
+          subcategory_id: data.subcategory_id || undefined,
           account_id: data.account_id!,
           payment_method: data.payment_method!,
           transaction_date: data.date,
-          tags: ["Inventario"],
+          tags: selectedProducts.flatMap(p => p.product.tags || []),
           beneficiary: supplier?.name,
           note: `Productos: ${selectedProducts.map(p => `${p.product.name} (${p.quantity})`).join(', ')}`,
         });

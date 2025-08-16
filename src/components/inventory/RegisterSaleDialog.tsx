@@ -67,7 +67,7 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [productSelectionOpen, setProductSelectionOpen] = useState(false);
   
-  const { accounts } = useSettings();
+  const { accounts, categories } = useSettings();
   const { contacts } = useContacts();
   const { createTransaction } = useTransactions();
   const { createDebt } = useDebts();
@@ -162,6 +162,9 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
 
     try {
       const customer = customers.find(c => c.id === data.customer_id);
+      
+      // Find the "Ventas" category automatically
+      const ventasCategory = categories.find(cat => cat.name.toLowerCase() === 'ventas');
 
       if (saleType === "paid") {
         // For paid sales: Create income transaction AND update inventory
@@ -171,10 +174,11 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
           type: "income",
           amount: totalAmount,
           description: data.description || `Venta de productos - ${customer?.name}`,
+          category_id: ventasCategory?.id,
           account_id: data.account_id!,
           payment_method: data.payment_method!,
           transaction_date: data.date,
-          tags: ["Inventario", "Venta"],
+          tags: selectedProducts.flatMap(p => p.product.tags || []),
           beneficiary: customer?.name,
           payer_contact_id: data.customer_id,
           note: `Productos vendidos: ${selectedProducts.map(p => `${p.product.name} (${p.quantity})`).join(', ')}${totalDiscount > 0 ? ` - Descuento aplicado: $${totalDiscount.toFixed(2)}` : ''}`,
