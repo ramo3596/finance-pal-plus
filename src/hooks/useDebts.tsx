@@ -241,7 +241,7 @@ export function useDebts() {
 
       // Create initial transaction for manual debts/loans (not for inventory-based ones)
       if (!options?.skipTransaction) {
-        const transactionType = debtData.type === 'debt' ? 'expense' : 'income'
+        const transactionType = debtData.type === 'debt' ? 'income' : 'expense'
         const categoryId = debtData.type === 'debt' ? debtCategoryId : loanCategoryId
         const description = debtData.type === 'debt' 
           ? `Deuda - ${contactData?.name || 'contacto'}` 
@@ -410,14 +410,14 @@ export function useDebts() {
       let description: string
 
       if (!debt || !debt.type) {
-        // Default to expense/debt category if debt info is not available
-        transactionType = 'expense'
+        // Default to income/debt category if debt info is not available
+        transactionType = 'income'
         categoryId = debtCategoryId
         description = `Pago - ${contactData?.name || 'contacto'}`
       } else if (debt.type === 'debt') {
         if (paymentData.amount > 0) {
           // Aumento de deuda → category "Deuda", positive amount
-          transactionType = 'expense'
+          transactionType = 'income'
           categoryId = debtCategoryId
           description = `Aumento de deuda con ${contactData?.name || 'contacto'}`
         } else {
@@ -430,7 +430,7 @@ export function useDebts() {
         // debt.type === 'loan'
         if (paymentData.amount < 0) {
           // Negative amount for loan = increase loan → category "Préstamo"
-          transactionType = 'income'
+          transactionType = 'expense'
           categoryId = loanCategoryId
           description = `Aumento de préstamo a ${contactData?.name || 'contacto'}`
         } else {
