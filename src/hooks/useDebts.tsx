@@ -239,25 +239,28 @@ export function useDebts() {
 
       if (error) throw error
 
-      // Create corresponding transaction in the history
-      const transactionData = {
-        type: debtData.type === 'loan' ? 'income' as const : 'expense' as const,
-        amount: debtData.initial_amount,
-        account_id: debtData.account_id,
-        category_id: debtData.type === 'loan' ? loanCategoryId : debtCategoryId,
-        description: `${debtData.type === 'loan' ? 'Préstamo a' : 'Deuda con'} ${contactData?.name || 'contacto'}`,
-        beneficiary: contactData?.name,
-        transaction_date: debtData.debt_date,
-        tags: []
-      }
+      // Only create transaction for loans (money given out), not for debts (money owed)
+      // Debts should only create transactions when they are actually paid
+      if (debtData.type === 'loan') {
+        const transactionData = {
+          type: 'income' as const,
+          amount: debtData.initial_amount,
+          account_id: debtData.account_id,
+          category_id: loanCategoryId,
+          description: `Préstamo a ${contactData?.name || 'contacto'}`,
+          beneficiary: contactData?.name,
+          transaction_date: debtData.debt_date,
+          tags: []
+        }
 
-      // Create the transaction
-      if (transactionData.category_id) {
-        try {
-          const createdTransaction = await createTransaction(transactionData)
-          console.log('Transaction created successfully for debt:', createdTransaction)
-        } catch (err) {
-          console.error('Error creating transaction for debt:', err)
+        // Create the transaction for loans only
+        if (transactionData.category_id) {
+          try {
+            const createdTransaction = await createTransaction(transactionData)
+            console.log('Transaction created successfully for loan:', createdTransaction)
+          } catch (err) {
+            console.error('Error creating transaction for loan:', err)
+          }
         }
       }
 
