@@ -197,7 +197,7 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
           account_id: accounts[0]?.id || "", // Optional for debts
           status: "active",
           debt_date: new Date(`${data.date}T${new Date().toTimeString().slice(0, 5)}`).toISOString(),
-        });
+        }, { skipTransaction: true });
 
         // 2. Update inventory quantities (inventory increases even though it's a debt)
         for (const item of selectedProducts) {

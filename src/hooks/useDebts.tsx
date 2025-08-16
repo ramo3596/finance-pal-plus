@@ -213,7 +213,7 @@ export function useDebts() {
     }
   }
 
-  const createDebt = async (debtData: Omit<Debt, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+  const createDebt = async (debtData: Omit<Debt, 'id' | 'user_id' | 'created_at' | 'updated_at'>, options?: { skipTransaction?: boolean }) => {
     if (!user) return null
 
     try {
@@ -239,9 +239,26 @@ export function useDebts() {
 
       if (error) throw error
 
-      // Do not create transactions automatically for debts or loans
-      // Transactions should only be created when debts are actually paid/collected
-      // This prevents false financial movements in the Records page
+      // Create initial transaction for manual debts/loans (not for inventory-based ones)
+      if (!options?.skipTransaction) {
+        const transactionType = debtData.type === 'debt' ? 'expense' : 'income'
+        const categoryId = debtData.type === 'debt' ? debtCategoryId : loanCategoryId
+        const description = debtData.type === 'debt' 
+          ? `Deuda - ${contactData?.name || 'contacto'}` 
+          : `Préstamo - ${contactData?.name || 'contacto'}`
+
+        await createTransaction({
+          type: transactionType,
+          amount: debtData.initial_amount,
+          account_id: debtData.account_id,
+          category_id: categoryId,
+          description,
+          beneficiary: contactData?.name,
+          note: debtData.description,
+          transaction_date: debtData.debt_date,
+          tags: []
+        })
+      }
 
       // Create initial payment record in debt_payments for history tracking
       // For debts, the initial amount should be positive, for loans negative
