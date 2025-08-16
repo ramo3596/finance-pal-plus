@@ -171,7 +171,7 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
           subcategory_id: data.subcategory_id || undefined,
           account_id: data.account_id!,
           payment_method: data.payment_method!,
-          transaction_date: data.date,
+          transaction_date: new Date(`${data.date}T${new Date().toTimeString().slice(0, 5)}`).toISOString(),
           tags: selectedProducts.flatMap(p => p.product.tags || []),
           beneficiary: supplier?.name,
           note: `Productos: ${selectedProducts.map(p => `${p.product.name} (${p.quantity})`).join(', ')}`,
@@ -196,7 +196,7 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
           contact_id: data.supplier_id,
           account_id: accounts[0]?.id || "", // Optional for debts
           status: "active",
-          debt_date: data.date,
+          debt_date: new Date(`${data.date}T${new Date().toTimeString().slice(0, 5)}`).toISOString(),
         });
 
         // 2. Update inventory quantities (inventory increases even though it's a debt)

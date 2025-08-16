@@ -193,7 +193,7 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
           subcategory_id: ventasSubcategory?.id,
           account_id: data.account_id!,
           payment_method: data.payment_method!,
-          transaction_date: data.date,
+          transaction_date: new Date(`${data.date}T${new Date().toTimeString().slice(0, 5)}`).toISOString(),
           tags: selectedProducts.flatMap(p => p.product.tags || []),
           beneficiary: customer?.name,
           payer_contact_id: data.customer_id,
@@ -218,7 +218,7 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
           contact_id: data.customer_id,
           account_id: accounts[0]?.id || "", // Optional for debts
           status: "active",
-          debt_date: data.date,
+          debt_date: new Date(`${data.date}T${new Date().toTimeString().slice(0, 5)}`).toISOString(),
         });
 
         // 2. Reduce inventory quantities (products are delivered)
