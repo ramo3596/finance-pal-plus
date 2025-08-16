@@ -22,6 +22,8 @@ export interface Transaction {
   transaction_date: string;
   created_at: string;
   updated_at: string;
+  contact_id?: string;
+  payer_contact_id?: string;
 }
 
 export interface DashboardCard {
