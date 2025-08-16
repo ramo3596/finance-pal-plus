@@ -113,9 +113,9 @@ export function AddPaymentDialog({ open, onOpenChange, debt, accounts }: AddPaym
   }
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-ES', {
+    return new Intl.NumberFormat('es-CO', {
       style: 'currency',
-      currency: 'EUR'
+      currency: 'USD'
     }).format(amount)
   }
 
