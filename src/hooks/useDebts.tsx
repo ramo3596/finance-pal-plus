@@ -129,7 +129,10 @@ export function useDebts() {
       const enrichedPayments = (data || []).map(payment => {
         // Determine category based on payment type and debt type
         let selectedCategory
-        if (payment.description?.includes('Registro inicial')) {
+        if (!debt || !debt.type) {
+          // Default to debt category if debt info is not available
+          selectedCategory = debtCategory
+        } else if (payment.description?.includes('Registro inicial')) {
           // Initial records should match the debt type
           selectedCategory = debt.type === 'loan' ? loanCategory : debtCategory
         } else {
@@ -147,9 +150,9 @@ export function useDebts() {
           ...payment,
           transactions: {
             category_id: selectedCategory?.id,
-            account_id: debt.account_id,
+            account_id: debt?.account_id,
             categories: selectedCategory,
-            accounts: debt.accounts
+            accounts: debt?.accounts
           }
         }
       })
@@ -407,7 +410,12 @@ export function useDebts() {
       let categoryId: string | null
       let description: string
 
-      if (debt.type === 'debt') {
+      if (!debt || !debt.type) {
+        // Default to expense/debt category if debt info is not available
+        transactionType = 'expense'
+        categoryId = debtCategoryId
+        description = `Pago - ${contactData?.name || 'contacto'}`
+      } else if (debt.type === 'debt') {
         if (paymentData.amount > 0) {
           // Aumento de deuda → category "Deuda", positive amount
           transactionType = 'expense'
@@ -440,7 +448,10 @@ export function useDebts() {
         // Determine the correct amount based on debt type and payment direction
         let transactionAmount: number
         
-        if (debt.type === 'debt') {
+        if (!debt || !debt.type) {
+          // Default case - keep amount as entered
+          transactionAmount = paymentData.amount
+        } else if (debt.type === 'debt') {
           if (paymentData.amount > 0) {
             // Aumento de deuda → positive amount (keep as entered)
             transactionAmount = paymentData.amount
@@ -462,7 +473,7 @@ export function useDebts() {
         const transactionData = {
           type: transactionType,
           amount: transactionAmount,
-          account_id: debt.account_id,
+          account_id: debt?.account_id || "",
           category_id: categoryId,
           description,
           beneficiary: contactData?.name,
@@ -498,9 +509,9 @@ export function useDebts() {
       // Update debt balance and handle automatic conversion
       let newBalance: number
       
-      if (debt.type === 'debt') {
+      if (!debt || !debt.type || debt.type === 'debt') {
         // Para deudas: amount positivo suma al saldo, amount negativo resta al saldo
-        newBalance = debt.current_balance + paymentData.amount
+        newBalance = debt ? debt.current_balance + paymentData.amount : paymentData.amount
       } else {
         // Para préstamos: la lógica debe ser invertida
         // - amount negativo (aumento de préstamo) debe AUMENTAR el saldo (me deben más)
@@ -515,7 +526,7 @@ export function useDebts() {
           current_balance: 0,
           status: 'closed'
         })
-      } else if ((debt.type === 'debt' && newBalance < 0) || (debt.type === 'loan' && newBalance < 0)) {
+      } else if ((debt && debt.type === 'debt' && newBalance < 0) || (debt && debt.type === 'loan' && newBalance < 0)) {
         // Overpayment occurred - close current debt and create opposite type
         await updateDebt(debtId, { 
           current_balance: 0,
@@ -524,10 +535,10 @@ export function useDebts() {
         
         // Create new debt/loan of opposite type for the excess amount
         const newDebtData = {
-          contact_id: debt.contact_id,
-          account_id: debt.account_id,
-          type: debt.type === 'debt' ? 'loan' as const : 'debt' as const,
-          description: `Saldo a favor - ${debt.description}`,
+          contact_id: debt?.contact_id || "",
+          account_id: debt?.account_id || "",
+          type: (debt && debt.type === 'debt') ? 'loan' as const : 'debt' as const,
+          description: `Saldo a favor - ${debt?.description || 'Compra'}`,
           initial_amount: Math.abs(newBalance),
           current_balance: Math.abs(newBalance),
           debt_date: paymentData.payment_date,
@@ -535,7 +546,7 @@ export function useDebts() {
         }
         
         await createDebt(newDebtData)
-        toast.success(`Pago registrado. ${debt.type === 'debt' ? 'Préstamo' : 'Deuda'} creado por el exceso.`)
+        toast.success(`Pago registrado. ${debt && debt.type === 'debt' ? 'Préstamo' : 'Deuda'} creado por el exceso.`)
       } else {
         // Normal payment - update balance
         await updateDebt(debtId, { 
@@ -671,13 +682,13 @@ export function useDebts() {
         if (isInitialRecord) {
           // For initial records, update the debt's initial_amount and recalculate balance
           const newInitialAmount = Math.abs(updatedData.amount)
-          const { error: debtUpdateError } = await supabase
-            .from('debts')
-            .update({ 
-              initial_amount: newInitialAmount,
-              current_balance: debt.type === 'debt' ? newInitialAmount : newInitialAmount
-            })
-            .eq('id', debtId)
+           const { error: debtUpdateError } = await supabase
+             .from('debts')
+             .update({ 
+               initial_amount: newInitialAmount,
+               current_balance: (debt && debt.type === 'debt') ? newInitialAmount : newInitialAmount
+             })
+             .eq('id', debtId)
           
           if (debtUpdateError) throw debtUpdateError
         } else {
