@@ -286,14 +286,91 @@ export function useDebts() {
 
   const updateDebt = async (id: string, updates: Partial<Debt>) => {
     try {
+      // Get current debt data before updating
+      const { data: currentDebt } = await supabase
+        .from('debts')
+        .select('*, contacts(name)')
+        .eq('id', id)
+        .single()
+
+      if (!currentDebt) throw new Error('Debt not found')
+
+      // Update the debt
       const { error } = await supabase
         .from('debts')
         .update(updates)
         .eq('id', id)
 
       if (error) throw error
+
+      // Handle synchronization with linked transactions
+      // 1. Update initial transaction if debt details changed
+      if (updates.initial_amount !== undefined || 
+          updates.debt_date !== undefined || 
+          updates.contact_id !== undefined) {
+        
+        // Get contact name for transaction description
+        let contactName = currentDebt.contacts?.name || ''
+        if (updates.contact_id && updates.contact_id !== currentDebt.contact_id) {
+          const { data: newContact } = await supabase
+            .from('contacts')
+            .select('name')
+            .eq('id', updates.contact_id)
+            .single()
+          contactName = newContact?.name || ''
+        }
+
+        // Find and update the initial transaction
+        const initialDescription = `${currentDebt.type === 'loan' ? 'Préstamo' : 'Deuda'} - ${contactName}`
+        
+        const transactionUpdates: any = {}
+        if (updates.initial_amount !== undefined) {
+          transactionUpdates.amount = updates.initial_amount
+        }
+        if (updates.debt_date !== undefined) {
+          transactionUpdates.transaction_date = updates.debt_date
+        }
+        if (contactName && (updates.contact_id !== undefined)) {
+          transactionUpdates.description = initialDescription
+          transactionUpdates.beneficiary = contactName
+        }
+
+        // Update the initial transaction if there are changes
+        if (Object.keys(transactionUpdates).length > 0) {
+          await supabase
+            .from('transactions')
+            .update(transactionUpdates)
+            .eq('description', `${currentDebt.type === 'loan' ? 'Préstamo' : 'Deuda'} - ${currentDebt.contacts?.name || ''}`)
+            .eq('transaction_date', currentDebt.debt_date)
+        }
+      }
+
+      // 2. Update debt payments and their linked transactions if account changed
+      if (updates.account_id !== undefined && updates.account_id !== currentDebt.account_id) {
+        // Get all debt payments with transaction IDs
+        const { data: debtPayments } = await supabase
+          .from('debt_payments')
+          .select('transaction_id')
+          .eq('debt_id', id)
+          .not('transaction_id', 'is', null)
+
+        // Update all linked transactions to use the new account
+        if (debtPayments && debtPayments.length > 0) {
+          const transactionIds = debtPayments
+            .filter(p => p.transaction_id)
+            .map(p => p.transaction_id)
+          
+          if (transactionIds.length > 0) {
+            await supabase
+              .from('transactions')
+              .update({ account_id: updates.account_id })
+              .in('id', transactionIds)
+          }
+        }
+      }
       
       await fetchDebts()
+      refetchTransactions() // Refresh transactions to show changes in Records page
       toast.success('Deuda actualizada exitosamente')
     } catch (error) {
       console.error('Error updating debt:', error)

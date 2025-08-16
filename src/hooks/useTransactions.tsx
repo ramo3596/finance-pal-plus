@@ -188,6 +188,24 @@ export const useTransactions = () => {
 
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
     try {
+      // Get the current transaction before updating
+      const currentTransaction = transactions.find(t => t.id === id);
+      if (!currentTransaction) {
+        throw new Error('Transaction not found');
+      }
+
+      // Check if this transaction is linked to a debt payment
+      const { data: linkedDebtPayment } = await supabase
+        .from('debt_payments')
+        .select('id, debt_id, amount')
+        .eq('transaction_id', id)
+        .single();
+
+      // Check if this is an initial debt/loan transaction (by description pattern)
+      const isInitialDebtTransaction = currentTransaction.description?.includes('Deuda -') || 
+                                      currentTransaction.description?.includes('Préstamo -');
+
+      // Update the transaction
       const { data, error } = await supabase
         .from('transactions' as any)
         .update(updates)
@@ -196,6 +214,87 @@ export const useTransactions = () => {
         .single();
 
       if (error) throw error;
+      
+      // Handle debt synchronization if this transaction is linked to a debt
+      if (linkedDebtPayment) {
+        // This transaction is linked to a debt payment - update the debt payment
+        const debtPaymentUpdates: any = {};
+        
+        if (updates.amount !== undefined) {
+          debtPaymentUpdates.amount = updates.amount;
+          
+          // Update debt balance - reverse old amount and apply new amount
+          const { data: currentDebt } = await supabase
+            .from('debts')
+            .select('current_balance, type')
+            .eq('id', linkedDebtPayment.debt_id)
+            .single();
+          
+          if (currentDebt) {
+            const balanceChange = updates.amount - linkedDebtPayment.amount;
+            const newBalance = currentDebt.current_balance + balanceChange;
+            
+            await supabase
+              .from('debts')
+              .update({ current_balance: newBalance })
+              .eq('id', linkedDebtPayment.debt_id);
+          }
+        }
+        
+        if (updates.transaction_date !== undefined) {
+          debtPaymentUpdates.payment_date = updates.transaction_date;
+        }
+        
+        if (updates.note !== undefined) {
+          debtPaymentUpdates.description = updates.note;
+        }
+        
+        // Update the debt payment if there are changes
+        if (Object.keys(debtPaymentUpdates).length > 0) {
+          await supabase
+            .from('debt_payments')
+            .update(debtPaymentUpdates)
+            .eq('id', linkedDebtPayment.id);
+        }
+      } else if (isInitialDebtTransaction) {
+        // This is an initial debt/loan transaction - update the corresponding debt
+        const { data: correspondingDebt } = await supabase
+          .from('debts')
+          .select('id, initial_amount')
+          .eq('debt_date', currentTransaction.transaction_date)
+          .or(`description.ilike.%${currentTransaction.description?.split(' - ')[1] || ''}%`)
+          .single();
+        
+        if (correspondingDebt) {
+          const debtUpdates: any = {};
+          
+          if (updates.amount !== undefined) {
+            debtUpdates.initial_amount = Math.abs(updates.amount);
+            // Update current balance to match new initial amount
+            debtUpdates.current_balance = Math.abs(updates.amount);
+          }
+          
+          if (updates.transaction_date !== undefined) {
+            debtUpdates.debt_date = updates.transaction_date;
+          }
+          
+          if (updates.description !== undefined) {
+            // Extract contact name from description and update debt description
+            const contactName = updates.description.split(' - ')[1];
+            if (contactName) {
+              debtUpdates.description = `${updates.description.includes('Deuda') ? 'Deuda con' : 'Préstamo a'} ${contactName}`;
+            }
+          }
+          
+          // Update the debt if there are changes
+          if (Object.keys(debtUpdates).length > 0) {
+            await supabase
+              .from('debts')
+              .update(debtUpdates)
+              .eq('id', correspondingDebt.id);
+          }
+        }
+      }
       
       setTransactions(prev => prev.map(t => t.id === id ? data as unknown as Transaction : t));
       // Refetch accounts to update balances
@@ -289,6 +388,17 @@ export const useTransactions = () => {
         throw new Error('Transaction not found');
       }
 
+      // Check if this transaction is linked to a debt payment
+      const { data: linkedDebtPayment } = await supabase
+        .from('debt_payments')
+        .select('id, debt_id')
+        .eq('transaction_id', id)
+        .single();
+
+      // Check if this is an initial debt/loan transaction (by description pattern)
+      const isInitialDebtTransaction = transactionToDelete.description?.includes('Deuda -') || 
+                                      transactionToDelete.description?.includes('Préstamo -');
+
       // If it's a transfer, find and delete both transactions
       if (transactionToDelete.type === 'transfer') {
         // Find the paired transaction
@@ -325,7 +435,61 @@ export const useTransactions = () => {
         
         toast.success('Transferencia eliminada completamente');
       } else {
-        // For regular transactions, delete normally
+        // For regular transactions, handle debt synchronization first
+        if (linkedDebtPayment) {
+          // This transaction is linked to a debt payment - delete the debt payment first
+          await supabase
+            .from('debt_payments')
+            .delete()
+            .eq('id', linkedDebtPayment.id);
+          
+          // Update debt balance by reversing the payment
+          const { data: debtPaymentData } = await supabase
+            .from('debt_payments')
+            .select('amount')
+            .eq('id', linkedDebtPayment.id)
+            .single();
+          
+          if (debtPaymentData) {
+            const { data: currentDebt } = await supabase
+              .from('debts')
+              .select('current_balance')
+              .eq('id', linkedDebtPayment.debt_id)
+              .single();
+            
+            if (currentDebt) {
+              const newBalance = currentDebt.current_balance - debtPaymentData.amount;
+              await supabase
+                .from('debts')
+                .update({ current_balance: newBalance })
+                .eq('id', linkedDebtPayment.debt_id);
+            }
+          }
+        } else if (isInitialDebtTransaction) {
+          // This is an initial debt/loan transaction - find and delete the corresponding debt
+          const { data: correspondingDebt } = await supabase
+            .from('debts')
+            .select('id')
+            .eq('debt_date', transactionToDelete.transaction_date)
+            .or(`description.ilike.%${transactionToDelete.description?.split(' - ')[1] || ''}%`)
+            .single();
+          
+          if (correspondingDebt) {
+            // Delete all debt payments first
+            await supabase
+              .from('debt_payments')
+              .delete()
+              .eq('debt_id', correspondingDebt.id);
+            
+            // Delete the debt
+            await supabase
+              .from('debts')
+              .delete()
+              .eq('id', correspondingDebt.id);
+          }
+        }
+        
+        // Delete the transaction
         const { error } = await supabase
           .from('transactions' as any)
           .delete()
