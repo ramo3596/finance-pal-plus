@@ -129,7 +129,7 @@ export function useDebts() {
       const enrichedPayments = (data || []).map(payment => {
         // Determine category based on payment type and debt type
         let selectedCategory
-        if (!debt || !debt.type) {
+        if (!debt?.type) {
           // Default to debt category if debt info is not available
           selectedCategory = debtCategory
         } else if (payment.description?.includes('Registro inicial')) {
@@ -486,7 +486,7 @@ export function useDebts() {
       let categoryId: string | null
       let description: string
 
-      if (!debt || !debt.type) {
+      if (!debt?.type) {
         // Default to income/debt category if debt info is not available
         transactionType = 'income'
         categoryId = debtCategoryId
