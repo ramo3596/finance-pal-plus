@@ -60,6 +60,25 @@ export function useDebts() {
   const { createTransaction, refetch: refetchTransactions } = useTransactions()
   const { categories, createCategory, createSubcategory } = useSettings()
 
+  const calculateDebtBalance = async (debtId: string): Promise<number> => {
+    try {
+      const { data: payments, error } = await supabase
+        .from('debt_payments')
+        .select('amount')
+        .eq('debt_id', debtId)
+        .order('payment_date', { ascending: true })
+
+      if (error) throw error
+      
+      // Calcular el saldo sumando todos los registros
+      const totalBalance = (payments || []).reduce((sum, payment) => sum + payment.amount, 0)
+      return totalBalance
+    } catch (error) {
+      console.error('Error calculating debt balance:', error)
+      return 0
+    }
+  }
+
   const fetchDebts = async () => {
     if (!user) return
 
@@ -82,7 +101,19 @@ export function useDebts() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setDebts((data as Debt[]) || [])
+      
+      // Calcular el saldo real para cada deuda basado en la suma de registros
+      const debtsWithCalculatedBalance = await Promise.all(
+        (data as Debt[] || []).map(async (debt) => {
+          const calculatedBalance = await calculateDebtBalance(debt.id)
+          return {
+            ...debt,
+            current_balance: calculatedBalance
+          }
+        })
+      )
+      
+      setDebts(debtsWithCalculatedBalance)
     } catch (error) {
       console.error('Error fetching debts:', error)
       toast.error('Error al cargar las deudas')
@@ -630,18 +661,8 @@ export function useDebts() {
           .eq('id', payment.id)
       }
 
-      // Update debt balance and handle automatic conversion
-      let newBalance: number
-      
-      if (!debt || !debt.type || debt.type === 'debt') {
-        // Para deudas: amount positivo suma al saldo, amount negativo resta al saldo
-        newBalance = debt ? debt.current_balance + paymentData.amount : paymentData.amount
-      } else {
-        // Para préstamos: el saldo actual = monto inicial + valores registrados
-        // - amount positivo (aumento de préstamo) suma al saldo
-        // - amount negativo (cobro de préstamo) resta al saldo
-        newBalance = debt.current_balance + paymentData.amount
-      }
+      // Recalcular el saldo basado en la suma de todos los registros
+      const newBalance = await calculateDebtBalance(debtId)
       
       // Check if balance reaches zero to close debt/loan
       if (Math.abs(newBalance) < 0.01) {
@@ -650,6 +671,7 @@ export function useDebts() {
           current_balance: 0,
           status: 'closed'
         })
+        toast.success('Pago registrado. Deuda/Préstamo cerrado.')
       } else if ((debt && debt.type === 'debt' && newBalance < 0) || (debt && debt.type === 'loan' && newBalance < 0)) {
         // Overpayment occurred - close current debt and create opposite type
         await updateDebt(debtId, { 
@@ -724,17 +746,12 @@ export function useDebts() {
 
       if (error) throw error
 
-      // Update debt balance by reversing the payment
-      const debt = debts.find(d => d.id === debtId)
-      if (debt) {
-        // Revertir el pago según el tipo de deuda
-        // Para deudas y préstamos: restar el payment.amount que se había agregado
-        const newBalance = debt.current_balance - payment.amount
-        await updateDebt(debtId, { 
-          current_balance: newBalance,
-          status: 'active'
-        })
-      }
+      // Recalcular el saldo basado en la suma de todos los registros restantes
+      const newBalance = await calculateDebtBalance(debtId)
+      await updateDebt(debtId, { 
+        current_balance: newBalance,
+        status: Math.abs(newBalance) < 0.01 ? 'closed' : 'active'
+      })
 
       await fetchDebts()
       refetchTransactions() // Refresh transactions to show in Records page
@@ -801,32 +818,25 @@ export function useDebts() {
         }
       }
 
-      // If amount changed, update debt balance and initial amount if it's an initial record
+      // If amount changed, update debt balance
       if (updatedData.amount !== undefined) {
         const isInitialRecord = currentPayment.description?.includes('Registro inicial')
         
         if (isInitialRecord) {
-          // For initial records, update the debt's initial_amount and recalculate balance
+          // For initial records, update the debt's initial_amount
           const newInitialAmount = Math.abs(updatedData.amount)
-           const { error: debtUpdateError } = await supabase
-             .from('debts')
-             .update({ 
-               initial_amount: newInitialAmount,
-               current_balance: newInitialAmount
-             })
-             .eq('id', debtId)
-          
-          if (debtUpdateError) throw debtUpdateError
-        } else {
-          // For regular payments, update balance normally
-          // Revertir el cambio anterior y aplicar el nuevo
-          const balanceChange = updatedData.amount - currentPayment.amount
-          const newBalance = debt.current_balance + balanceChange
-          await updateDebt(debtId, { 
-            current_balance: newBalance,
-            status: Math.abs(newBalance) < 0.01 ? 'closed' : 'active'
-          })
+          await supabase
+            .from('debts')
+            .update({ initial_amount: newInitialAmount })
+            .eq('id', debtId)
         }
+        
+        // Recalcular el saldo basado en la suma de todos los registros
+        const newBalance = await calculateDebtBalance(debtId)
+        await updateDebt(debtId, { 
+          current_balance: newBalance,
+          status: Math.abs(newBalance) < 0.01 ? 'closed' : 'active'
+        })
       }
 
       await fetchDebts()
@@ -878,6 +888,7 @@ export function useDebts() {
     addDebtPayment,
     deleteDebtPayment,
     updateDebtPayment,
-    reactivateDebt
+    reactivateDebt,
+    calculateDebtBalance
   }
 }

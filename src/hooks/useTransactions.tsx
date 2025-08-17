@@ -223,22 +223,16 @@ export const useTransactions = () => {
         if (updates.amount !== undefined) {
           debtPaymentUpdates.amount = updates.amount;
           
-          // Update debt balance - reverse old amount and apply new amount
-          const { data: currentDebt } = await supabase
-            .from('debts')
-            .select('current_balance, type')
-            .eq('id', linkedDebtPayment.debt_id)
-            .single();
+          // Recalcular el saldo basado en la suma de todos los registros
+          // Importar useDebts y usar calculateDebtBalance
+          const { useDebts } = await import('./useDebts');
+          const { calculateDebtBalance } = useDebts();
+          const newBalance = await calculateDebtBalance(linkedDebtPayment.debt_id);
           
-          if (currentDebt) {
-            const balanceChange = updates.amount - linkedDebtPayment.amount;
-            const newBalance = currentDebt.current_balance + balanceChange;
-            
-            await supabase
-              .from('debts')
-              .update({ current_balance: newBalance })
-              .eq('id', linkedDebtPayment.debt_id);
-          }
+          await supabase
+            .from('debts')
+            .update({ current_balance: newBalance })
+            .eq('id', linkedDebtPayment.debt_id);
         }
         
         if (updates.transaction_date !== undefined) {
@@ -443,28 +437,15 @@ export const useTransactions = () => {
             .delete()
             .eq('id', linkedDebtPayment.id);
           
-          // Update debt balance by reversing the payment
-          const { data: debtPaymentData } = await supabase
-            .from('debt_payments')
-            .select('amount')
-            .eq('id', linkedDebtPayment.id)
-            .single();
+          // Recalcular el saldo basado en la suma de todos los registros restantes
+          const { useDebts } = await import('./useDebts');
+          const { calculateDebtBalance } = useDebts();
+          const newBalance = await calculateDebtBalance(linkedDebtPayment.debt_id);
           
-          if (debtPaymentData) {
-            const { data: currentDebt } = await supabase
-              .from('debts')
-              .select('current_balance')
-              .eq('id', linkedDebtPayment.debt_id)
-              .single();
-            
-            if (currentDebt) {
-              const newBalance = currentDebt.current_balance - debtPaymentData.amount;
-              await supabase
-                .from('debts')
-                .update({ current_balance: newBalance })
-                .eq('id', linkedDebtPayment.debt_id);
-            }
-          }
+          await supabase
+            .from('debts')
+            .update({ current_balance: newBalance })
+            .eq('id', linkedDebtPayment.debt_id);
         } else if (isInitialDebtTransaction) {
           // This is an initial debt/loan transaction - find and delete the corresponding debt
           const { data: correspondingDebt } = await supabase
