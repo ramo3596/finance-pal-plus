@@ -114,7 +114,13 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
-    Quagga.stop();
+    try {
+      if (Quagga && typeof Quagga.stop === 'function') {
+        Quagga.stop();
+      }
+    } catch (error) {
+      console.warn('Error stopping Quagga:', error);
+    }
     setIsScanning(false);
   };
 
@@ -203,7 +209,13 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
   // Limpiar QuaggaJS al desmontar el componente
   useEffect(() => {
     return () => {
-      Quagga.stop();
+      try {
+        if (Quagga && typeof Quagga.stop === 'function') {
+          Quagga.stop();
+        }
+      } catch (error) {
+        console.warn('Error stopping Quagga during cleanup:', error);
+      }
     };
   }, []);
 
