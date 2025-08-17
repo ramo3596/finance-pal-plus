@@ -84,7 +84,8 @@ export function useDebts() {
       // - Deudas ("Me prestaron"): valores negativos
       // - Préstamos ("Prestó"): valores positivos
       const totalBalance = (payments || []).reduce((sum, payment) => sum + payment.amount, 0)
-      return totalBalance
+      // Multiplicar el resultado por -1 según la nueva lógica
+      return totalBalance * -1
     } catch (error) {
       console.error('Error calculating debt balance:', error)
       return 0
@@ -344,9 +345,9 @@ export function useDebts() {
 
       // Create initial payment record in debt_payments for history tracking
       // Para que las deudas muestren valores negativos y los préstamos positivos:
-      // - Para deudas ("Me prestaron"): monto negativo
-      // - Para préstamos ("Prestó"): monto positivo
-      const initialPaymentAmount = debtData.type === 'debt' ? -debtData.initial_amount : debtData.initial_amount
+      // - Para deudas ("Me prestaron"): monto positivo (se invierte con el *-1 en calculateDebtBalance)
+      // - Para préstamos ("Prestó"): monto negativo (se invierte con el *-1 en calculateDebtBalance)
+      const initialPaymentAmount = debtData.type === 'debt' ? debtData.initial_amount : -debtData.initial_amount
       
       await supabase
         .from('debt_payments')
@@ -678,42 +679,36 @@ export function useDebts() {
       // Recalcular el saldo basado en la suma de todos los registros
       const newBalance = await calculateDebtBalance(debtId)
       
-      // Check if balance reaches zero to close debt/loan
+      // Check if balance reaches exactly zero to close debt/loan
       if (Math.abs(newBalance) < 0.01) {
-        // Exact payment - close the debt/loan only when balance is zero
+        // Exact payment - close the debt/loan only when balance is exactly zero
         await updateDebt(debtId, { 
           current_balance: 0,
           status: 'closed'
         })
         toast.success('Pago registrado. Deuda/Préstamo cerrado.')
-      } else if ((debt && debt.type === 'debt' && newBalance < 0) || (debt && debt.type === 'loan' && newBalance < 0)) {
-        // Overpayment occurred - close current debt and create opposite type
-        await updateDebt(debtId, { 
-          current_balance: 0,
-          status: 'closed'
-        })
-        
-        // Create new debt/loan of opposite type for the excess amount
-        const newDebtData = {
-          contact_id: debt?.contact_id || "",
-          account_id: debt?.account_id || "",
-          type: (debt && debt.type === 'debt') ? 'loan' as const : 'debt' as const,
-          description: `Saldo a favor - ${debt?.description || 'Compra'}`,
-          initial_amount: Math.abs(newBalance),
-          current_balance: Math.abs(newBalance),
-          debt_date: paymentData.payment_date,
-          status: 'active' as const
-        }
-        
-        await createDebt(newDebtData)
-        toast.success(`Pago registrado. ${debt && debt.type === 'debt' ? 'Préstamo' : 'Deuda'} creado por el exceso.`)
       } else {
-        // Normal payment - update balance
-        await updateDebt(debtId, { 
-          current_balance: newBalance,
-          status: newBalance === 0 ? 'closed' : 'active'
-        })
-        toast.success('Pago registrado exitosamente')
+        // Check if the sign changed (debt became loan or vice versa)
+        const originalType = debt?.type
+        const shouldChangeType = (originalType === 'debt' && newBalance > 0) || (originalType === 'loan' && newBalance < 0)
+        
+        if (shouldChangeType) {
+          // Change debt type but keep it active with the same records
+          const newType = originalType === 'debt' ? 'loan' : 'debt'
+          await updateDebt(debtId, { 
+            current_balance: newBalance,
+            type: newType,
+            status: 'active'
+          })
+          toast.success(`Pago registrado. ${originalType === 'debt' ? 'Deuda convertida a Préstamo' : 'Préstamo convertido a Deuda'}.`)
+        } else {
+          // Normal payment - update balance and keep active
+          await updateDebt(debtId, { 
+            current_balance: newBalance,
+            status: 'active'
+          })
+          toast.success('Pago registrado exitosamente')
+        }
       }
 
       refetchTransactions() // Refresh transactions to show in Records page
@@ -847,10 +842,34 @@ export function useDebts() {
         
         // Recalcular el saldo basado en la suma de todos los registros
         const newBalance = await calculateDebtBalance(debtId)
-        await updateDebt(debtId, { 
-          current_balance: newBalance,
-          status: Math.abs(newBalance) < 0.01 ? 'closed' : 'active'
-        })
+        
+        // Check if balance reaches exactly zero to close debt/loan
+        if (Math.abs(newBalance) < 0.01) {
+          await updateDebt(debtId, { 
+            current_balance: 0,
+            status: 'closed'
+          })
+        } else {
+          // Check if the sign changed (debt became loan or vice versa)
+          const originalType = debt?.type
+          const shouldChangeType = (originalType === 'debt' && newBalance > 0) || (originalType === 'loan' && newBalance < 0)
+          
+          if (shouldChangeType) {
+            // Change debt type but keep it active with the same records
+            const newType = originalType === 'debt' ? 'loan' : 'debt'
+            await updateDebt(debtId, { 
+              current_balance: newBalance,
+              type: newType,
+              status: 'active'
+            })
+          } else {
+            // Normal update - update balance and keep active
+            await updateDebt(debtId, { 
+              current_balance: newBalance,
+              status: 'active'
+            })
+          }
+        }
       }
 
       await fetchDebts()
