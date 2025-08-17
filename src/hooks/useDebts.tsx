@@ -776,7 +776,8 @@ export function useDebts() {
         const transactionUpdates: any = {}
         
         if (updatedData.amount !== undefined) {
-          transactionUpdates.amount = Math.abs(updatedData.amount)
+          // Mantener el signo original del monto para preservar la naturaleza de la transacción
+          transactionUpdates.amount = updatedData.amount
         }
         if (updatedData.payment_date !== undefined) {
           transactionUpdates.transaction_date = updatedData.payment_date
