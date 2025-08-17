@@ -136,8 +136,8 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
               </div>
               <div>
                 <span className="text-muted-foreground">Saldo actual:</span>
-                <p className={`font-semibold ${isDebt ? 'text-red-600' : 'text-green-600'}`}>
-                  {formatCurrency(Math.abs(debt.current_balance))}
+                <p className={`font-semibold ${debt.current_balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  {formatCurrency(debt.current_balance)}
                 </p>
               </div>
               <div>

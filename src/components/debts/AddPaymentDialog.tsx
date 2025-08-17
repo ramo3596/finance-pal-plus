@@ -128,7 +128,7 @@ export function AddPaymentDialog({ open, onOpenChange, debt, accounts }: AddPaym
             {isDebt ? 'DEBO' : 'ME DEBEN'} {contactName}
           </div>
           <div className="text-sm font-medium">
-            Saldo actual: {formatCurrency(Math.abs(debt.current_balance))}
+            Saldo actual: {formatCurrency(debt.current_balance)}
           </div>
         </DialogHeader>
 

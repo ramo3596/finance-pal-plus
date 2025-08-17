@@ -62,6 +62,15 @@ export function useDebts() {
 
   const calculateDebtBalance = async (debtId: string): Promise<number> => {
     try {
+      // Obtener información de la deuda para conocer su tipo
+      const { data: debt, error: debtError } = await supabase
+        .from('debts')
+        .select('type')
+        .eq('id', debtId)
+        .single()
+
+      if (debtError) throw debtError
+
       const { data: payments, error } = await supabase
         .from('debt_payments')
         .select('amount')
@@ -71,6 +80,9 @@ export function useDebts() {
       if (error) throw error
       
       // Calcular el saldo sumando todos los registros
+      // Los valores ya están almacenados con los signos correctos:
+      // - Deudas ("Me prestaron"): valores negativos
+      // - Préstamos ("Prestó"): valores positivos
       const totalBalance = (payments || []).reduce((sum, payment) => sum + payment.amount, 0)
       return totalBalance
     } catch (error) {
@@ -331,8 +343,10 @@ export function useDebts() {
       }
 
       // Create initial payment record in debt_payments for history tracking
-      // For debts, the initial amount should be positive, for loans negative
-      const initialPaymentAmount = debtData.type === 'debt' ? debtData.initial_amount : -debtData.initial_amount
+      // Para que las deudas muestren valores negativos y los préstamos positivos:
+      // - Para deudas ("Me prestaron"): monto negativo
+      // - Para préstamos ("Prestó"): monto positivo
+      const initialPaymentAmount = debtData.type === 'debt' ? -debtData.initial_amount : debtData.initial_amount
       
       await supabase
         .from('debt_payments')
