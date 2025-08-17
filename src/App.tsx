@@ -10,6 +10,7 @@ import Settings from "./pages/Settings";
 import Records from "./pages/Records";
 import Inventory from "./pages/Inventory";
 import Statistics from "./pages/Statistics";
+import ProductStatistics from "./pages/ProductStatistics";
 import Contacts from "./pages/Contacts";
 import Debts from "./pages/Debts";
 import ScheduledPayments from "./pages/ScheduledPayments";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/records" element={<Records />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/statistics" element={<Statistics />} />
+            <Route path="/statistics/products" element={<ProductStatistics />} />
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/debts" element={<Debts />} />
             <Route path="/scheduled-payments" element={<ScheduledPayments />} />
