@@ -260,11 +260,15 @@ export const useSettings = () => {
   const createCategory = async (category: Omit<Category, 'id' | 'created_at' | 'updated_at'>) => {
     if (!user) return null;
     
+    console.log('Creating category with data:', { ...category, user_id: user.id });
+    
     const { data, error } = await supabase
       .from('categories')
       .insert([{ ...category, user_id: user.id }])
       .select()
       .single();
+    
+    console.log('Category creation result:', { data, error });
 
     if (error) {
       toast({
@@ -331,11 +335,15 @@ export const useSettings = () => {
 
   // Subcategory CRUD operations
   const createSubcategory = async (subcategory: Omit<Subcategory, 'id' | 'created_at'>) => {
+    console.log('Creating subcategory with data:', subcategory);
+    
     const { data, error } = await supabase
       .from('subcategories')
       .insert([subcategory])
       .select()
       .single();
+    
+    console.log('Subcategory creation result:', { data, error });
 
     if (error) {
       toast({
@@ -343,7 +351,7 @@ export const useSettings = () => {
         description: "No se pudo crear la subcategoría.",
         variant: "destructive",
       });
-      return;
+      return null;
     }
 
     // Update the categories state to include the new subcategory
@@ -357,6 +365,8 @@ export const useSettings = () => {
       title: "Éxito",
       description: "Subcategoría creada exitosamente.",
     });
+    
+    return data as Subcategory;
   };
 
   const updateSubcategory = async (id: string, updates: Partial<Subcategory>) => {

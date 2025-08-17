@@ -111,7 +111,7 @@ export default function Debts() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Debts Section */}
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold text-red-600">Deudas</h2>
+                <h2 className="text-xl font-semibold text-red-600">Me prestaron</h2>
                 {myDebts.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     No tienes deudas {statusFilter === 'active' ? 'activas' : 'cerradas'}
@@ -132,7 +132,7 @@ export default function Debts() {
 
               {/* Loans Section */}
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold text-green-600">Préstamos</h2>
+                <h2 className="text-xl font-semibold text-green-600">Prestó</h2>
                 {myLoans.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     No tienes préstamos {statusFilter === 'active' ? 'activos' : 'cerrados'}

@@ -58,7 +58,7 @@ export function useDebts() {
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
   const { createTransaction, refetch: refetchTransactions } = useTransactions()
-  const { categories, createCategory } = useSettings()
+  const { categories, createCategory, createSubcategory } = useSettings()
 
   const fetchDebts = async () => {
     if (!user) return
@@ -105,16 +105,18 @@ export function useDebts() {
 
       if (debtError) throw debtError
 
-      // Get categories for debt and loan
+      // Get categories for debt and loan using the new category structure
+      const { debtCategoryId, loanCategoryId } = await ensureDebtCategories()
+      
       const { data: categories, error: categoriesError } = await supabase
         .from('categories')
         .select('*')
-        .in('name', ['Deuda', 'Préstamo'])
+        .in('id', [debtCategoryId, loanCategoryId].filter(Boolean))
 
       if (categoriesError) throw categoriesError
 
-      const debtCategory = categories?.find(c => c.name === 'Deuda')
-      const loanCategory = categories?.find(c => c.name === 'Préstamo')
+      const debtCategory = categories?.find(c => c.id === debtCategoryId)
+      const loanCategory = categories?.find(c => c.id === loanCategoryId)
 
       // Get payments
       const { data, error } = await supabase
@@ -165,51 +167,87 @@ export function useDebts() {
   }
 
   const ensureDebtCategories = async () => {
-    if (!user) return { debtCategoryId: null, loanCategoryId: null }
+    if (!user) return { debtCategoryId: null, loanCategoryId: null, debtSubcategoryId: null, loanSubcategoryId: null }
 
-    // Use existing categories from configuration, prioritizing them regardless of nature
-    let debtCategory = categories.find(c => c.name === 'Deuda')
-    let loanCategory = categories.find(c => c.name === 'Préstamo')
-
-    // Create debt category if it doesn't exist
-    if (!debtCategory) {
+    // Find or create 'Gastos financieros' category for loans (Préstamos -> Comisión)
+    let expenseCategory = categories.find(c => c.name === 'Gastos financieros')
+    if (!expenseCategory) {
       try {
-        const newDebtCategory = await createCategory({
-          name: 'Deuda',
-          color: '#ef4444', // Red color for debts
-          icon: '💳',
+        const newExpenseCategory = await createCategory({
+          name: 'Gastos financieros',
+          color: '#ef4444', // Red color for expenses
+          icon: '💰',
           nature: 'expense'
         })
-        if (newDebtCategory) {
-          debtCategory = newDebtCategory
-          console.log('Created debt category:', debtCategory)
+        if (newExpenseCategory) {
+          expenseCategory = newExpenseCategory
+          console.log('Created expense category:', expenseCategory)
         }
       } catch (error) {
-        console.error('Error creating debt category:', error)
+        console.error('Error creating expense category:', error)
       }
     }
 
-    // Create loan category if it doesn't exist
-    if (!loanCategory) {
+    // Find or create 'Ingresos' category for debts (Deuda -> Préstamos, alquileres)
+    let incomeCategory = categories.find(c => c.name === 'Ingresos')
+    if (!incomeCategory) {
       try {
-        const newLoanCategory = await createCategory({
-          name: 'Préstamo',
-          color: '#22c55e', // Green color for loans
-          icon: '🏦',
+        const newIncomeCategory = await createCategory({
+          name: 'Ingresos',
+          color: '#22c55e', // Green color for income
+          icon: '💵',
           nature: 'income'
         })
-        if (newLoanCategory) {
-          loanCategory = newLoanCategory
-          console.log('Created loan category:', loanCategory)
+        if (newIncomeCategory) {
+          incomeCategory = newIncomeCategory
+          console.log('Created income category:', incomeCategory)
         }
       } catch (error) {
-        console.error('Error creating loan category:', error)
+        console.error('Error creating income category:', error)
+      }
+    }
+
+    // Find or create 'Comisión' subcategory under 'Gastos financieros'
+    let comisionSubcategory = expenseCategory?.subcategories?.find(s => s.name === 'Comisión')
+    if (!comisionSubcategory && expenseCategory) {
+      try {
+        const newComisionSubcategory = await createSubcategory({
+          name: 'Comisión',
+          category_id: expenseCategory.id,
+          icon: '🏦'
+        })
+        if (newComisionSubcategory) {
+          comisionSubcategory = newComisionSubcategory
+          console.log('Created comision subcategory:', comisionSubcategory)
+        }
+      } catch (error) {
+        console.error('Error creating comision subcategory:', error)
+      }
+    }
+
+    // Find or create 'Préstamos, alquileres' subcategory under 'Ingresos'
+    let prestamosSubcategory = incomeCategory?.subcategories?.find(s => s.name === 'Préstamos, alquileres')
+    if (!prestamosSubcategory && incomeCategory) {
+      try {
+        const newPrestamosSubcategory = await createSubcategory({
+          name: 'Préstamos, alquileres',
+          category_id: incomeCategory.id,
+          icon: '🏠'
+        })
+        if (newPrestamosSubcategory) {
+          prestamosSubcategory = newPrestamosSubcategory
+          console.log('Created prestamos subcategory:', prestamosSubcategory)
+        }
+      } catch (error) {
+        console.error('Error creating prestamos subcategory:', error)
       }
     }
 
     return {
-      debtCategoryId: debtCategory?.id || null,
-      loanCategoryId: loanCategory?.id || null
+      debtCategoryId: incomeCategory?.id || null, // Deuda -> Ingresos
+      loanCategoryId: expenseCategory?.id || null, // Préstamo -> Gastos financieros
+      debtSubcategoryId: prestamosSubcategory?.id || null, // Deuda -> Préstamos, alquileres
+      loanSubcategoryId: comisionSubcategory?.id || null // Préstamo -> Comisión
     }
   }
 
@@ -218,7 +256,7 @@ export function useDebts() {
 
     try {
       // Ensure debt/loan categories exist
-      const { debtCategoryId, loanCategoryId } = await ensureDebtCategories()
+      const { debtCategoryId, loanCategoryId, debtSubcategoryId, loanSubcategoryId } = await ensureDebtCategories()
 
       // Get contact information for the transaction
       const { data: contactData } = await supabase
@@ -252,6 +290,7 @@ export function useDebts() {
           amount: debtData.initial_amount,
           account_id: debtData.account_id,
           category_id: categoryId,
+          subcategory_id: debtData.type === 'debt' ? debtSubcategoryId : loanSubcategoryId,
           description,
           beneficiary: contactData?.name,
           note: debtData.description,
@@ -459,7 +498,7 @@ export function useDebts() {
       if (!debt) throw new Error('Debt not found')
 
       // Ensure debt/loan categories exist
-      const { debtCategoryId, loanCategoryId } = await ensureDebtCategories()
+      const { debtCategoryId, loanCategoryId, debtSubcategoryId, loanSubcategoryId } = await ensureDebtCategories()
 
       // Get contact information for the transaction
       const { data: contactData } = await supabase
@@ -546,11 +585,20 @@ export function useDebts() {
           }
         }
 
+        // Determine subcategory based on transaction type and category
+        let subcategoryId: string | null = null
+        if (categoryId === debtCategoryId) {
+          subcategoryId = debtSubcategoryId
+        } else if (categoryId === loanCategoryId) {
+          subcategoryId = loanSubcategoryId
+        }
+
         const transactionData = {
           type: transactionType,
           amount: transactionAmount,
           account_id: debt?.account_id || "",
           category_id: categoryId,
+          subcategory_id: subcategoryId,
           description,
           beneficiary: contactData?.name,
           note: paymentData.description,

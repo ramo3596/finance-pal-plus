@@ -169,28 +169,28 @@ export function TransactionItem({
             <span className={cn(
               "text-sm font-bold min-w-[80px] text-right",
               (() => {
-                // Lógica específica para categorías Deuda y Préstamo
-                if (categoryData?.name === 'Deuda') {
-                  return "text-green-600"; // Deuda siempre positiva (ingreso)
+                // Lógica específica para categorías de deudas y préstamos
+                if (categoryData?.name === 'Ingresos') {
+                  return "text-green-600"; // Ingresos siempre positivos
                 }
-                if (categoryData?.name === 'Préstamo') {
-                  return "text-red-600"; // Préstamo siempre negativa (egreso)
+                if (categoryData?.name === 'Gastos financieros') {
+                  return "text-red-600"; // Gastos financieros siempre negativos
                 }
                 return transaction.amount >= 0 ? "text-green-600" : "text-red-600";
               })()
             )}>
               {(() => {
-                // Lógica específica para categorías Deuda y Préstamo
-                if (categoryData?.name === 'Deuda') {
-                  // Deuda siempre mostrar como positivo
+                // Lógica específica para categorías de deudas y préstamos
+                if (categoryData?.name === 'Ingresos') {
+                  // Ingresos siempre mostrar como positivo
                   const displayAmount = Math.abs(transaction.amount);
                   return `+${new Intl.NumberFormat('en-US', {
                     style: 'currency',
                     currency: 'USD'
                   }).format(displayAmount)}`;
                 }
-                if (categoryData?.name === 'Préstamo') {
-                  // Préstamo siempre mostrar como negativo
+                if (categoryData?.name === 'Gastos financieros') {
+                  // Gastos financieros siempre mostrar como negativo
                   const displayAmount = Math.abs(transaction.amount);
                   return `-${new Intl.NumberFormat('en-US', {
                     style: 'currency',
