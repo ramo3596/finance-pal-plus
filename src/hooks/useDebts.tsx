@@ -34,6 +34,7 @@ export interface DebtPayment {
   id: string
   debt_id: string
   transaction_id?: string
+  account_id?: string
   amount: number
   payment_date: string
   description?: string
@@ -642,7 +643,7 @@ export function useDebts() {
         const transactionData = {
           type: transactionType,
           amount: transactionAmount,
-          account_id: debt?.account_id || "",
+          account_id: paymentData.account_id || debt?.account_id || "",
           category_id: categoryId,
           subcategory_id: subcategoryId,
           description,

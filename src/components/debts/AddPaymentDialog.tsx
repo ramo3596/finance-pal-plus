@@ -94,6 +94,7 @@ export function AddPaymentDialog({ open, onOpenChange, debt, accounts }: AddPaym
 
     const result = await addDebtPayment(debt.id, {
       amount,
+      account_id: data.account_id,
       payment_date: data.payment_date.toISOString(),
       description: data.description,
     })
