@@ -132,7 +132,7 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
               </div>
               <div>
                 <span className="text-muted-foreground">Monto inicial:</span>
-                <p className="font-medium">{formatCurrency(debt.initial_amount)}</p>
+                <p className="font-medium">{formatCurrency(isDebt ? debt.initial_amount : -Math.abs(debt.initial_amount))}</p>
               </div>
               <div>
                 <span className="text-muted-foreground">Saldo actual:</span>

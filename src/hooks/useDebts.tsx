@@ -637,10 +637,10 @@ export function useDebts() {
         // Para deudas: amount positivo suma al saldo, amount negativo resta al saldo
         newBalance = debt ? debt.current_balance + paymentData.amount : paymentData.amount
       } else {
-        // Para préstamos: la lógica debe ser invertida
-        // - amount negativo (aumento de préstamo) debe AUMENTAR el saldo (me deben más)
-        // - amount positivo (cobro de préstamo) debe DISMINUIR el saldo (me deben menos)
-        newBalance = debt.current_balance - paymentData.amount
+        // Para préstamos: el saldo actual = monto inicial + valores registrados
+        // - amount positivo (aumento de préstamo) suma al saldo
+        // - amount negativo (cobro de préstamo) resta al saldo
+        newBalance = debt.current_balance + paymentData.amount
       }
       
       // Check if balance reaches zero to close debt/loan
@@ -727,7 +727,8 @@ export function useDebts() {
       // Update debt balance by reversing the payment
       const debt = debts.find(d => d.id === debtId)
       if (debt) {
-        // Revertir el pago: si agregamos payment.amount, ahora restamos payment.amount
+        // Revertir el pago según el tipo de deuda
+        // Para deudas y préstamos: restar el payment.amount que se había agregado
         const newBalance = debt.current_balance - payment.amount
         await updateDebt(debtId, { 
           current_balance: newBalance,
@@ -811,7 +812,7 @@ export function useDebts() {
              .from('debts')
              .update({ 
                initial_amount: newInitialAmount,
-               current_balance: (debt && debt.type === 'debt') ? newInitialAmount : newInitialAmount
+               current_balance: newInitialAmount
              })
              .eq('id', debtId)
           
