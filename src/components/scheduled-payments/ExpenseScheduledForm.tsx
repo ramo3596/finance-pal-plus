@@ -62,7 +62,7 @@ export const ExpenseScheduledForm = ({ onClose }: ExpenseScheduledFormProps) => 
     },
   });
 
-  const expenseCategories = categories.filter(cat => cat.nature === 'expense' || cat.nature === 'Necesitar' || cat.nature === 'Deseos' || cat.nature === 'Deber');
+  const expenseCategories = categories.filter(cat => cat.nature === 'Necesitar' || cat.nature === 'Deseos' || cat.nature === 'Deber');
   const paymentMethods = [
     { value: "cash", label: "Dinero en efectivo" },
     { value: "debit", label: "Tarjeta de débito" },
