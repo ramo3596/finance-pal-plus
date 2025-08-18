@@ -7,6 +7,7 @@ import { CalendarIcon } from "lucide-react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -41,7 +42,6 @@ import { useDebts, type Debt } from "@/hooks/useDebts"
 
 const paymentSchema = z.object({
   action: z.enum(['payment', 'increase']),
-  account_id: z.string().min(1, "Selecciona una cuenta"),
   amount: z.number().positive("El monto debe ser positivo"),
   payment_date: z.date(),
   description: z.string().optional(),
@@ -94,7 +94,6 @@ export function AddPaymentDialog({ open, onOpenChange, debt, accounts }: AddPaym
 
     const result = await addDebtPayment(debt.id, {
       amount,
-      account_id: data.account_id,
       payment_date: data.payment_date.toISOString(),
       description: data.description,
     })
@@ -125,12 +124,9 @@ export function AddPaymentDialog({ open, onOpenChange, debt, accounts }: AddPaym
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Añadir Registro</DialogTitle>
-          <div className="text-sm text-muted-foreground">
-            {isDebt ? 'DEBO' : 'ME DEBEN'} {contactName}
-          </div>
-          <div className="text-sm font-medium">
-            Saldo actual: {formatCurrency(debt.current_balance)}
-          </div>
+          <DialogDescription>
+            {isDebt ? 'DEBO' : 'ME DEBEN'} {contactName} - Saldo actual: {formatCurrency(debt.current_balance)}
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -166,30 +162,6 @@ export function AddPaymentDialog({ open, onOpenChange, debt, accounts }: AddPaym
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="account_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cuenta</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una cuenta" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {accounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <FormField
               control={form.control}
