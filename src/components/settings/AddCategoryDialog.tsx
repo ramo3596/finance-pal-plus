@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { Category } from "@/hooks/useSettings";
 
@@ -53,9 +53,6 @@ export function AddCategoryDialog({ onAdd }: AddCategoryDialogProps) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Agregar Nueva Categoría</DialogTitle>
-          <DialogDescription>
-            Completa los campos para crear una nueva categoría de transacciones.
-          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
