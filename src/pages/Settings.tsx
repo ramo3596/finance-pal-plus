@@ -537,30 +537,34 @@ export default function Settings() {
                 <span>
                   {selectedCategory ? `Subcategorías de "${selectedCategory.name}"` : 'Subcategorías'}
                 </span>
-                {selectedCategory && (
+                 {selectedCategory && (
+                    <AddSubcategoryDialog
+                      categoryId={selectedCategory.id}
+                      categoryName={selectedCategory.name}
+                      onAdd={async (subcategory) => {
+                        await createSubcategory(subcategory);
+                      }}
+                    />
+                  )}
+               </CardTitle>
+             </CardHeader>
+             <CardContent>
+               {!selectedCategory ? (
+                 <div className="text-center text-muted-foreground py-12">
+                   <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                   <p>Selecciona una categoría del panel izquierdo para ver sus subcategorías</p>
+                 </div>
+               ) : subcategories.length === 0 ? (
+                 <div className="text-center text-muted-foreground py-12">
+                   <p className="mb-4">Esta categoría no tiene subcategorías.</p>
                    <AddSubcategoryDialog
-                     categoryId={selectedCategory.id}
-                     categoryName={selectedCategory.name}
-                     onAdd={createSubcategory}
-                   />
-                 )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!selectedCategory ? (
-                <div className="text-center text-muted-foreground py-12">
-                  <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Selecciona una categoría del panel izquierdo para ver sus subcategorías</p>
-                </div>
-              ) : subcategories.length === 0 ? (
-                <div className="text-center text-muted-foreground py-12">
-                  <p className="mb-4">Esta categoría no tiene subcategorías.</p>
-                  <AddSubcategoryDialog
-                     categoryId={selectedCategory.id}
-                     categoryName={selectedCategory.name}
-                     onAdd={createSubcategory}
-                   />
-                </div>
+                      categoryId={selectedCategory.id}
+                      categoryName={selectedCategory.name}
+                      onAdd={async (subcategory) => {
+                        await createSubcategory(subcategory);
+                      }}
+                    />
+                 </div>
               ) : (
                 <div className="space-y-2">
                   {subcategories.map((subcategory) => (
