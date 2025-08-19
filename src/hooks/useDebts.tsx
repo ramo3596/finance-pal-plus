@@ -19,6 +19,7 @@ export interface Debt {
   status: 'active' | 'closed'
   created_at: string
   updated_at: string
+  tags?: string[]
   contacts?: {
     id: string
     name: string
@@ -39,6 +40,7 @@ export interface DebtPayment {
   payment_date: string
   description?: string
   created_at: string
+  tags?: string[]
   transactions?: {
     category_id: string
     subcategory_id?: string
@@ -342,7 +344,7 @@ export function useDebts() {
     }
   }
 
-  const createDebt = async (debtData: Omit<Debt, 'id' | 'user_id' | 'created_at' | 'updated_at'>, options?: { skipTransaction?: boolean }) => {
+  const createDebt = async (debtData: Omit<Debt, 'id' | 'user_id' | 'created_at' | 'updated_at'>, selectedTags: string[] = [], options?: { skipTransaction?: boolean }) => {
     if (!user) return null
 
     try {
@@ -386,7 +388,7 @@ export function useDebts() {
           beneficiary: contactData?.name,
           note: debtData.description,
           transaction_date: debtData.debt_date,
-          tags: []
+          tags: selectedTags
         })
       }
 
@@ -584,7 +586,7 @@ export function useDebts() {
     }
   }
 
-  const addDebtPayment = async (debtId: string, paymentData: Omit<DebtPayment, 'id' | 'debt_id' | 'created_at'>) => {
+  const addDebtPayment = async (debtId: string, paymentData: Omit<DebtPayment, 'id' | 'debt_id' | 'created_at'>, selectedTags: string[] = []) => {
     try {
       // Get debt information first
       const debt = debts.find(d => d.id === debtId)
@@ -648,7 +650,7 @@ export function useDebts() {
           beneficiary: contactData?.name,
           note: paymentData.description,
           transaction_date: paymentData.payment_date,
-          tags: []
+          tags: selectedTags
         }
 
         try {

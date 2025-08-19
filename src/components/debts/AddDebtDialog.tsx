@@ -36,8 +36,10 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar } from "@/components/ui/calendar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import { useDebts } from "@/hooks/useDebts"
+import { useSettings } from "@/hooks/useSettings"
 
 const debtSchema = z.object({
   type: z.enum(['debt', 'loan']),
@@ -47,6 +49,7 @@ const debtSchema = z.object({
   initial_amount: z.number().positive("El monto debe ser positivo"),
   debt_date: z.date(),
   due_date: z.date().optional(),
+  tags: z.array(z.string()).optional(),
 })
 
 type DebtFormData = z.infer<typeof debtSchema>
@@ -60,13 +63,16 @@ interface AddDebtDialogProps {
 
 export function AddDebtDialog({ open, onOpenChange, contacts, accounts }: AddDebtDialogProps) {
   const [debtType, setDebtType] = useState<'debt' | 'loan'>('debt')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
   const { createDebt } = useDebts()
+  const { tags } = useSettings()
 
   const form = useForm<DebtFormData>({
     resolver: zodResolver(debtSchema),
     defaultValues: {
       type: 'debt',
       debt_date: new Date(),
+      tags: [],
     },
   })
 
@@ -81,10 +87,11 @@ export function AddDebtDialog({ open, onOpenChange, contacts, accounts }: AddDeb
       debt_date: data.debt_date.toISOString(),
       due_date: data.due_date?.toISOString(),
       status: 'active' as const,
-    })
+    }, selectedTags)
 
     if (result) {
       form.reset()
+      setSelectedTags([])
       onOpenChange(false)
     }
   }
@@ -97,7 +104,7 @@ export function AddDebtDialog({ open, onOpenChange, contacts, accounts }: AddDeb
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nueva Deuda</DialogTitle>
         </DialogHeader>
@@ -292,6 +299,62 @@ export function AddDebtDialog({ open, onOpenChange, contacts, accounts }: AddDeb
                   </FormItem>
                 )}
               />
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <Label>Etiquetas</Label>
+                <Select
+                  onValueChange={(value) => {
+                    if (value && !selectedTags.includes(value)) {
+                      setSelectedTags([...selectedTags, value])
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar etiqueta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tags
+                      .filter(tag => !selectedTags.includes(tag.name))
+                      .map((tag) => (
+                        <SelectItem key={tag.id} value={tag.name}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: tag.color }}
+                            />
+                            {tag.name}
+                          </div>
+                        </SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+                
+                {selectedTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedTags.map((tagName) => {
+                      const tag = tags.find(t => t.name === tagName)
+                      return (
+                        <span
+                          key={tagName}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full text-white"
+                          style={{ backgroundColor: tag?.color || '#6b7280' }}
+                        >
+                          {tagName}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedTags(selectedTags.filter(t => t !== tagName))}
+                            className="ml-1 hover:bg-black/20 rounded-full p-0.5"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
 
               <div className="flex justify-end space-x-2 pt-4">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
