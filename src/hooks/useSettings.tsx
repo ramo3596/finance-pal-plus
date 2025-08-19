@@ -202,88 +202,14 @@ export const useSettings = () => {
     })) || []
   }
 
-  // Function to initialize required categories for debt payments
-  const initializeDebtCategories = async () => {
-    if (!user) return
-
-    try {
-      // Check if categories already exist
-      const existingCategories = await fetchCategories()
-      
-      const incomeCategory = existingCategories.find(c => c.name === 'Ingresos')
-      const expenseCategory = existingCategories.find(c => c.name === 'Gastos financieros')
-      
-      // Create income category if not exists
-      if (!incomeCategory) {
-        const newIncomeCategory = await createCategory({
-          name: 'Ingresos',
-          color: '#22c55e',
-          icon: '💵',
-          nature: 'Necesitar'
-        })
-        
-        // Create "Préstamos, alquileres" subcategory
-        if (newIncomeCategory) {
-          await createSubcategory({
-            name: 'Préstamos, alquileres',
-            category_id: newIncomeCategory.id,
-            icon: '🏠'
-          })
-        }
-      } else {
-        // Check if subcategory exists
-        const prestamosSubcat = incomeCategory.subcategories?.find(s => s.name === 'Préstamos, alquileres')
-        if (!prestamosSubcat) {
-          await createSubcategory({
-            name: 'Préstamos, alquileres',
-            category_id: incomeCategory.id,
-            icon: '🏠'
-          })
-        }
-      }
-      
-      // Create expense category if not exists
-      if (!expenseCategory) {
-        const newExpenseCategory = await createCategory({
-          name: 'Gastos financieros',
-          color: '#ef4444',
-          icon: '💰',
-          nature: 'Deber'
-        })
-        
-        // Create "Comisión" subcategory
-        if (newExpenseCategory) {
-          await createSubcategory({
-            name: 'Comisión',
-            category_id: newExpenseCategory.id,
-            icon: '💳'
-          })
-        }
-      } else {
-        // Check if subcategory exists
-        const comisionSubcat = expenseCategory.subcategories?.find(s => s.name === 'Comisión')
-        if (!comisionSubcat) {
-          await createSubcategory({
-            name: 'Comisión',
-            category_id: expenseCategory.id,
-            icon: '💳'
-          })
-        }
-      }
-      
-      // Refresh categories after creation
-      await fetchCategories()
-    } catch (error) {
-      console.error('Error initializing debt categories:', error)
-    }
-  }
+  // Removed initializeDebtCategories function to prevent duplicate category creation
+  // Categories are now created on-demand by the useDebts hook when needed
 
   useEffect(() => {
     if (user) {
-      fetchData().then(() => {
-        // Initialize debt categories after fetching existing data
-        initializeDebtCategories()
-      })
+      fetchData()
+      // Removed initializeDebtCategories() call to prevent duplicate category creation
+      // Categories will be created on-demand by useDebts hook when needed
     }
   }, [user]);
 

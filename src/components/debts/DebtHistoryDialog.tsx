@@ -182,15 +182,15 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
                             backgroundColor: payment.transactions?.categories?.color || 'hsl(var(--primary))' 
                           }}
                         >
-                          {payment.transactions?.categories?.icon && (
+                          {(payment.transactions?.subcategories?.icon || payment.transactions?.categories?.icon) && (
                             <span className="text-sm">
-                              {payment.transactions.categories.icon}
+                              {payment.transactions?.subcategories?.icon || payment.transactions?.categories?.icon}
                             </span>
                           )}
                         </div>
                         <div className="flex-1">
                           <p className="font-medium text-foreground">
-                            {payment.transactions?.categories?.name || getPaymentType(payment.amount)}
+                            {payment.transactions?.subcategories?.name || payment.transactions?.categories?.name || getPaymentType(payment.amount)}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {payment.transactions?.accounts?.name}

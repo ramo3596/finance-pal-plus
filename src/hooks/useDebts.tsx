@@ -41,11 +41,16 @@ export interface DebtPayment {
   created_at: string
   transactions?: {
     category_id: string
+    subcategory_id?: string
     account_id: string
     categories: {
       name: string
       icon: string
       color: string
+    }
+    subcategories?: {
+      name: string
+      icon: string
     }
     accounts: {
       name: string
@@ -59,7 +64,7 @@ export function useDebts() {
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
   const { createTransaction, refetch: refetchTransactions } = useTransactions()
-  const { categories, createCategory, createSubcategory } = useSettings()
+  const { categories, createCategory, createSubcategory, refetch: refetchSettings } = useSettings()
 
   const calculateDebtBalance = async (debtId: string): Promise<number> => {
     try {
@@ -150,18 +155,23 @@ export function useDebts() {
 
       if (debtError) throw debtError
 
-      // Get categories for debt and loan using the new category structure
-      const { debtCategoryId, loanCategoryId } = await ensureDebtCategories()
+      // Get categories and subcategories for debt and loan using the new category structure
+      const { incomeCategory, incomeSubcategory, expenseCategory, expenseSubcategory } = await ensureDebtCategories()
       
       const { data: categories, error: categoriesError } = await supabase
         .from('categories')
-        .select('*')
-        .in('id', [debtCategoryId, loanCategoryId].filter(Boolean))
+        .select(`
+          *,
+          subcategories (*)
+        `)
+        .in('id', [incomeCategory, expenseCategory].filter(Boolean))
 
       if (categoriesError) throw categoriesError
 
-      const debtCategory = categories?.find(c => c.id === debtCategoryId)
-      const loanCategory = categories?.find(c => c.id === loanCategoryId)
+      const incomeCateg = categories?.find(c => c.id === incomeCategory)
+      const expenseCateg = categories?.find(c => c.id === expenseCategory)
+      const prestamosSubcategory = incomeCateg?.subcategories?.find(s => s.id === incomeSubcategory)
+      const comisionSubcategory = expenseCateg?.subcategories?.find(s => s.id === expenseSubcategory)
 
       // Get payments
       const { data, error } = await supabase
@@ -172,33 +182,30 @@ export function useDebts() {
 
       if (error) throw error
 
-      // Add category and account info to each payment
+      // Add category and subcategory info to each payment
       const enrichedPayments = (data || []).map(payment => {
-        // Determine category based on payment type and debt type
-        let selectedCategory
-        if (!debt?.type) {
-          // Default to debt category if debt info is not available
-          selectedCategory = debtCategory
-        } else if (payment.description?.includes('Registro inicial')) {
-          // Initial records should match the debt type
-          selectedCategory = debt.type === 'loan' ? loanCategory : debtCategory
+        // Determine category and subcategory based on amount sign (same logic as addDebtPayment)
+        const isPositiveAmount = payment.amount > 0
+        let selectedCategory, selectedSubcategory
+        
+        if (isPositiveAmount) {
+          // Positive amounts use "Ingresos" -> "Préstamos, alquileres"
+          selectedCategory = incomeCateg
+          selectedSubcategory = prestamosSubcategory
         } else {
-          // Apply the same category logic as addDebtPayment
-          if (debt.type === 'debt') {
-            // For debts: positive = "Deuda", negative = "Préstamo"
-            selectedCategory = payment.amount > 0 ? debtCategory : loanCategory
-          } else {
-            // For loans: positive = "Deuda", negative = "Préstamo"
-            selectedCategory = payment.amount > 0 ? debtCategory : loanCategory
-          }
+          // Negative amounts use "Gastos financieros" -> "Comisión"
+          selectedCategory = expenseCateg
+          selectedSubcategory = comisionSubcategory
         }
 
         return {
           ...payment,
           transactions: {
             category_id: selectedCategory?.id,
+            subcategory_id: selectedSubcategory?.id,
             account_id: debt?.account_id,
             categories: selectedCategory,
+            subcategories: selectedSubcategory,
             accounts: debt?.accounts
           }
         }
@@ -214,8 +221,19 @@ export function useDebts() {
   const ensureDebtCategories = async () => {
     if (!user) return { debtCategoryId: null, loanCategoryId: null, debtSubcategoryId: null, loanSubcategoryId: null }
 
+    // Get fresh categories from database to avoid stale state
+    const { data: freshCategories } = await supabase
+      .from('categories')
+      .select(`
+        *,
+        subcategories (*)
+      `)
+      .eq('user_id', user.id)
+
+    const currentCategories = freshCategories || []
+
     // Find or create 'Gastos financieros' category (for negative amounts/expenses)
-    let expenseCategory = categories.find(c => c.name === 'Gastos financieros')
+    let expenseCategory = currentCategories.find(c => c.name === 'Gastos financieros')
     if (!expenseCategory) {
       try {
         const newExpenseCategory = await createCategory({
@@ -225,8 +243,10 @@ export function useDebts() {
           nature: 'Deber' // Using correct nature value
         })
         if (newExpenseCategory) {
-          expenseCategory = newExpenseCategory
+          expenseCategory = newExpenseCategory as any
           console.log('Created expense category:', expenseCategory)
+          // Refresh settings to update local state
+          await refetchSettings()
         }
       } catch (error) {
         console.error('Error creating expense category:', error)
@@ -234,7 +254,7 @@ export function useDebts() {
     }
 
     // Find or create 'Ingresos' category (for positive amounts/income)
-    let incomeCategory = categories.find(c => c.name === 'Ingresos')
+    let incomeCategory = currentCategories.find(c => c.name === 'Ingresos')
     if (!incomeCategory) {
       try {
         const newIncomeCategory = await createCategory({
@@ -244,26 +264,43 @@ export function useDebts() {
           nature: 'Necesitar' // Using correct nature value
         })
         if (newIncomeCategory) {
-          incomeCategory = newIncomeCategory
+          incomeCategory = newIncomeCategory as any
           console.log('Created income category:', incomeCategory)
+          // Refresh settings to update local state
+          await refetchSettings()
         }
       } catch (error) {
         console.error('Error creating income category:', error)
       }
     }
 
+    // Get updated categories after potential creation
+    const { data: updatedCategories } = await supabase
+      .from('categories')
+      .select(`
+        *,
+        subcategories (*)
+      `)
+      .eq('user_id', user.id)
+
+    const finalCategories = updatedCategories || []
+    const finalExpenseCategory = finalCategories.find(c => c.name === 'Gastos financieros')
+    const finalIncomeCategory = finalCategories.find(c => c.name === 'Ingresos')
+
     // Find or create 'Comisión' subcategory under 'Gastos financieros' (for negative amounts)
-    let comisionSubcategory = expenseCategory?.subcategories?.find(s => s.name === 'Comisión')
-    if (!comisionSubcategory && expenseCategory) {
+    let comisionSubcategory = finalExpenseCategory?.subcategories?.find(s => s.name === 'Comisión')
+    if (!comisionSubcategory && finalExpenseCategory) {
       try {
         const newComisionSubcategory = await createSubcategory({
           name: 'Comisión',
-          category_id: expenseCategory.id,
+          category_id: finalExpenseCategory.id,
           icon: '💳'
         })
         if (newComisionSubcategory) {
-          comisionSubcategory = newComisionSubcategory
+          comisionSubcategory = newComisionSubcategory as any
           console.log('Created comision subcategory:', comisionSubcategory)
+          // Refresh settings to update local state
+          await refetchSettings()
         }
       } catch (error) {
         console.error('Error creating comision subcategory:', error)
@@ -271,17 +308,19 @@ export function useDebts() {
     }
 
     // Find or create 'Préstamos, alquileres' subcategory under 'Ingresos' (for positive amounts)
-    let prestamosSubcategory = incomeCategory?.subcategories?.find(s => s.name === 'Préstamos, alquileres')
-    if (!prestamosSubcategory && incomeCategory) {
+    let prestamosSubcategory = finalIncomeCategory?.subcategories?.find(s => s.name === 'Préstamos, alquileres')
+    if (!prestamosSubcategory && finalIncomeCategory) {
       try {
         const newPrestamosSubcategory = await createSubcategory({
           name: 'Préstamos, alquileres',
-          category_id: incomeCategory.id,
+          category_id: finalIncomeCategory.id,
           icon: '🏠'
         })
         if (newPrestamosSubcategory) {
-          prestamosSubcategory = newPrestamosSubcategory
+          prestamosSubcategory = newPrestamosSubcategory as any
           console.log('Created prestamos subcategory:', prestamosSubcategory)
+          // Refresh settings to update local state
+          await refetchSettings()
         }
       } catch (error) {
         console.error('Error creating prestamos subcategory:', error)
@@ -290,14 +329,14 @@ export function useDebts() {
 
     return {
       // For positive amounts (income): use "Ingresos" -> "Préstamos, alquileres"
-      incomeCategory: incomeCategory?.id || null,
+      incomeCategory: finalIncomeCategory?.id || null,
       incomeSubcategory: prestamosSubcategory?.id || null,
       // For negative amounts (expense): use "Gastos financieros" -> "Comisión"
-      expenseCategory: expenseCategory?.id || null,
+      expenseCategory: finalExpenseCategory?.id || null,
       expenseSubcategory: comisionSubcategory?.id || null,
       // Keep old naming for backward compatibility
-      debtCategoryId: incomeCategory?.id || null,
-      loanCategoryId: expenseCategory?.id || null,
+      debtCategoryId: finalIncomeCategory?.id || null,
+      loanCategoryId: finalExpenseCategory?.id || null,
       debtSubcategoryId: prestamosSubcategory?.id || null,
       loanSubcategoryId: comisionSubcategory?.id || null
     }
