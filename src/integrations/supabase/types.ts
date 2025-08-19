@@ -211,6 +211,7 @@ export type Database = {
       }
       debt_payments: {
         Row: {
+          account_id: string | null
           amount: number
           created_at: string
           debt_id: string
@@ -220,6 +221,7 @@ export type Database = {
           transaction_id: string | null
         }
         Insert: {
+          account_id?: string | null
           amount: number
           created_at?: string
           debt_id: string
@@ -229,6 +231,7 @@ export type Database = {
           transaction_id?: string | null
         }
         Update: {
+          account_id?: string | null
           amount?: number
           created_at?: string
           debt_id?: string

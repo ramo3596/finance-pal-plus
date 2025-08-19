@@ -214,7 +214,7 @@ export function useDebts() {
   const ensureDebtCategories = async () => {
     if (!user) return { debtCategoryId: null, loanCategoryId: null, debtSubcategoryId: null, loanSubcategoryId: null }
 
-    // Find or create 'Gastos financieros' category for loans (Préstamos -> Comisión)
+    // Find or create 'Gastos financieros' category (for negative amounts/expenses)
     let expenseCategory = categories.find(c => c.name === 'Gastos financieros')
     if (!expenseCategory) {
       try {
@@ -222,7 +222,7 @@ export function useDebts() {
           name: 'Gastos financieros',
           color: '#ef4444', // Red color for expenses
           icon: '💰',
-          nature: 'expense'
+          nature: 'Deber' // Using correct nature value
         })
         if (newExpenseCategory) {
           expenseCategory = newExpenseCategory
@@ -233,7 +233,7 @@ export function useDebts() {
       }
     }
 
-    // Find or create 'Ingresos' category for debts (Deuda -> Préstamos, alquileres)
+    // Find or create 'Ingresos' category (for positive amounts/income)
     let incomeCategory = categories.find(c => c.name === 'Ingresos')
     if (!incomeCategory) {
       try {
@@ -241,7 +241,7 @@ export function useDebts() {
           name: 'Ingresos',
           color: '#22c55e', // Green color for income
           icon: '💵',
-          nature: 'income'
+          nature: 'Necesitar' // Using correct nature value
         })
         if (newIncomeCategory) {
           incomeCategory = newIncomeCategory
@@ -252,14 +252,14 @@ export function useDebts() {
       }
     }
 
-    // Find or create 'Comisión' subcategory under 'Gastos financieros'
+    // Find or create 'Comisión' subcategory under 'Gastos financieros' (for negative amounts)
     let comisionSubcategory = expenseCategory?.subcategories?.find(s => s.name === 'Comisión')
     if (!comisionSubcategory && expenseCategory) {
       try {
         const newComisionSubcategory = await createSubcategory({
           name: 'Comisión',
           category_id: expenseCategory.id,
-          icon: '🏦'
+          icon: '💳'
         })
         if (newComisionSubcategory) {
           comisionSubcategory = newComisionSubcategory
@@ -270,7 +270,7 @@ export function useDebts() {
       }
     }
 
-    // Find or create 'Préstamos, alquileres' subcategory under 'Ingresos'
+    // Find or create 'Préstamos, alquileres' subcategory under 'Ingresos' (for positive amounts)
     let prestamosSubcategory = incomeCategory?.subcategories?.find(s => s.name === 'Préstamos, alquileres')
     if (!prestamosSubcategory && incomeCategory) {
       try {
@@ -289,10 +289,17 @@ export function useDebts() {
     }
 
     return {
-      debtCategoryId: incomeCategory?.id || null, // Deuda -> Ingresos
-      loanCategoryId: expenseCategory?.id || null, // Préstamo -> Gastos financieros
-      debtSubcategoryId: prestamosSubcategory?.id || null, // Deuda -> Préstamos, alquileres
-      loanSubcategoryId: comisionSubcategory?.id || null // Préstamo -> Comisión
+      // For positive amounts (income): use "Ingresos" -> "Préstamos, alquileres"
+      incomeCategory: incomeCategory?.id || null,
+      incomeSubcategory: prestamosSubcategory?.id || null,
+      // For negative amounts (expense): use "Gastos financieros" -> "Comisión"
+      expenseCategory: expenseCategory?.id || null,
+      expenseSubcategory: comisionSubcategory?.id || null,
+      // Keep old naming for backward compatibility
+      debtCategoryId: incomeCategory?.id || null,
+      loanCategoryId: expenseCategory?.id || null,
+      debtSubcategoryId: prestamosSubcategory?.id || null,
+      loanSubcategoryId: comisionSubcategory?.id || null
     }
   }
 
@@ -545,7 +552,7 @@ export function useDebts() {
       if (!debt) throw new Error('Debt not found')
 
       // Ensure debt/loan categories exist
-      const { debtCategoryId, loanCategoryId, debtSubcategoryId, loanSubcategoryId } = await ensureDebtCategories()
+      const { incomeCategory, incomeSubcategory, expenseCategory, expenseSubcategory } = await ensureDebtCategories()
 
       // Get contact information for the transaction
       const { data: contactData } = await supabase
@@ -554,7 +561,7 @@ export function useDebts() {
         .eq('id', debt.contact_id)
         .single()
 
-      // Create payment record
+      // Create payment record with account_id
       const { data: payment, error: paymentError } = await supabase
         .from('debt_payments')
         .insert({
@@ -566,83 +573,35 @@ export function useDebts() {
 
       if (paymentError) throw paymentError
 
-      // Create corresponding transaction in the main records
-      // Determine transaction type and category based on debt type and payment direction
+      // NEW LOGIC: Simple categorization based on amount sign
+      // Positive amount → "Ingresos" with "Préstamos, alquileres" subcategory
+      // Negative amount → "Gastos financieros" with "Comisión" subcategory
+      const isPositiveAmount = paymentData.amount > 0
       let transactionType: 'income' | 'expense'
       let categoryId: string | null
+      let subcategoryId: string | null
       let description: string
 
-      if (!debt?.type) {
-        // Default to income/debt category if debt info is not available
+      if (isPositiveAmount) {
+        // Positive amounts always use income category with loans subcategory
         transactionType = 'income'
-        categoryId = debtCategoryId
-        description = `Pago - ${contactData?.name || 'contacto'}`
-      } else if (debt.type === 'debt') {
-        if (paymentData.amount > 0) {
-          // Aumento de deuda → category "Deuda", positive amount
-          transactionType = 'income'
-          categoryId = debtCategoryId
-          description = `Aumento de deuda con ${contactData?.name || 'contacto'}`
-        } else {
-          // Reembolsar deuda → category "Préstamo", negative amount  
-          transactionType = 'expense'
-          categoryId = loanCategoryId
-          description = `Reembolsar deuda a ${contactData?.name || 'contacto'}`
-        }
+        categoryId = incomeCategory
+        subcategoryId = incomeSubcategory
+        description = `Ingreso por deuda/préstamo - ${contactData?.name || 'contacto'}`
       } else {
-        // debt.type === 'loan'
-        if (paymentData.amount < 0) {
-          // Negative amount for loan = increase loan → category "Préstamo"
-          transactionType = 'expense'
-          categoryId = loanCategoryId
-          description = `Aumento de préstamo a ${contactData?.name || 'contacto'}`
-        } else {
-          // Positive amount for loan = collect loan → category "Deuda"
-          transactionType = 'income'
-          categoryId = debtCategoryId
-          description = `Cobro de préstamo de ${contactData?.name || 'contacto'}`
-        }
+        // Negative amounts always use expense category with commission subcategory
+        transactionType = 'expense'
+        categoryId = expenseCategory
+        subcategoryId = expenseSubcategory
+        description = `Gasto por deuda/préstamo - ${contactData?.name || 'contacto'}`
       }
 
       // Create the transaction if category exists
       let transactionId = null
       if (categoryId) {
-        // Determine the correct amount based on debt type and payment direction
-        let transactionAmount: number
-        
-        if (!debt || !debt.type) {
-          // Default case - keep amount as entered
-          transactionAmount = paymentData.amount
-        } else if (debt.type === 'debt') {
-          if (paymentData.amount > 0) {
-            // Aumento de deuda → positive amount (keep as entered)
-            transactionAmount = paymentData.amount
-          } else {
-            // Reembolsar deuda → negative amount (keep as entered)
-            transactionAmount = paymentData.amount
-          }
-        } else {
-          // debt.type === 'loan'
-          if (paymentData.amount < 0) {
-            // Aumento de préstamo → keep as entered (negative)
-            transactionAmount = paymentData.amount
-          } else {
-            // Cobro de préstamo → keep as entered (positive)
-            transactionAmount = paymentData.amount
-          }
-        }
-
-        // Determine subcategory based on transaction type and category
-        let subcategoryId: string | null = null
-        if (categoryId === debtCategoryId) {
-          subcategoryId = debtSubcategoryId
-        } else if (categoryId === loanCategoryId) {
-          subcategoryId = loanSubcategoryId
-        }
-
         const transactionData = {
           type: transactionType,
-          amount: transactionAmount,
+          amount: paymentData.amount,
           account_id: paymentData.account_id || debt?.account_id || "",
           category_id: categoryId,
           subcategory_id: subcategoryId,
