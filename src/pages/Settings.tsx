@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,12 +28,14 @@ import {
   Calendar,
   DollarSign,
   AlertTriangle,
-  X
+  X,
+  ChevronRight
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/hooks/useSettings";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -60,6 +62,7 @@ import { DraggableTagList } from "@/components/settings/DraggableTagList";
 export default function Settings() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("profile");
   const [showAddAccountDialog, setShowAddAccountDialog] = useState(false);
@@ -146,6 +149,45 @@ export default function Settings() {
     deleteNotification,
     refetch: refetchNotifications
   } = useNotifications();
+
+  // Mobile Settings Navigation Items
+  const settingsNavItems = [
+    {
+      title: "Cuentas", 
+      description: "Gestiona tus cuentas bancarias y tarjetas",
+      icon: CreditCard,
+      href: "/settings/accounts",
+      count: accounts?.length || 0
+    },
+    {
+      title: "Categorías",
+      description: "Organiza tus gastos e ingresos", 
+      icon: FolderOpen,
+      href: "/settings/categories",
+      count: categories?.length || 0
+    },
+    {
+      title: "Etiquetas",
+      description: "Personaliza tus transacciones",
+      icon: Tag,
+      href: "/settings/tags", 
+      count: tags?.length || 0
+    },
+    {
+      title: "Plantillas",
+      description: "Crea plantillas para transacciones frecuentes",
+      icon: FileText,
+      href: "/settings/templates",
+      count: templates?.length || 0
+    },
+    {
+      title: "Filtros",
+      description: "Configura filtros personalizados", 
+      icon: Filter,
+      href: "/settings/filters",
+      count: filters?.length || 0
+    }
+  ];
 
   // Load profile data on component mount
   useEffect(() => {
@@ -972,142 +1014,121 @@ export default function Settings() {
         </div>
 
         {/* Mobile Navigation - Vertical List */}
-        <div className="block md:hidden mb-6">
-          <div className="space-y-2">
-            <Button
-              variant={activeTab === "profile" ? "default" : "outline"}
-              className="w-full justify-start gap-3 h-12"
-              onClick={() => setActiveTab("profile")}
-            >
-              <User className="h-5 w-5" />
-              <span>Perfil</span>
-            </Button>
-            <Button
-              variant={activeTab === "accounts" ? "default" : "outline"}
-              className="w-full justify-start gap-3 h-12"
-              onClick={() => setActiveTab("accounts")}
-            >
-              <CreditCard className="h-5 w-5" />
-              <span>Cuentas</span>
-            </Button>
-            <Button
-              variant={activeTab === "categories" ? "default" : "outline"}
-              className="w-full justify-start gap-3 h-12"
-              onClick={() => setActiveTab("categories")}
-            >
-              <FolderOpen className="h-5 w-5" />
-              <span>Categorías</span>
-            </Button>
-            <Button
-              variant={activeTab === "tags" ? "default" : "outline"}
-              className="w-full justify-start gap-3 h-12"
-              onClick={() => setActiveTab("tags")}
-            >
-              <Tag className="h-5 w-5" />
-              <span>Etiquetas</span>
-            </Button>
-            <Button
-              variant={activeTab === "templates" ? "default" : "outline"}
-              className="w-full justify-start gap-3 h-12"
-              onClick={() => setActiveTab("templates")}
-            >
-              <FileText className="h-5 w-5" />
-              <span>Plantillas</span>
-            </Button>
-            <Button
-              variant={activeTab === "filters" ? "default" : "outline"}
-              className="w-full justify-start gap-3 h-12"
-              onClick={() => setActiveTab("filters")}
-            >
-              <Filter className="h-5 w-5" />
-              <span>Filtros</span>
-            </Button>
-            <Button
-              variant={activeTab === "notifications" ? "default" : "outline"}
-              className="w-full justify-start gap-3 h-12"
-              onClick={() => setActiveTab("notifications")}
-            >
-              <Bell className="h-5 w-5" />
-              <span>Notificaciones</span>
-            </Button>
+        {isMobile ? (
+          <div className="space-y-3">
+            <Card>
+              <CardContent className="p-4">
+                <Link
+                  to="/settings/accounts"
+                  className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-primary/10">
+                      <CreditCard className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Cuentas</h3>
+                      <p className="text-sm text-muted-foreground">Gestiona tus cuentas bancarias</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{accounts?.length || 0}</Badge>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {settingsNavItems.slice(1).map((item) => (
+              <Card key={item.href}>
+                <CardContent className="p-4">
+                  <Link
+                    to={item.href}
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-full bg-primary/10">
+                        <item.icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{item.title}</h3>
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{item.count}</Badge>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="p-3">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 rounded-full bg-primary/10">
+                      <Bell className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Notificaciones</h3>
+                      <p className="text-sm text-muted-foreground">Configura tus notificaciones</p>
+                    </div>
+                  </div>
+                  <NotificationsSection />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <ProfileSection />
+              </CardContent>
+            </Card>
           </div>
-        </div>
+        ) : (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7 mb-6">
+              <TabsTrigger value="profile" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">Perfil</span>
+              </TabsTrigger>
+              <TabsTrigger value="accounts" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                <span className="hidden sm:inline">Cuentas</span>
+              </TabsTrigger>
+              <TabsTrigger value="categories" className="flex items-center gap-2">
+                <FolderOpen className="h-4 w-4" />
+                <span className="hidden sm:inline">Categorías</span>
+              </TabsTrigger>
+              <TabsTrigger value="tags" className="flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                <span className="hidden sm:inline">Etiquetas</span>
+              </TabsTrigger>
+              <TabsTrigger value="templates" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Plantillas</span>
+              </TabsTrigger>
+              <TabsTrigger value="filters" className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <span className="hidden sm:inline">Filtros</span>
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                <span className="hidden sm:inline">Notificaciones</span>
+              </TabsTrigger>
+            </TabsList>
 
-        {/* Desktop Navigation - Horizontal Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full hidden md:block">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7 mb-6">
-            <TabsTrigger value="profile" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Perfil</span>
-            </TabsTrigger>
-            <TabsTrigger value="accounts" className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              <span className="hidden sm:inline">Cuentas</span>
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center gap-2">
-              <FolderOpen className="h-4 w-4" />
-              <span className="hidden sm:inline">Categorías</span>
-            </TabsTrigger>
-            <TabsTrigger value="tags" className="flex items-center gap-2">
-              <Tag className="h-4 w-4" />
-              <span className="hidden sm:inline">Etiquetas</span>
-            </TabsTrigger>
-            <TabsTrigger value="templates" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Plantillas</span>
-            </TabsTrigger>
-            <TabsTrigger value="filters" className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              <span className="hidden sm:inline">Filtros</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center gap-2">
-              <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">Notificaciones</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Desktop Tabs Content */}
-          <div className="hidden md:block">
-            <TabsContent value="profile">
-              <ProfileSection />
-            </TabsContent>
-
-            <TabsContent value="accounts">
-              <AccountsSection />
-            </TabsContent>
-
-            <TabsContent value="categories">
-              <CategoriesSection />
-            </TabsContent>
-
-            <TabsContent value="tags">
-              <TagsSection />
-            </TabsContent>
-
-            <TabsContent value="templates">
-              <TemplatesSection />
-            </TabsContent>
-
-            <TabsContent value="filters">
-              <FiltersSection />
-            </TabsContent>
-
-            <TabsContent value="notifications">
-              <NotificationsSection />
-            </TabsContent>
-          </div>
-        </Tabs>
-
-        {/* Mobile Content */}
-        <div className="block md:hidden">
-          {activeTab === "profile" && <ProfileSection />}
-          {activeTab === "accounts" && <AccountsSection />}
-          {activeTab === "categories" && <CategoriesSection />}
-          {activeTab === "tags" && <TagsSection />}
-          {activeTab === "templates" && <TemplatesSection />}
-          {activeTab === "filters" && <FiltersSection />}
-          {activeTab === "notifications" && <NotificationsSection />}
-        </div>
+            <TabsContent value="profile"><ProfileSection /></TabsContent>
+            <TabsContent value="accounts"><AccountsSection /></TabsContent>
+            <TabsContent value="categories"><CategoriesSection /></TabsContent>
+            <TabsContent value="tags"><TagsSection /></TabsContent>
+            <TabsContent value="templates"><TemplatesSection /></TabsContent>
+            <TabsContent value="filters"><FiltersSection /></TabsContent>
+            <TabsContent value="notifications"><NotificationsSection /></TabsContent>
+          </Tabs>
+        )}
       </div>
     </Layout>
   );
