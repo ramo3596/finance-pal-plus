@@ -12,7 +12,6 @@ import CategoriesSettings from "./pages/settings/CategoriesSettings";
 import TagsSettings from "./pages/settings/TagsSettings";
 import TemplatesSettings from "./pages/settings/TemplatesSettings";
 import FiltersSettings from "./pages/settings/FiltersSettings";
-import ProfileSettings from "./pages/settings/ProfileSettings";
 import Records from "./pages/Records";
 import Inventory from "./pages/Inventory";
 import Statistics from "./pages/Statistics";
@@ -36,7 +35,6 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/settings/profile" element={<ProfileSettings />} />
             <Route path="/settings/accounts" element={<AccountsSettings />} />
             <Route path="/settings/categories" element={<CategoriesSettings />} />
             <Route path="/settings/tags" element={<TagsSettings />} />

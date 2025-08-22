@@ -153,13 +153,6 @@ export default function Settings() {
   // Mobile Settings Navigation Items
   const settingsNavItems = [
     {
-      title: "Perfil",
-      description: "Gestiona tu información personal",
-      icon: User,
-      href: "/settings/profile",
-      count: 1
-    },
-    {
       title: "Cuentas", 
       description: "Gestiona tus cuentas bancarias y tarjetas",
       icon: CreditCard,
