@@ -153,6 +153,13 @@ export default function Settings() {
   // Mobile Settings Navigation Items
   const settingsNavItems = [
     {
+      title: "Perfil",
+      description: "Configura tu perfil y preferencias",
+      icon: User,
+      href: "/settings/profile",
+      count: null
+    },
+    {
       title: "Cuentas", 
       description: "Gestiona tus cuentas bancarias y tarjetas",
       icon: CreditCard,
@@ -1016,30 +1023,7 @@ export default function Settings() {
         {/* Mobile Navigation - Vertical List */}
         {isMobile ? (
           <div className="space-y-3">
-            <Card>
-              <CardContent className="p-4">
-                <Link
-                  to="/settings/accounts"
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-primary/10">
-                      <CreditCard className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium">Cuentas</h3>
-                      <p className="text-sm text-muted-foreground">Gestiona tus cuentas bancarias</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{accounts?.length || 0}</Badge>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </Link>
-              </CardContent>
-            </Card>
-
-            {settingsNavItems.slice(1).map((item) => (
+            {settingsNavItems.map((item) => (
               <Card key={item.href}>
                 <CardContent className="p-4">
                   <Link
@@ -1056,7 +1040,9 @@ export default function Settings() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{item.count}</Badge>
+                      {item.count !== null && (
+                        <Badge variant="secondary">{item.count}</Badge>
+                      )}
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </Link>
@@ -1078,12 +1064,6 @@ export default function Settings() {
                   </div>
                   <NotificationsSection />
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <ProfileSection />
               </CardContent>
             </Card>
           </div>

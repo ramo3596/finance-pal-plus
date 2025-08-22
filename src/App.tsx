@@ -12,6 +12,7 @@ import CategoriesSettings from "./pages/settings/CategoriesSettings";
 import TagsSettings from "./pages/settings/TagsSettings";
 import TemplatesSettings from "./pages/settings/TemplatesSettings";
 import FiltersSettings from "./pages/settings/FiltersSettings";
+import ProfileSettings from "./pages/settings/ProfileSettings";
 import Records from "./pages/Records";
 import Inventory from "./pages/Inventory";
 import Statistics from "./pages/Statistics";
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/settings/tags" element={<TagsSettings />} />
             <Route path="/settings/templates" element={<TemplatesSettings />} />
             <Route path="/settings/filters" element={<FiltersSettings />} />
+            <Route path="/settings/profile" element={<ProfileSettings />} />
             <Route path="/records" element={<Records />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/statistics" element={<Statistics />} />
