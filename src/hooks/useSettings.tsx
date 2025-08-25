@@ -77,6 +77,12 @@ export interface UserSettings {
   scheduled_payments: boolean;
   debts: boolean;
   income: boolean;
+  card_reminders?: boolean;
+  inventory_alerts?: boolean;
+  contact_notifications?: boolean;
+  reports_notifications?: boolean;
+  system_updates?: boolean;
+  security_alerts?: boolean;
   created_at?: string;
   updated_at?: string;
 }

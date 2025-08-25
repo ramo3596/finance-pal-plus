@@ -14,7 +14,13 @@ import {
   AlertTriangle,
   Trash2,
   CheckCircle2,
-  X
+  X,
+  CreditCard,
+  Package,
+  Users,
+  TrendingUp,
+  Settings,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -121,75 +127,255 @@ export default function NotificationsSettings() {
                 Preferencias de Notificaciones
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4">
               {userSettings && (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label className="font-medium">Recordatorio de Cartera</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Recibe notificaciones sobre el estado de tu cartera
-                      </p>
+                <div className="grid gap-4">
+                  {/* Notificaciones Financieras */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <DollarSign className="h-4 w-4 text-primary" />
+                      <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Finanzas</h4>
                     </div>
-                    <Switch
-                      checked={userSettings.wallet_reminder || false}
-                      onCheckedChange={(checked) =>
-                        updateUserSettings({ wallet_reminder: checked })
-                      }
-                    />
+                    
+                    <div className="grid gap-4 pl-6">
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <Bell className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-medium">Recordatorio de Cartera</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Recibe notificaciones sobre el estado de tu cartera
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={userSettings.wallet_reminder || false}
+                          onCheckedChange={(checked) =>
+                            updateUserSettings({ wallet_reminder: checked })
+                          }
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/20">
+                            <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-medium">Ingresos</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Notificaciones sobre ingresos importantes
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={userSettings.income || false}
+                          onCheckedChange={(checked) =>
+                            updateUserSettings({ income: checked })
+                          }
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/20">
+                            <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-medium">Deudas</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Recordatorios sobre deudas pendientes
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={userSettings.debts || false}
+                          onCheckedChange={(checked) =>
+                            updateUserSettings({ debts: checked })
+                          }
+                        />
+                      </div>
+                    </div>
                   </div>
                   
                   <Separator />
                   
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label className="font-medium">Pagos Programados</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Alertas sobre próximos pagos programados
-                      </p>
+                  {/* Notificaciones de Pagos */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Pagos y Programación</h4>
                     </div>
-                    <Switch
-                      checked={userSettings.scheduled_payments || false}
-                      onCheckedChange={(checked) =>
-                        updateUserSettings({ scheduled_payments: checked })
-                      }
-                    />
+                    
+                    <div className="grid gap-4 pl-6">
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/20">
+                            <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-medium">Pagos Programados</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Alertas sobre próximos pagos programados
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={userSettings.scheduled_payments || false}
+                          onCheckedChange={(checked) =>
+                            updateUserSettings({ scheduled_payments: checked })
+                          }
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/20">
+                            <CreditCard className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-medium">Vencimientos de Tarjetas</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Recordatorios de fechas de pago de tarjetas
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={userSettings.card_reminders || false}
+                          onCheckedChange={(checked) =>
+                            updateUserSettings({ card_reminders: checked })
+                          }
+                        />
+                      </div>
+                    </div>
                   </div>
                   
                   <Separator />
                   
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label className="font-medium">Deudas</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Recordatorios sobre deudas pendientes
-                      </p>
+                  {/* Notificaciones de Gestión */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Package className="h-4 w-4 text-orange-600" />
+                      <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Gestión y Control</h4>
                     </div>
-                    <Switch
-                      checked={userSettings.debts || false}
-                      onCheckedChange={(checked) =>
-                        updateUserSettings({ debts: checked })
-                      }
-                    />
+                    
+                    <div className="grid gap-4 pl-6">
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/20">
+                            <Package className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-medium">Inventario</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Alertas sobre stock bajo y productos
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={userSettings.inventory_alerts || false}
+                          onCheckedChange={(checked) =>
+                            updateUserSettings({ inventory_alerts: checked })
+                          }
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-cyan-100 dark:bg-cyan-900/20">
+                            <Users className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-medium">Contactos</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Notificaciones sobre actividad de contactos
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={userSettings.contact_notifications || false}
+                          onCheckedChange={(checked) =>
+                            updateUserSettings({ contact_notifications: checked })
+                          }
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/20">
+                            <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-medium">Reportes y Estadísticas</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Resúmenes periódicos de tu actividad financiera
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={userSettings.reports_notifications || false}
+                          onCheckedChange={(checked) =>
+                            updateUserSettings({ reports_notifications: checked })
+                          }
+                        />
+                      </div>
+                    </div>
                   </div>
                   
                   <Separator />
                   
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label className="font-medium">Ingresos</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Notificaciones sobre ingresos importantes
-                      </p>
+                  {/* Notificaciones del Sistema */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Settings className="h-4 w-4 text-gray-600" />
+                      <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Sistema</h4>
                     </div>
-                    <Switch
-                      checked={userSettings.income || false}
-                      onCheckedChange={(checked) =>
-                        updateUserSettings({ income: checked })
-                      }
-                    />
+                    
+                    <div className="grid gap-4 pl-6">
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800">
+                            <Settings className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-medium">Actualizaciones del Sistema</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Notificaciones sobre nuevas funciones y mejoras
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={userSettings.system_updates || false}
+                          onCheckedChange={(checked) =>
+                            updateUserSettings({ system_updates: checked })
+                          }
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/20">
+                            <Shield className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-medium">Seguridad</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Alertas de seguridad y accesos inusuales
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={userSettings.security_alerts || false}
+                          onCheckedChange={(checked) =>
+                            updateUserSettings({ security_alerts: checked })
+                          }
+                        />
+                      </div>
+                    </div>
                   </div>
-                </>
+                </div>
               )}
             </CardContent>
           </Card>

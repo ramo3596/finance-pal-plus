@@ -691,7 +691,7 @@ export default function Settings() {
           />
         )}
       </div>
-    );
+  );
   };
 
   const CategoriesSection = () => {
@@ -998,8 +998,6 @@ export default function Settings() {
     </div>
   );
 
-
-
   return (
     <Layout>
       <div className="container mx-auto p-6">
@@ -1076,21 +1074,21 @@ export default function Settings() {
 
             <TabsContent value="profile"><ProfileSection /></TabsContent>
             <TabsContent value="notifications">
-              {isMobile ? (
-                <div className="text-center py-8">
-                  <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-medium mb-2">Configuración de Notificaciones</h3>
-                  <p className="text-muted-foreground mb-4">Gestiona tus preferencias de notificaciones en una página dedicada</p>
-                  <Link to="/settings/notifications">
-                    <Button>
-                      <Bell className="h-4 w-4 mr-2" />
-                      Ir a Notificaciones
-                    </Button>
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Configuración de Notificaciones */}
+              <div className="space-y-6">
+                {/* Enlace a página dedicada en móvil */}
+                {isMobile && (
+                  <div className="text-center py-4 mb-6">
+                    <Link to="/settings/notifications">
+                      <Button variant="outline" className="w-full">
+                        <Bell className="h-4 w-4 mr-2" />
+                        Ver en Página Completa
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+                
+                {/* Configuración de Notificaciones - Siempre visible */}
+                   {/* Configuración de Notificaciones */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -1101,70 +1099,192 @@ export default function Settings() {
                     <CardContent className="space-y-6">
                       {userSettings && (
                         <>
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                              <Label className="font-medium">Recordatorio de Cartera</Label>
-                              <p className="text-sm text-muted-foreground">
-                                Recibe notificaciones sobre el estado de tu cartera
-                              </p>
+                          {/* Finanzas */}
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-semibold text-primary flex items-center gap-2">
+                              <DollarSign className="h-5 w-5" />
+                              Finanzas
+                            </h3>
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <Label className="font-medium">Recordatorio de Cartera</Label>
+                                <p className="text-sm text-muted-foreground">
+                                  Recibe notificaciones sobre el estado de tu cartera
+                                </p>
+                              </div>
+                              <Switch
+                                checked={userSettings.wallet_reminder || false}
+                                onCheckedChange={(checked) =>
+                                  updateUserSettings({ wallet_reminder: checked })
+                                }
+                              />
                             </div>
-                            <Switch
-                              checked={userSettings.wallet_reminder || false}
-                              onCheckedChange={(checked) =>
-                                updateUserSettings({ wallet_reminder: checked })
-                              }
-                            />
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <Label className="font-medium">Vencimientos de Tarjetas</Label>
+                                <p className="text-sm text-muted-foreground">
+                                  Alertas sobre fechas de vencimiento de tarjetas
+                                </p>
+                              </div>
+                              <Switch
+                                checked={userSettings.card_reminders || false}
+                                onCheckedChange={(checked) =>
+                                  updateUserSettings({ card_reminders: checked })
+                                }
+                              />
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <Label className="font-medium">Ingresos</Label>
+                                <p className="text-sm text-muted-foreground">
+                                  Notificaciones sobre ingresos importantes
+                                </p>
+                              </div>
+                              <Switch
+                                checked={userSettings.income || false}
+                                onCheckedChange={(checked) =>
+                                  updateUserSettings({ income: checked })
+                                }
+                              />
+                            </div>
                           </div>
                           
                           <Separator />
                           
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                              <Label className="font-medium">Pagos Programados</Label>
-                              <p className="text-sm text-muted-foreground">
-                                Alertas sobre próximos pagos programados
-                              </p>
+                          {/* Pagos y Programación */}
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-semibold text-primary flex items-center gap-2">
+                              <Calendar className="h-5 w-5" />
+                              Pagos y Programación
+                            </h3>
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <Label className="font-medium">Pagos Programados</Label>
+                                <p className="text-sm text-muted-foreground">
+                                  Alertas sobre próximos pagos programados
+                                </p>
+                              </div>
+                              <Switch
+                                checked={userSettings.scheduled_payments || false}
+                                onCheckedChange={(checked) =>
+                                  updateUserSettings({ scheduled_payments: checked })
+                                }
+                              />
                             </div>
-                            <Switch
-                              checked={userSettings.scheduled_payments || false}
-                              onCheckedChange={(checked) =>
-                                updateUserSettings({ scheduled_payments: checked })
-                              }
-                            />
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <Label className="font-medium">Deudas</Label>
+                                <p className="text-sm text-muted-foreground">
+                                  Recordatorios sobre deudas pendientes
+                                </p>
+                              </div>
+                              <Switch
+                                checked={userSettings.debts || false}
+                                onCheckedChange={(checked) =>
+                                  updateUserSettings({ debts: checked })
+                                }
+                              />
+                            </div>
                           </div>
                           
                           <Separator />
                           
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                              <Label className="font-medium">Deudas</Label>
-                              <p className="text-sm text-muted-foreground">
-                                Recordatorios sobre deudas pendientes
-                              </p>
+                          {/* Gestión y Control */}
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-semibold text-primary flex items-center gap-2">
+                              <AlertTriangle className="h-5 w-5" />
+                              Gestión y Control
+                            </h3>
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <Label className="font-medium">Inventario</Label>
+                                <p className="text-sm text-muted-foreground">
+                                  Alertas sobre niveles de inventario
+                                </p>
+                              </div>
+                              <Switch
+                                checked={userSettings.inventory_alerts || false}
+                                onCheckedChange={(checked) =>
+                                  updateUserSettings({ inventory_alerts: checked })
+                                }
+                              />
                             </div>
-                            <Switch
-                              checked={userSettings.debts || false}
-                              onCheckedChange={(checked) =>
-                                updateUserSettings({ debts: checked })
-                              }
-                            />
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <Label className="font-medium">Contactos</Label>
+                                <p className="text-sm text-muted-foreground">
+                                  Notificaciones relacionadas con contactos
+                                </p>
+                              </div>
+                              <Switch
+                                checked={userSettings.contact_notifications || false}
+                                onCheckedChange={(checked) =>
+                                  updateUserSettings({ contact_notifications: checked })
+                                }
+                              />
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <Label className="font-medium">Reportes y Estadísticas</Label>
+                                <p className="text-sm text-muted-foreground">
+                                  Notificaciones sobre reportes generados
+                                </p>
+                              </div>
+                              <Switch
+                                checked={userSettings.reports_notifications || false}
+                                onCheckedChange={(checked) =>
+                                  updateUserSettings({ reports_notifications: checked })
+                                }
+                              />
+                            </div>
                           </div>
                           
                           <Separator />
                           
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                              <Label className="font-medium">Ingresos</Label>
-                              <p className="text-sm text-muted-foreground">
-                                Notificaciones sobre ingresos importantes
-                              </p>
+                          {/* Sistema */}
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-semibold text-primary flex items-center gap-2">
+                              <CheckCircle2 className="h-5 w-5" />
+                              Sistema
+                            </h3>
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <Label className="font-medium">Actualizaciones del Sistema</Label>
+                                <p className="text-sm text-muted-foreground">
+                                  Notificaciones sobre actualizaciones disponibles
+                                </p>
+                              </div>
+                              <Switch
+                                checked={userSettings.system_updates || false}
+                                onCheckedChange={(checked) =>
+                                  updateUserSettings({ system_updates: checked })
+                                }
+                              />
                             </div>
-                            <Switch
-                              checked={userSettings.income || false}
-                              onCheckedChange={(checked) =>
-                                updateUserSettings({ income: checked })
-                              }
-                            />
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <Label className="font-medium">Seguridad</Label>
+                                <p className="text-sm text-muted-foreground">
+                                  Alertas de seguridad y accesos
+                                </p>
+                              </div>
+                              <Switch
+                                checked={userSettings.security_alerts || false}
+                                onCheckedChange={(checked) =>
+                                  updateUserSettings({ security_alerts: checked })
+                                }
+                              />
+                            </div>
                           </div>
                         </>
                       )}
@@ -1253,14 +1373,12 @@ export default function Settings() {
                     </CardContent>
                   </Card>
                 </div>
-              )}
             </TabsContent>
             <TabsContent value="accounts"><AccountsSection /></TabsContent>
             <TabsContent value="categories"><CategoriesSection /></TabsContent>
             <TabsContent value="tags"><TagsSection /></TabsContent>
             <TabsContent value="templates"><TemplatesSection /></TabsContent>
             <TabsContent value="filters"><FiltersSection /></TabsContent>
-
           </Tabs>
         )}
       </div>
