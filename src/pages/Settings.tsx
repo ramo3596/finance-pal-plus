@@ -1042,7 +1042,7 @@ export default function Settings() {
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-8 mb-6">
+            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7 mb-6">
               <TabsTrigger value="profile" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
                 <span className="hidden sm:inline">Perfil</span>
