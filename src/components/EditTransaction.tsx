@@ -123,6 +123,59 @@ export function EditTransaction({
     }
   };
 
+  // Handle location detection
+  const handleLocationDetection = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            // Try to get address using a free geocoding service
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=es`
+            );
+            if (response.ok) {
+              const data = await response.json();
+              if (data.display_name) {
+                setLocation(data.display_name);
+              } else {
+                setLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+              }
+            } else {
+              setLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+            }
+          } catch (error) {
+            console.error('Error getting address:', error);
+            setLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+          }
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          let errorMessage = 'No se pudo obtener la ubicación.';
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Permisos de ubicación denegados. Habilita la ubicación en tu navegador.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Información de ubicación no disponible.';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Tiempo de espera agotado para obtener la ubicación.';
+              break;
+          }
+          alert(errorMessage);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 300000
+        }
+      );
+    } else {
+      alert('La geolocalización no está soportada en este navegador.');
+    }
+  };
+
   const handleDelete = async () => {
     if (!transaction) return;
     
@@ -327,7 +380,13 @@ export function EditTransaction({
               <Label htmlFor="location">Lugar</Label>
               <div className="relative">
                 <Input id="location" placeholder="Ubicación" value={location} onChange={e => setLocation(e.target.value)} className="pr-10" />
-                <Button variant="ghost" size="icon" className="absolute right-1 top-1 h-8 w-8">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute right-1 top-1 h-8 w-8"
+                  onClick={handleLocationDetection}
+                  title="Obtener ubicación actual"
+                >
                   <MapPin className="h-4 w-4" />
                 </Button>
               </div>
