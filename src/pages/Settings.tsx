@@ -24,12 +24,20 @@ import {
   Save,
   Loader2,
   RotateCcw,
-  ChevronRight
+  ChevronRight,
+  Calendar,
+  DollarSign,
+  AlertTriangle,
+  CheckCircle2,
+  X
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/hooks/useSettings";
+import { useNotifications } from "@/hooks/useNotifications";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 
 // Import dialogs
@@ -52,6 +60,15 @@ import { DraggableCategoryList } from "@/components/settings/DraggableCategoryLi
 import { DraggableTagList } from "@/components/settings/DraggableTagList";
 
 export default function Settings() {
+  const {
+    notifications,
+    loading: notificationsLoading,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    refetch: refetchNotifications
+  } = useNotifications();
+
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -146,13 +163,6 @@ export default function Settings() {
       count: null
     },
     {
-      title: "Notificaciones",
-      description: "Gestiona tus preferencias de notificaciones",
-      icon: Bell,
-      href: "/settings/notifications",
-      count: null
-    },
-    {
       title: "Cuentas", 
       description: "Gestiona tus cuentas bancarias y tarjetas",
       icon: CreditCard,
@@ -186,6 +196,13 @@ export default function Settings() {
       icon: Filter,
       href: "/settings/filters",
       count: filters?.length || 0
+    },
+    {
+      title: "Notificaciones",
+      description: "Gestiona tus preferencias de notificaciones",
+      icon: Bell,
+      href: "/settings/notifications",
+      count: null
     }
   ];
 
@@ -219,6 +236,69 @@ export default function Settings() {
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+    }
+  };
+
+  // Notification helper functions
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'payment_reminder':
+        return <Calendar className="h-4 w-4" />;
+      case 'debt_reminder':
+        return <AlertTriangle className="h-4 w-4" />;
+      case 'income_alert':
+        return <DollarSign className="h-4 w-4" />;
+      case 'wallet_reminder':
+        return <Bell className="h-4 w-4" />;
+      default:
+        return <Bell className="h-4 w-4" />;
+    }
+  };
+
+  const getNotificationColor = (type: string) => {
+    switch (type) {
+      case 'payment_reminder':
+        return 'text-blue-600';
+      case 'debt_reminder':
+        return 'text-red-600';
+      case 'income_alert':
+        return 'text-green-600';
+      case 'wallet_reminder':
+        return 'text-orange-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead();
+      toast({
+        title: "Notificaciones marcadas",
+        description: "Todas las notificaciones han sido marcadas como leídas.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudieron marcar las notificaciones.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      await deleteNotification(id);
+      toast({
+        title: "Notificación eliminada",
+        description: "La notificación ha sido eliminada correctamente.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo eliminar la notificación.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -865,10 +945,6 @@ export default function Settings() {
                 <User className="h-4 w-4" />
                 <span className="hidden sm:inline">Perfil</span>
               </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                <span className="hidden sm:inline">Notificaciones</span>
-              </TabsTrigger>
               <TabsTrigger value="accounts" className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 <span className="hidden sm:inline">Cuentas</span>
@@ -889,22 +965,193 @@ export default function Settings() {
                 <Filter className="h-4 w-4" />
                 <span className="hidden sm:inline">Filtros</span>
               </TabsTrigger>
+              <TabsTrigger value="notifications" className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                <span className="hidden sm:inline">Notificaciones</span>
+              </TabsTrigger>
 
             </TabsList>
 
             <TabsContent value="profile"><ProfileSection /></TabsContent>
             <TabsContent value="notifications">
-              <div className="text-center py-8">
-                <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">Configuración de Notificaciones</h3>
-                <p className="text-muted-foreground mb-4">Gestiona tus preferencias de notificaciones en una página dedicada</p>
-                <Link to="/settings/notifications">
-                  <Button>
-                    <Bell className="h-4 w-4 mr-2" />
-                    Ir a Notificaciones
-                  </Button>
-                </Link>
-              </div>
+              {isMobile ? (
+                <div className="text-center py-8">
+                  <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">Configuración de Notificaciones</h3>
+                  <p className="text-muted-foreground mb-4">Gestiona tus preferencias de notificaciones en una página dedicada</p>
+                  <Link to="/settings/notifications">
+                    <Button>
+                      <Bell className="h-4 w-4 mr-2" />
+                      Ir a Notificaciones
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Configuración de Notificaciones */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Bell className="h-5 w-5" />
+                        Preferencias de Notificaciones
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {userSettings && (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                              <Label className="font-medium">Recordatorio de Cartera</Label>
+                              <p className="text-sm text-muted-foreground">
+                                Recibe notificaciones sobre el estado de tu cartera
+                              </p>
+                            </div>
+                            <Switch
+                              checked={userSettings.wallet_reminder || false}
+                              onCheckedChange={(checked) =>
+                                updateUserSettings({ wallet_reminder: checked })
+                              }
+                            />
+                          </div>
+                          
+                          <Separator />
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                              <Label className="font-medium">Pagos Programados</Label>
+                              <p className="text-sm text-muted-foreground">
+                                Alertas sobre próximos pagos programados
+                              </p>
+                            </div>
+                            <Switch
+                              checked={userSettings.scheduled_payments || false}
+                              onCheckedChange={(checked) =>
+                                updateUserSettings({ scheduled_payments: checked })
+                              }
+                            />
+                          </div>
+                          
+                          <Separator />
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                              <Label className="font-medium">Deudas</Label>
+                              <p className="text-sm text-muted-foreground">
+                                Recordatorios sobre deudas pendientes
+                              </p>
+                            </div>
+                            <Switch
+                              checked={userSettings.debts || false}
+                              onCheckedChange={(checked) =>
+                                updateUserSettings({ debts: checked })
+                              }
+                            />
+                          </div>
+                          
+                          <Separator />
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                              <Label className="font-medium">Ingresos</Label>
+                              <p className="text-sm text-muted-foreground">
+                                Notificaciones sobre ingresos importantes
+                              </p>
+                            </div>
+                            <Switch
+                              checked={userSettings.income || false}
+                              onCheckedChange={(checked) =>
+                                updateUserSettings({ income: checked })
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Lista de Notificaciones */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                          <Bell className="h-5 w-5" />
+                          Notificaciones Recientes
+                        </span>
+                        {notifications && notifications.length > 0 && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handleMarkAllAsRead}
+                            disabled={notificationsLoading}
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Marcar todas como leídas
+                          </Button>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[400px]">
+                        {notificationsLoading ? (
+                          <div className="flex items-center justify-center py-8">
+                            <div className="text-muted-foreground">Cargando notificaciones...</div>
+                          </div>
+                        ) : notifications && notifications.length > 0 ? (
+                          <div className="space-y-4">
+                            {notifications.map((notification) => (
+                              <div
+                                key={notification.id}
+                                className={`flex items-start gap-3 p-4 rounded-lg border transition-colors ${
+                                  notification.isNew ? 'bg-primary/5 border-primary/20' : 'bg-muted/30'
+                                }`}
+                              >
+                                <div className={`p-2 rounded-full bg-background ${getNotificationColor(notification.type)}`}>
+                                  {getNotificationIcon(notification.type)}
+                                </div>
+                                <div className="flex-1 space-y-1">
+                                  <div className="flex items-start justify-between">
+                                    <h4 className="font-medium text-sm">{notification.title}</h4>
+                                    <div className="flex items-center gap-2">
+                                      {notification.isNew && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          Nuevo
+                                        </Badge>
+                                      )}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDeleteNotification(notification.id)}
+                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">{notification.message}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {formatDistanceToNow(new Date(notification.date), {
+                                      addSuffix: true,
+                                      locale: es
+                                    })}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-8 text-center">
+                            <Bell className="h-12 w-12 text-muted-foreground mb-4" />
+                            <h3 className="font-medium text-lg mb-2">No hay notificaciones</h3>
+                            <p className="text-muted-foreground text-sm">
+                              Cuando tengas notificaciones, aparecerán aquí.
+                            </p>
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="accounts"><AccountsSection /></TabsContent>
             <TabsContent value="categories"><CategoriesSection /></TabsContent>
