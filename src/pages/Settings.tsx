@@ -77,6 +77,8 @@ export default function Settings() {
   const [showAddAccountDialog, setShowAddAccountDialog] = useState(false);
   const [editAccountId, setEditAccountId] = useState<string | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [profileData, setProfileData] = useState({
     username: "",
     email: "",
@@ -214,6 +216,11 @@ export default function Settings() {
         email: user.email || "",
         newPassword: ""
       });
+      // Cargar imagen de perfil si existe
+      const avatarUrl = user.user_metadata?.avatar_url;
+      if (avatarUrl) {
+        setProfileImage(avatarUrl);
+      }
       fetchUserProfile();
     }
   }, [user]);
@@ -388,6 +395,87 @@ export default function Settings() {
     await signOut();
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validar tipo de archivo
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Error",
+        description: "Formato de archivo no soportado. Use JPG, PNG, GIF o WebP.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validar tamaño de archivo (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "El archivo es demasiado grande. Máximo 5MB.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsUploadingImage(true);
+
+    try {
+      // Crear nombre único para el archivo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `profile-images/${fileName}`;
+
+      // Subir archivo a Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Actualizar perfil del usuario con la nueva imagen
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      });
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      setProfileImage(publicUrl);
+      toast({
+        title: "Éxito",
+        description: "Imagen de perfil actualizada correctamente."
+      });
+
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al subir la imagen.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingImage(false);
+      // Limpiar el input
+      event.target.value = '';
+    }
+  };
+
+  const triggerImageUpload = () => {
+    const input = document.getElementById('image-upload') as HTMLInputElement;
+    input?.click();
+  };
+
   const handleDeleteAccount = async (id: string) => {
     if (confirm("¿Estás seguro de que quieres eliminar esta cuenta?")) {
       await deleteAccount(id);
@@ -470,9 +558,9 @@ export default function Settings() {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-              {user?.user_metadata?.avatar_url ? (
+              {profileImage ? (
                 <img 
-                  src={user.user_metadata.avatar_url} 
+                  src={profileImage} 
                   alt="Foto de perfil" 
                   className="w-full h-full object-cover"
                 />
@@ -481,16 +569,30 @@ export default function Settings() {
               )}
             </div>
             <div className="flex flex-col gap-2">
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/settings/profile">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={triggerImageUpload}
+                disabled={isUploadingImage}
+              >
+                {isUploadingImage ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
                   <Upload className="h-4 w-4 mr-2" />
-                  Cambiar imagen
-                </Link>
+                )}
+                {isUploadingImage ? 'Subiendo...' : 'Cambiar imagen'}
               </Button>
               <p className="text-xs text-muted-foreground">
-                Ir a configuración de perfil
+                JPG, PNG, GIF o WebP. Máximo 5MB.
               </p>
             </div>
+            <input
+              id="image-upload"
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
