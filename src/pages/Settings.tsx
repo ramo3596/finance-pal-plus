@@ -24,21 +24,13 @@ import {
   Save,
   Loader2,
   RotateCcw,
-  CheckCircle2,
-  Calendar,
-  DollarSign,
-  AlertTriangle,
-  X,
   ChevronRight
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/hooks/useSettings";
-import { useNotifications } from "@/hooks/useNotifications";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
 
 // Import dialogs
 import { AddAccountDialog } from "@/components/settings/AddAccountDialog";
@@ -142,13 +134,7 @@ export default function Settings() {
     refetch,
   } = useSettings();
 
-  const {
-    notifications,
-    loading: notificationsLoading,
-    markAsRead,
-    deleteNotification,
-    refetch: refetchNotifications
-  } = useNotifications();
+
 
   // Mobile Settings Navigation Items
   const settingsNavItems = [
@@ -157,6 +143,13 @@ export default function Settings() {
       description: "Configura tu perfil y preferencias",
       icon: User,
       href: "/settings/profile",
+      count: null
+    },
+    {
+      title: "Notificaciones",
+      description: "Gestiona tus preferencias de notificaciones",
+      icon: Bell,
+      href: "/settings/notifications",
       count: null
     },
     {
@@ -823,209 +816,7 @@ export default function Settings() {
     </div>
   );
 
-  const NotificationsSection = () => {
-    const getNotificationIcon = (type: string) => {
-      switch (type) {
-        case 'payment_reminder':
-          return <Calendar className="h-4 w-4" />;
-        case 'debt_reminder':
-          return <AlertTriangle className="h-4 w-4" />;
-        case 'income_alert':
-          return <DollarSign className="h-4 w-4" />;
-        case 'wallet_reminder':
-          return <Bell className="h-4 w-4" />;
-        default:
-          return <Bell className="h-4 w-4" />;
-      }
-    };
 
-    const getNotificationColor = (type: string) => {
-      switch (type) {
-        case 'payment_reminder':
-          return 'text-blue-600';
-        case 'debt_reminder':
-          return 'text-red-600';
-        case 'income_alert':
-          return 'text-green-600';
-        case 'wallet_reminder':
-          return 'text-orange-600';
-        default:
-          return 'text-gray-600';
-      }
-    };
-
-    return (
-      <div className="space-y-6">
-        {/* Configuración de Notificaciones */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Configuración de Notificaciones
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {userSettings && (
-              <>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="font-medium">Recordatorio de Wallet</p>
-                    <p className="text-sm text-muted-foreground">
-                      Recibe una notificación a las 20:00 para recordarte que anotes tus gastos del día.
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={userSettings.wallet_reminder}
-                    onCheckedChange={(checked) => updateUserSettings({ wallet_reminder: checked })}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="font-medium">Pagos Programados</p>
-                    <p className="text-sm text-muted-foreground">
-                      Notifica sobre los próximos pagos programados.
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={userSettings.scheduled_payments}
-                    onCheckedChange={(checked) => updateUserSettings({ scheduled_payments: checked })}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="font-medium">Deudas</p>
-                    <p className="text-sm text-muted-foreground">
-                      Recuerda las próximas fechas de vencimiento de deudas.
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={userSettings.debts}
-                    onCheckedChange={(checked) => updateUserSettings({ debts: checked })}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="font-medium">Ingresos</p>
-                    <p className="text-sm text-muted-foreground">
-                      Informa sobre un ingreso importante en tus cuentas.
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={userSettings.income}
-                    onCheckedChange={(checked) => updateUserSettings({ income: checked })}
-                  />
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Lista de Notificaciones */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Notificaciones Recientes
-              </span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={refetchNotifications}
-                disabled={notificationsLoading}
-              >
-                {notificationsLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RotateCcw className="h-4 w-4" />
-                )}
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-96">
-              {notificationsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : notifications.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No tienes notificaciones</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {notifications.map((notification) => (
-                    <div
-                       key={notification.id}
-                       className={`p-4 rounded-lg border transition-colors ${
-                         !notification.isNew ? 'bg-muted/30' : 'bg-background border-primary/20'
-                       }`}
-                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3 flex-1">
-                          <div className={`mt-1 ${getNotificationColor(notification.type)}`}>
-                            {getNotificationIcon(notification.type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className={`font-medium text-sm ${
-                               !notification.isNew ? 'text-muted-foreground' : 'text-foreground'
-                             }`}>
-                               {notification.title}
-                             </h4>
-                             <p className={`text-sm mt-1 ${
-                               !notification.isNew ? 'text-muted-foreground/70' : 'text-muted-foreground'
-                             }`}>
-                               {notification.message}
-                             </p>
-                             <p className="text-xs text-muted-foreground/60 mt-2">
-                               {formatDistanceToNow(new Date(notification.date), {
-                                 addSuffix: true,
-                                 locale: es
-                               })}
-                             </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {notification.isNew && (
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               onClick={() => markAsRead(notification.id)}
-                               className="h-8 w-8 p-0"
-                             >
-                               <CheckCircle2 className="h-4 w-4" />
-                             </Button>
-                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteNotification(notification.id)}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
 
   return (
     <Layout>
@@ -1065,22 +856,7 @@ export default function Settings() {
               </Card>
             ))}
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="p-3">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-full bg-primary/10">
-                      <Bell className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium">Notificaciones</h3>
-                      <p className="text-sm text-muted-foreground">Configura tus notificaciones</p>
-                    </div>
-                  </div>
-                  <NotificationsSection />
-                </div>
-              </CardContent>
-            </Card>
+
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -1109,10 +885,7 @@ export default function Settings() {
                 <Filter className="h-4 w-4" />
                 <span className="hidden sm:inline">Filtros</span>
               </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                <span className="hidden sm:inline">Notificaciones</span>
-              </TabsTrigger>
+
             </TabsList>
 
             <TabsContent value="profile"><ProfileSection /></TabsContent>
@@ -1121,7 +894,7 @@ export default function Settings() {
             <TabsContent value="tags"><TagsSection /></TabsContent>
             <TabsContent value="templates"><TemplatesSection /></TabsContent>
             <TabsContent value="filters"><FiltersSection /></TabsContent>
-            <TabsContent value="notifications"><NotificationsSection /></TabsContent>
+
           </Tabs>
         )}
       </div>

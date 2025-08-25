@@ -384,68 +384,7 @@ export default function ProfileSettings() {
               />
             </div>
 
-            {/* Notification Settings */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Configuración de Notificaciones</h3>
-              <div className="grid gap-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Recordatorio de Cartera</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Recibe notificaciones sobre el estado de tu cartera
-                    </p>
-                  </div>
-                  <Switch
-                    checked={userSettings?.wallet_reminder || false}
-                    onCheckedChange={(checked) =>
-                      updateUserSettings({ wallet_reminder: checked })
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Pagos Programados</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Alertas sobre próximos pagos programados
-                    </p>
-                  </div>
-                  <Switch
-                    checked={userSettings?.scheduled_payments || false}
-                    onCheckedChange={(checked) =>
-                      updateUserSettings({ scheduled_payments: checked })
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Deudas</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Recordatorios sobre deudas pendientes
-                    </p>
-                  </div>
-                  <Switch
-                    checked={userSettings?.debts || false}
-                    onCheckedChange={(checked) =>
-                      updateUserSettings({ debts: checked })
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Ingresos</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Notificaciones sobre ingresos importantes
-                    </p>
-                  </div>
-                  <Switch
-                    checked={userSettings?.income || false}
-                    onCheckedChange={(checked) =>
-                      updateUserSettings({ income: checked })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
+
             
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="hidden md:block">

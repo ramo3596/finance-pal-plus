@@ -13,6 +13,7 @@ import TagsSettings from "./pages/settings/TagsSettings";
 import TemplatesSettings from "./pages/settings/TemplatesSettings";
 import FiltersSettings from "./pages/settings/FiltersSettings";
 import ProfileSettings from "./pages/settings/ProfileSettings";
+import NotificationsSettings from "./pages/settings/NotificationsSettings";
 import Records from "./pages/Records";
 import Inventory from "./pages/Inventory";
 import Statistics from "./pages/Statistics";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/settings/templates" element={<TemplatesSettings />} />
             <Route path="/settings/filters" element={<FiltersSettings />} />
             <Route path="/settings/profile" element={<ProfileSettings />} />
+            <Route path="/settings/notifications" element={<NotificationsSettings />} />
             <Route path="/records" element={<Records />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/statistics" element={<Statistics />} />
