@@ -33,6 +33,13 @@ export function ContactCard({ contact }: ContactCardProps) {
       .slice(0, 2);
   };
 
+  const openWhatsApp = (phoneNumber: string) => {
+    // Remove any non-numeric characters and format for WhatsApp
+    const cleanNumber = phoneNumber.replace(/\D/g, '');
+    const whatsappUrl = `https://wa.me/${cleanNumber}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -85,7 +92,16 @@ export function ContactCard({ contact }: ContactCardProps) {
             {contact.mobile && (
               <div className="flex items-center text-muted-foreground">
                 <Phone className="h-3 w-3 mr-2" />
-                <span className="truncate">{contact.mobile}</span>
+                <span 
+                  className="truncate cursor-pointer hover:text-green-600 hover:underline transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openWhatsApp(contact.mobile!);
+                  }}
+                  title="Abrir chat en WhatsApp"
+                >
+                  {contact.mobile}
+                </span>
               </div>
             )}
             {contact.email && (
