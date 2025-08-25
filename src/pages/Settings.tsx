@@ -860,10 +860,14 @@ export default function Settings() {
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7 mb-6">
+            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-8 mb-6">
               <TabsTrigger value="profile" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
                 <span className="hidden sm:inline">Perfil</span>
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                <span className="hidden sm:inline">Notificaciones</span>
               </TabsTrigger>
               <TabsTrigger value="accounts" className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
@@ -889,6 +893,19 @@ export default function Settings() {
             </TabsList>
 
             <TabsContent value="profile"><ProfileSection /></TabsContent>
+            <TabsContent value="notifications">
+              <div className="text-center py-8">
+                <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-2">Configuración de Notificaciones</h3>
+                <p className="text-muted-foreground mb-4">Gestiona tus preferencias de notificaciones en una página dedicada</p>
+                <Link to="/settings/notifications">
+                  <Button>
+                    <Bell className="h-4 w-4 mr-2" />
+                    Ir a Notificaciones
+                  </Button>
+                </Link>
+              </div>
+            </TabsContent>
             <TabsContent value="accounts"><AccountsSection /></TabsContent>
             <TabsContent value="categories"><CategoriesSection /></TabsContent>
             <TabsContent value="tags"><TagsSection /></TabsContent>
