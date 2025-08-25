@@ -396,13 +396,28 @@ export default function Settings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-8 w-8 text-primary" />
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+              {user?.user_metadata?.avatar_url ? (
+                <img 
+                  src={user.user_metadata.avatar_url} 
+                  alt="Foto de perfil" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="h-8 w-8 text-primary" />
+              )}
             </div>
-            <Button variant="outline" size="sm">
-              <Upload className="h-4 w-4 mr-2" />
-              Cambiar imagen
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/settings/profile">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Cambiar imagen
+                </Link>
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Ir a configuración de perfil
+              </p>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
