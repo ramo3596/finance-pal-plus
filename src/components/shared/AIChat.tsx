@@ -57,7 +57,7 @@ export function AIChat() {
 
     try {
       // Send to webhook
-      const response = await fetch('https://n8n-n8n.97qppr.easypanel.host/webhook-test/b49538ed-b1bd-4be4-be13-4d9e7da516a4', {
+      const response = await fetch('https://n8n-n8n.97qppr.easypanel.host/webhook/b49538ed-b1bd-4be4-be13-4d9e7da516a4', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
