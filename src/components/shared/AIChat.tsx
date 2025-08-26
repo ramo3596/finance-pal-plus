@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, Send, X, Bot, User } from "lucide-react";
@@ -108,6 +109,13 @@ export function AIChat() {
     sendMessage(inputMessage);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(inputMessage);
+    }
+  };
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('es-ES', {
       hour: '2-digit',
@@ -208,18 +216,20 @@ export function AIChat() {
             </ScrollArea>
             
             <div className="p-4 border-t bg-background/50">
-              <form onSubmit={handleSubmit} className="flex gap-2">
-                <Input
+              <form onSubmit={handleSubmit} className="flex gap-2 items-end">
+                <Textarea
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
-                  placeholder="Escribe tu pregunta..."
-                  className="flex-1 border-muted-foreground/20 focus:border-primary"
+                  onKeyDown={handleKeyDown}
+                  placeholder="Escribe tu pregunta... (Shift+Enter para nueva línea)"
+                  className="flex-1 border-muted-foreground/20 focus:border-primary resize-none min-h-[40px] max-h-[120px]"
                   disabled={isLoading}
+                  rows={1}
                 />
                 <Button
                   type="submit"
                   size="icon"
-                  className="bg-primary hover:bg-primary/90 transition-colors"
+                  className="bg-primary hover:bg-primary/90 transition-colors flex-shrink-0"
                   disabled={isLoading || !inputMessage.trim()}
                 >
                   <Send className="h-4 w-4" />
