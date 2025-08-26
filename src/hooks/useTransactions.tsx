@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 import { useSettings } from './useSettings';
+import { useCachedTransactions } from './useCache';
+import { cacheService } from '@/lib/cache';
 
 export interface Transaction {
   id: string;
@@ -52,9 +54,38 @@ const defaultCards: DashboardCard[] = [
 export const useTransactions = () => {
   const { user } = useAuth();
   const { refetch: refetchSettings } = useSettings();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [cards, setCards] = useState<DashboardCard[]>(defaultCards);
   const [loading, setLoading] = useState(false);
+
+  // Use cached transactions with automatic loading and cache management
+  const fetchTransactionsFromDB = async (): Promise<Transaction[]> => {
+    if (!user) return [];
+    
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('transaction_date', { ascending: false });
+
+      if (error) throw error;
+      
+      return (data || []).map((transaction: any) => ({
+        ...transaction,
+        tags: transaction.tags ? transaction.tags.split(',').filter(Boolean) : []
+      }));
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      toast.error('Error al cargar las transacciones');
+      throw error;
+    }
+  };
+
+  const cachedTransactions = useCachedTransactions(fetchTransactionsFromDB);
+  const transactions = cachedTransactions.data || [];
+
+  // Merge loading states
+  const isLoading = loading || cachedTransactions.loading;
 
   // Fetch dashboard card preferences
   const fetchCardPreferences = async () => {
@@ -97,24 +128,8 @@ export const useTransactions = () => {
   };
 
   const fetchTransactions = async () => {
-    if (!user) return;
-    
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('transactions' as any)
-        .select('*')
-        .eq('user_id', user.id)
-        .order('transaction_date', { ascending: false });
-
-      if (error) throw error;
-      setTransactions((data as unknown as Transaction[]) || []);
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      toast.error('Error al cargar las transacciones');
-    } finally {
-      setLoading(false);
-    }
+    // Use cached transactions refresh method
+    await cachedTransactions.refresh();
   };
 
   const createTransaction = async (transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
@@ -149,7 +164,10 @@ export const useTransactions = () => {
 
         if (error) throw error;
         
-        setTransactions(prev => [...(data as unknown as Transaction[]), ...prev]);
+        // Update cache with new transactions
+        const newTransactions = [...(data as unknown as Transaction[]), ...transactions];
+        await cachedTransactions.updateCache(newTransactions);
+        
         // Refetch accounts to update balances
         refetchSettings();
         toast.success('Transferencia creada exitosamente');
@@ -173,7 +191,10 @@ export const useTransactions = () => {
 
         if (error) throw error;
         
-        setTransactions(prev => [data as unknown as Transaction, ...prev]);
+        // Update cache with new transaction
+        const newTransactions = [data as unknown as Transaction, ...transactions];
+        await cachedTransactions.updateCache(newTransactions);
+        
         // Refetch accounts to update balances
         refetchSettings();
         toast.success('Transacción creada exitosamente');
@@ -290,7 +311,10 @@ export const useTransactions = () => {
         }
       }
       
-      setTransactions(prev => prev.map(t => t.id === id ? data as unknown as Transaction : t));
+      // Update cache with updated transaction
+      const updatedTransactions = transactions.map(t => t.id === id ? data as unknown as Transaction : t);
+      await cachedTransactions.updateCache(updatedTransactions);
+      
       // Refetch accounts to update balances
       refetchSettings();
       toast.success('Transacción actualizada');
@@ -356,12 +380,13 @@ export const useTransactions = () => {
 
       if (destError) throw destError;
       
-      // Update local state
-      setTransactions(prev => prev.map(t => {
+      // Update cache with both updated transactions
+      const updatedTransactions = transactions.map(t => {
         if (t.id === (sourceData as unknown as Transaction).id) return sourceData as unknown as Transaction;
         if (t.id === (destData as unknown as Transaction).id) return destData as unknown as Transaction;
         return t;
-      }));
+      });
+      await cachedTransactions.updateCache(updatedTransactions);
       
       // Refetch accounts to update balances
       refetchSettings();
@@ -422,10 +447,11 @@ export const useTransactions = () => {
           if (result.error) throw result.error;
         }
         
-        // Update local state - remove both transactions
-        setTransactions(prev => prev.filter(t => 
+        // Update cache - remove both transactions
+        const updatedTransactions = transactions.filter(t => 
           t.id !== id && (!pairedTransaction || t.id !== pairedTransaction.id)
-        ));
+        );
+        await cachedTransactions.updateCache(updatedTransactions);
         
         toast.success('Transferencia eliminada completamente');
       } else {
@@ -478,7 +504,10 @@ export const useTransactions = () => {
 
         if (error) throw error;
         
-        setTransactions(prev => prev.filter(t => t.id !== id));
+        // Update cache - remove the transaction
+        const updatedTransactions = transactions.filter(t => t.id !== id);
+        await cachedTransactions.updateCache(updatedTransactions);
+        
         toast.success('Transacción eliminada');
       }
       
@@ -564,7 +593,7 @@ export const useTransactions = () => {
   return {
     transactions,
     cards,
-    loading,
+    loading: isLoading,
     createTransaction,
     updateTransaction,
     updateTransferPair,

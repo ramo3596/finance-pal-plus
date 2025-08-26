@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "@/hooks/use-toast";
+import { useCachedProducts } from "./useCache";
 
 export interface Product {
   id: string;
@@ -59,15 +60,14 @@ export interface UpdateProductData {
 }
 
 export function useInventory() {
-  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  const fetchProducts = async () => {
-    if (!user) return;
+  // Use cached products with automatic loading and cache management
+  const fetchProductsFromDB = async (): Promise<Product[]> => {
+    if (!user) return [];
     
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -76,11 +76,9 @@ export function useInventory() {
 
       if (error) throw error;
 
-      const formattedProducts: Product[] = (data || []).map((product: any) => ({
+      return (data || []).map((product: any) => ({
         ...product,
       }));
-
-      setProducts(formattedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -88,9 +86,19 @@ export function useInventory() {
         description: "No se pudieron cargar los productos",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
+      throw error;
     }
+  };
+
+  const cachedProducts = useCachedProducts(fetchProductsFromDB);
+  const products = cachedProducts.data || [];
+
+  // Merge loading states
+  const isLoading = loading || cachedProducts.loading;
+
+  const fetchProducts = async () => {
+    // Use cached products refresh method
+    await cachedProducts.refresh();
   };
 
   const createProduct = async (productData: CreateProductData) => {
@@ -113,7 +121,10 @@ export function useInventory() {
         description: "Producto creado correctamente",
       });
 
-      await fetchProducts();
+      // Update cache with new product
+      const newProducts = [data, ...products];
+      await cachedProducts.updateCache(newProducts);
+      
       return data;
     } catch (error) {
       console.error('Error creating product:', error);
@@ -140,7 +151,9 @@ export function useInventory() {
         description: "Producto actualizado correctamente",
       });
 
-      await fetchProducts();
+      // Update cache with updated product
+      const updatedProducts = products.map(p => p.id === productId ? { ...p, ...updates } : p);
+      await cachedProducts.updateCache(updatedProducts);
     } catch (error) {
       console.error('Error updating product:', error);
       toast({
@@ -166,7 +179,9 @@ export function useInventory() {
         description: "Producto eliminado correctamente",
       });
 
-      await fetchProducts();
+      // Update cache - remove the product
+      const updatedProducts = products.filter(p => p.id !== productId);
+      await cachedProducts.updateCache(updatedProducts);
     } catch (error) {
       console.error('Error deleting product:', error);
       toast({
@@ -179,12 +194,14 @@ export function useInventory() {
   };
 
   useEffect(() => {
-    fetchProducts();
+    if (user) {
+      fetchProducts();
+    }
   }, [user]);
 
   return {
     products,
-    loading,
+    loading: isLoading,
     fetchProducts,
     createProduct,
     updateProduct,
