@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, Send, X, Bot, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Message {
   id: string;
@@ -16,6 +17,7 @@ interface Message {
 }
 
 export function AIChat() {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -61,8 +63,11 @@ export function AIChat() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: content,
-          timestamp: new Date().toISOString()
+          userId: user?.id || null,
+          body: {
+            message: content,
+            timestamp: new Date().toISOString()
+          }
         })
       });
 
