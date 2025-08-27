@@ -119,20 +119,49 @@ export function InventoryList({ filters, onEditProduct, onDeleteProduct }: Inven
               </div>
 
               {/* Tags */}
-              {product.tags && product.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {product.tags.slice(0, 2).map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                  {product.tags.length > 2 && (
-                    <Badge variant="secondary" className="text-xs">
-                      +{product.tags.length - 2}
-                    </Badge>
-                  )}
-                </div>
-              )}
+              {(() => {
+                // Handle both array and string formats for tags
+                let tagsArray: string[] = [];
+                
+                if (Array.isArray(product.tags)) {
+                  tagsArray = product.tags;
+                } else if (product.tags && typeof product.tags === 'string') {
+                  const tagString = product.tags as string;
+                  // If it's a string that looks like JSON array, try to parse it
+                  if (tagString.startsWith('[') && tagString.endsWith(']')) {
+                    try {
+                      const parsed = JSON.parse(tagString);
+                      if (Array.isArray(parsed)) {
+                        tagsArray = parsed;
+                      } else {
+                        tagsArray = [tagString.trim()];
+                      }
+                    } catch {
+                      tagsArray = [tagString.trim()];
+                    }
+                  } else {
+                    // If it's a regular string, split by common separators or treat as single tag
+                    tagsArray = tagString.includes(',') 
+                      ? tagString.split(',').map(tag => tag.trim())
+                      : [tagString.trim()];
+                  }
+                }
+                
+                return tagsArray.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {tagsArray.slice(0, 2).map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {tagsArray.length > 2 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{tagsArray.length - 2}
+                      </Badge>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Action Buttons */}
               <div className="flex space-x-2 pt-2">

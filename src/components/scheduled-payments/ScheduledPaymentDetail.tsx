@@ -333,23 +333,52 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
           </div>
 
           {/* Tags */}
-          {payment.tags && payment.tags.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-sm">Etiquetas:</span>
-              {payment.tags.map((tagId, index) => {
-                const tag = getTagById(tagId);
-                return (
-                  <Badge 
-                    key={index} 
-                    variant="secondary"
-                    style={tag?.color ? { backgroundColor: tag.color, color: 'white' } : {}}
-                  >
-                    {tag?.name || tagId}
-                  </Badge>
-                );
-              })}
-            </div>
-          )}
+          {(() => {
+            // Handle both array and string formats for tags
+            let tagsArray: string[] = [];
+            
+            if (Array.isArray(payment.tags)) {
+              tagsArray = payment.tags;
+            } else if (payment.tags && typeof payment.tags === 'string') {
+              const tagString = payment.tags as string;
+              // If it's a string that looks like JSON array, try to parse it
+              if (tagString.startsWith('[') && tagString.endsWith(']')) {
+                try {
+                  const parsed = JSON.parse(tagString);
+                  if (Array.isArray(parsed)) {
+                    tagsArray = parsed;
+                  } else {
+                    tagsArray = [tagString.trim()];
+                  }
+                } catch {
+                  tagsArray = [tagString.trim()];
+                }
+              } else {
+                // If it's a regular string, split by common separators or treat as single tag
+                tagsArray = tagString.includes(',') 
+                  ? tagString.split(',').map(tag => tag.trim())
+                  : [tagString.trim()];
+              }
+            }
+            
+            return tagsArray.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium text-sm">Etiquetas:</span>
+                {tagsArray.map((tagId, index) => {
+                  const tag = getTagById(tagId);
+                  return (
+                    <Badge 
+                      key={index} 
+                      variant="secondary"
+                      style={tag?.color ? { backgroundColor: tag.color, color: 'white' } : {}}
+                    >
+                      {tag?.name || tagId}
+                    </Badge>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* Note */}
           {payment.note && (
