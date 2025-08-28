@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { LogOut } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { NotificationDropdown } from "@/components/NotificationDropdown"
+import { PendingChangesIndicator } from "@/components/PendingChangesIndicator"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 interface LayoutProps {
@@ -26,6 +27,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex justify-between items-center p-4 border-b">
             <SidebarTrigger />
             <div className="flex items-center gap-2">
+              <PendingChangesIndicator className="hidden sm:flex" />
               <NotificationDropdown />
               {!isMobile && (
                 <Button

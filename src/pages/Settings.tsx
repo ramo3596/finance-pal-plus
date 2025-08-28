@@ -29,7 +29,8 @@ import {
   DollarSign,
   AlertTriangle,
   CheckCircle2,
-  X
+  X,
+  Database
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +40,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { syncService } from "@/lib/syncService";
+import { PendingChangesIndicator } from "@/components/PendingChangesIndicator";
 
 // Import dialogs
 import { AddAccountDialog } from "@/components/settings/AddAccountDialog";
@@ -84,6 +87,7 @@ export default function Settings() {
     email: "",
     newPassword: ""
   });
+  const [isSyncingData, setIsSyncingData] = useState(false);
 
   // Handle URL parameters
   useEffect(() => {
@@ -103,6 +107,8 @@ export default function Settings() {
       setEditAccountId(edit);
     }
   }, [searchParams]);
+
+  // Note: syncService initialization is now handled by CacheProvider
 
   const handleCloseAddAccountDialog = () => {
     setShowAddAccountDialog(false);
@@ -384,6 +390,33 @@ export default function Settings() {
     }
   };
 
+  const handleSyncData = async () => {
+    setIsSyncingData(true);
+    try {
+      await syncService.performFullSync();
+      
+      // Refresh all data after sync
+      await Promise.all([
+        refetch(),
+        refetchNotifications()
+      ]);
+
+      toast({
+        title: "Datos sincronizados",
+        description: "Todos los datos han sido sincronizados exitosamente.",
+        duration: 3000,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error de sincronización",
+        description: error.message || "No se pudieron sincronizar los datos.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSyncingData(false);
+    }
+  };
+
   const handleSave = () => {
     toast({
       title: "Configuración guardada",
@@ -540,19 +573,25 @@ export default function Settings() {
               <User className="h-5 w-5" />
               Perfil de Usuario
             </span>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleSyncConfiguration}
-              disabled={isLoadingProfile}
-            >
-              {isLoadingProfile ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RotateCcw className="h-4 w-4 mr-2" />
-              )}
-              Sincronizar configuración
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleSyncConfiguration}
+                disabled={isLoadingProfile}
+              >
+                {isLoadingProfile ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                )}
+                Sincronizar configuración
+              </Button>
+              <PendingChangesIndicator 
+                showSyncButton={true}
+                onSyncClick={handleSyncData}
+              />
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
