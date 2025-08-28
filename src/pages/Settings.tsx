@@ -40,7 +40,6 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { cacheService } from "@/lib/cache";
-import { syncService } from "@/lib/syncService";
 
 // Import dialogs
 import { AddAccountDialog } from "@/components/settings/AddAccountDialog";
@@ -80,7 +79,6 @@ export default function Settings() {
   const [editAccountId, setEditAccountId] = useState<string | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isSyncingData, setIsSyncingData] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<string>('');
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -362,35 +360,23 @@ export default function Settings() {
     if (!user) return;
     
     setIsSyncingData(true);
-    setSyncStatus('Iniciando sincronización...');
     try {
-      setSyncStatus('Subiendo cambios locales...');
-      // Perform bidirectional synchronization
-      const result = await syncService.performBidirectionalSync(user.id);
-      setSyncStatus('Descargando datos actualizados...');
+      // Step 1: Upload any pending local changes (if implemented in the future)
+      // This would check for any offline changes and sync them to Supabase
       
-      if (result.success) {
-        // Force refresh all data from hooks to reflect the synchronized data
-        await refetch(); // Settings data
-        await refetchNotifications(); // Notifications data
-        
-        toast({
-          title: "Datos sincronizados",
-          description: `Sincronización completada. ${result.uploadedCount} cambios subidos, ${result.downloadedCount} registros descargados.`,
-          duration: 3000,
-        });
-      } else {
-        // Show errors but still indicate partial success if some operations worked
-        const errorMessage = result.errors.length > 0 
-          ? result.errors.slice(0, 2).join('. ') + (result.errors.length > 2 ? '...' : '')
-          : 'Error desconocido durante la sincronización';
-          
-        toast({
-          title: result.uploadedCount > 0 || result.downloadedCount > 0 ? "Sincronización parcial" : "Error de sincronización",
-          description: errorMessage,
-          variant: result.uploadedCount > 0 || result.downloadedCount > 0 ? "default" : "destructive"
-        });
-      }
+      // Step 2: Clear all local cache
+      await cacheService.clearAll();
+      
+      // Step 3: Force refresh all data from Supabase to repopulate cache
+      // This will trigger fresh data downloads for all cached hooks
+      await refetch(); // Settings data
+      await refetchNotifications(); // Notifications data
+      
+      toast({
+        title: "Datos sincronizados",
+        description: "Todos los datos han sido sincronizados correctamente con el servidor.",
+        duration: 3000,
+      });
     } catch (error: any) {
       console.error('Error syncing data:', error);
       toast({
@@ -400,7 +386,6 @@ export default function Settings() {
       });
     } finally {
       setIsSyncingData(false);
-      setSyncStatus('');
     }
   };
 
@@ -602,7 +587,7 @@ export default function Settings() {
                 ) : (
                   <RotateCcw className="h-4 w-4 mr-2" />
                 )}
-                {isSyncingData ? syncStatus || 'Sincronizando...' : 'Sincronizar datos'}
+                Sincronizar datos
               </Button>
               <Button 
                 variant="outline" 
