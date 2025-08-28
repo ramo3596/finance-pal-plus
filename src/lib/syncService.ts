@@ -100,7 +100,6 @@ class SyncService {
         this.downloadTableData('categories'),
         this.downloadTableData('tags'),
         this.downloadTableData('contacts'),
-        this.downloadTableData('contact_tags'),
         this.downloadTableData('debts'),
         this.downloadTableData('scheduled_payments'),
         this.downloadTableData('inventory')

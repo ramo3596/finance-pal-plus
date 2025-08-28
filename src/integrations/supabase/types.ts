@@ -828,6 +828,12 @@ export type Database = {
           updated_at: string | null
           user_id: string
           wallet_reminder: boolean | null
+          card_reminders: boolean | null
+          inventory_alerts: boolean | null
+          contact_notifications: boolean | null
+          reports_notifications: boolean | null
+          system_updates: boolean | null
+          security_alerts: boolean | null
         }
         Insert: {
           created_at?: string | null
@@ -838,6 +844,12 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           wallet_reminder?: boolean | null
+          card_reminders?: boolean | null
+          inventory_alerts?: boolean | null
+          contact_notifications?: boolean | null
+          reports_notifications?: boolean | null
+          system_updates?: boolean | null
+          security_alerts?: boolean | null
         }
         Update: {
           created_at?: string | null
@@ -848,6 +860,12 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           wallet_reminder?: boolean | null
+          card_reminders?: boolean | null
+          inventory_alerts?: boolean | null
+          contact_notifications?: boolean | null
+          reports_notifications?: boolean | null
+          system_updates?: boolean | null
+          security_alerts?: boolean | null
         }
         Relationships: []
       }

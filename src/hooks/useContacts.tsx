@@ -72,17 +72,6 @@ export function useContacts() {
         return [];
       });
       
-      // Load contact_tags and tags for building relationships
-      const cachedContactTags = await (cacheService as any).get('contact_tags').catch((err: any) => {
-        console.warn('Error loading contact_tags from cache:', err);
-        return [];
-      });
-      
-      const cachedTags = await cacheService.get('tags').catch(err => {
-        console.warn('Error loading tags from cache:', err);
-        return [];
-      });
-
       // Filter contacts by user_id and calculate totals
       const userContacts = cachedContacts
         .filter((contact: any) => contact.user_id === user.id)
@@ -98,17 +87,10 @@ export function useContacts() {
           const totalExpenses = expenseTransactions.reduce((sum: number, t: any) => sum + Math.abs(Number(t.amount)), 0);
           const totalIncome = incomeTransactions.reduce((sum: number, t: any) => sum + Math.abs(Number(t.amount)), 0);
 
-          // Build tags relationship from contact_tags and tags
-          const contactTagIds = cachedContactTags
-            .filter((ct: any) => ct.contact_id === contact.id)
-            .map((ct: any) => ct.tag_id);
-          
-          const contactTags = cachedTags.filter((tag: any) => contactTagIds.includes(tag.id));
-
           return {
             ...contact,
             contact_type: contact.contact_type as 'persona' | 'empresa',
-            tags: contactTags || [],
+            tags: contact.tags || [],
             totalExpenses,
             totalIncome,
           };
