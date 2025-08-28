@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "./useAuth";
 import { cacheService } from "@/lib/cache";
 import { contactTagsAutoSync } from "@/lib/contactTagsAutoSync";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface Contact {
@@ -192,12 +193,25 @@ export function useContacts() {
 
     const { tagIds, ...contactUpdates } = updates;
 
+    // First, verify if the contact exists in Supabase
+    const { data: existingContact, error: fetchError } = await supabase
+      .from('contacts')
+      .select('id')
+      .eq('id', contactId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (fetchError || !existingContact) {
+      toast.error('Por favor primero cree el contacto');
+      return;
+    }
+
     // Get current contact from cache
     const cachedContacts = await cacheService.get('contacts') || [];
     const contactIndex = cachedContacts.findIndex((c: any) => c.id === contactId && c.user_id === user.id);
     
     if (contactIndex === -1) {
-      throw new Error('Contact not found');
+      throw new Error('Contact not found in cache');
     }
 
     const updatedContact = {
@@ -224,46 +238,45 @@ export function useContacts() {
       data: updatedContact
     });
 
-    // Handle contact tags changes if provided
+    // Handle contact tags changes if provided - use direct Supabase sync
     if (tagIds !== undefined) {
-      // Get original contact tags to delete them first (before the update)
-      const originalContact = cachedContacts[contactIndex];
-      if (originalContact.tags && originalContact.tags.length > 0) {
-        for (const tag of originalContact.tags) {
-          // Remove from contact_tags cache
-          await cacheService.deleteCacheItem('contact_tags', `${contactId}-${tag.id}`);
-          
-          await cacheService.addPendingChange({
-            table: 'contact_tags',
-            operation: 'delete',
-            record_id: `${contactId}-${tag.id}`,
-            data: {
-              contact_id: contactId,
-              tag_id: tag.id
-            }
-          });
-        }
-      }
+      try {
+        // Delete existing contact tags from Supabase
+        const { error: deleteError } = await supabase
+          .from('contact_tags')
+          .delete()
+          .eq('contact_id', contactId);
 
-      // Add new tags
-      if (tagIds.length > 0) {
-        for (const tagId of tagIds) {
-          const contactTagData = {
-            id: `${contactId}-${tagId}`,
+        if (deleteError) {
+          console.error('Error deleting contact tags:', deleteError);
+          toast.error('Error al actualizar etiquetas');
+          return;
+        }
+
+        // Add new tags to Supabase
+        if (tagIds.length > 0) {
+          const contactTagsData = tagIds.map(tagId => ({
             contact_id: contactId,
             tag_id: tagId
-          };
-          
-          // Add to contact_tags cache
-          await cacheService.updateCacheItem('contact_tags', contactTagData);
-          
-          await cacheService.addPendingChange({
-            table: 'contact_tags',
-            operation: 'create',
-            record_id: `${contactId}-${tagId}`,
-            data: contactTagData
-          });
+          }));
+
+          const { error: insertError } = await supabase
+            .from('contact_tags')
+            .insert(contactTagsData);
+
+          if (insertError) {
+            console.error('Error inserting contact tags:', insertError);
+            toast.error('Error al actualizar etiquetas');
+            return;
+          }
         }
+
+        // The contactTagsAutoSync service will handle cache updates automatically
+        toast.success('Etiquetas actualizadas correctamente');
+      } catch (error) {
+        console.error('Error updating contact tags:', error);
+        toast.error('Error al actualizar etiquetas');
+        return;
       }
     }
 
