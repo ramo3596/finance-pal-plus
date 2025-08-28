@@ -8,6 +8,7 @@ export interface CacheStore {
   templates: any[];
   filters: any[];
   contacts: any[];
+  contact_tags: any[];
   debts: any[];
   debt_payments: any[];
   scheduled_payments: any[];
@@ -48,7 +49,7 @@ class CacheService {
         // Create object stores for each data type
         const stores = [
           'transactions', 'accounts', 'categories', 'tags', 'templates', 'filters',
-          'contacts', 'debts', 'debt_payments', 'scheduled_payments', 'inventory', 'pending_changes'
+          'contacts', 'contact_tags', 'debts', 'debt_payments', 'scheduled_payments', 'inventory', 'pending_changes'
         ];
         
         stores.forEach(storeName => {
@@ -69,7 +70,7 @@ class CacheService {
     
     const stores = [
       'transactions', 'accounts', 'categories', 'tags', 'templates', 'filters',
-      'contacts', 'debts', 'debt_payments', 'scheduled_payments', 'inventory', 'pending_changes'
+      'contacts', 'contact_tags', 'debts', 'debt_payments', 'scheduled_payments', 'inventory', 'pending_changes'
     ];
     
     for (const storeName of stores) {
@@ -174,7 +175,7 @@ class CacheService {
     
     const stores = [
       'transactions', 'accounts', 'categories', 'tags', 
-      'contacts', 'debts', 'scheduled_payments', 'inventory'
+      'contacts', 'contact_tags', 'debts', 'scheduled_payments', 'inventory'
     ];
     
     const transaction = this.db!.transaction(stores, 'readwrite');

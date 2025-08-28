@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./useAuth";
 import { cacheService } from "@/lib/cache";
+import { contactTagsAutoSync } from "@/lib/contactTagsAutoSync";
 import { toast } from "sonner";
 
 export interface Contact {
@@ -55,6 +56,23 @@ export function useContacts() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
+  const loadContactTags = async (contactId: string) => {
+    try {
+      // Obtener etiquetas en tiempo real desde Supabase
+      const contactTags = await contactTagsAutoSync.getContactTagsByContactId(contactId);
+      const cachedTags = await cacheService.get('tags').catch(() => []);
+      
+      // Mapear las etiquetas con su información completa
+      return contactTags.map(ct => {
+        const tag = cachedTags.find((t: any) => t.id === ct.tag_id);
+        return tag ? { id: tag.id, name: tag.name, color: tag.color } : null;
+      }).filter(Boolean);
+    } catch (error) {
+      console.error('Error loading contact tags:', error);
+      return [];
+    }
+  };
+
   const fetchContacts = async () => {
     if (!user) return;
 
@@ -73,31 +91,36 @@ export function useContacts() {
       });
       
       // Filter contacts by user_id and calculate totals
-      const userContacts = cachedContacts
-        .filter((contact: any) => contact.user_id === user.id)
-        .map((contact: any) => {
-          // Calculate totals from cached transactions
-          const expenseTransactions = cachedTransactions.filter((t: any) => 
-            t.user_id === user.id && t.contact_id === contact.id && t.type === 'expense'
-          );
-          const incomeTransactions = cachedTransactions.filter((t: any) => 
-            t.user_id === user.id && t.payer_contact_id === contact.id && t.type === 'income'
-          );
+      const userContacts = await Promise.all(
+        cachedContacts
+          .filter((contact: any) => contact.user_id === user.id)
+          .map(async (contact: any) => {
+            // Calculate totals from cached transactions
+            const expenseTransactions = cachedTransactions.filter((t: any) => 
+              t.user_id === user.id && t.contact_id === contact.id && t.type === 'expense'
+            );
+            const incomeTransactions = cachedTransactions.filter((t: any) => 
+              t.user_id === user.id && t.payer_contact_id === contact.id && t.type === 'income'
+            );
 
-          const totalExpenses = expenseTransactions.reduce((sum: number, t: any) => sum + Math.abs(Number(t.amount)), 0);
-          const totalIncome = incomeTransactions.reduce((sum: number, t: any) => sum + Math.abs(Number(t.amount)), 0);
+            const totalExpenses = expenseTransactions.reduce((sum: number, t: any) => sum + Math.abs(Number(t.amount)), 0);
+            const totalIncome = incomeTransactions.reduce((sum: number, t: any) => sum + Math.abs(Number(t.amount)), 0);
 
-          return {
-            ...contact,
-            contact_type: contact.contact_type as 'persona' | 'empresa',
-            tags: contact.tags || [],
-            totalExpenses,
-            totalIncome,
-          };
-        })
-        .sort((a: any, b: any) => a.name.localeCompare(b.name));
+            // Cargar etiquetas en tiempo real
+            const tags = await loadContactTags(contact.id);
 
-      setContacts(userContacts);
+            return {
+              ...contact,
+              contact_type: contact.contact_type as 'persona' | 'empresa',
+              tags,
+              totalExpenses,
+              totalIncome,
+            };
+          })
+      );
+
+      const sortedContacts = userContacts.sort((a: any, b: any) => a.name.localeCompare(b.name));
+      setContacts(sortedContacts);
     } catch (error) {
       console.error('Error loading contacts from cache:', error);
       toast.error('Error al cargar contactos desde caché');
@@ -143,14 +166,20 @@ export function useContacts() {
     // Register pending changes for contact tags
     if (tagIds.length > 0) {
       for (const tagId of tagIds) {
+        const contactTagData = {
+          id: `${newContact.id}-${tagId}`,
+          contact_id: newContact.id,
+          tag_id: tagId
+        };
+        
+        // Add to contact_tags cache
+        await cacheService.updateCacheItem('contact_tags', contactTagData);
+        
         await cacheService.addPendingChange({
           table: 'contact_tags',
           operation: 'create',
           record_id: `${newContact.id}-${tagId}`,
-          data: {
-            contact_id: newContact.id,
-            tag_id: tagId
-          }
+          data: contactTagData
         });
       }
     }
@@ -197,10 +226,13 @@ export function useContacts() {
 
     // Handle contact tags changes if provided
     if (tagIds !== undefined) {
-      // Get current contact tags to delete them first
-      const currentContact = cachedContacts[contactIndex];
-      if (currentContact.tags && currentContact.tags.length > 0) {
-        for (const tag of currentContact.tags) {
+      // Get original contact tags to delete them first (before the update)
+      const originalContact = cachedContacts[contactIndex];
+      if (originalContact.tags && originalContact.tags.length > 0) {
+        for (const tag of originalContact.tags) {
+          // Remove from contact_tags cache
+          await cacheService.deleteCacheItem('contact_tags', `${contactId}-${tag.id}`);
+          
           await cacheService.addPendingChange({
             table: 'contact_tags',
             operation: 'delete',
@@ -216,14 +248,20 @@ export function useContacts() {
       // Add new tags
       if (tagIds.length > 0) {
         for (const tagId of tagIds) {
+          const contactTagData = {
+            id: `${contactId}-${tagId}`,
+            contact_id: contactId,
+            tag_id: tagId
+          };
+          
+          // Add to contact_tags cache
+          await cacheService.updateCacheItem('contact_tags', contactTagData);
+          
           await cacheService.addPendingChange({
             table: 'contact_tags',
             operation: 'create',
             record_id: `${contactId}-${tagId}`,
-            data: {
-              contact_id: contactId,
-              tag_id: tagId
-            }
+            data: contactTagData
           });
         }
       }
@@ -257,6 +295,9 @@ export function useContacts() {
     // Register pending changes to delete contact tags
     if (contactToDelete.tags && contactToDelete.tags.length > 0) {
       for (const tag of contactToDelete.tags) {
+        // Remove from contact_tags cache
+        await cacheService.deleteCacheItem('contact_tags', `${contactId}-${tag.id}`);
+        
         await cacheService.addPendingChange({
           table: 'contact_tags',
           operation: 'delete',
@@ -275,7 +316,14 @@ export function useContacts() {
   useEffect(() => {
     if (user) {
       fetchContacts();
+      // Iniciar sincronización automática de etiquetas de contactos
+      contactTagsAutoSync.startAutoSync();
     }
+    
+    // Cleanup: detener sincronización automática al desmontar
+    return () => {
+      contactTagsAutoSync.stopAutoSync();
+    };
   }, [user]);
 
   return {

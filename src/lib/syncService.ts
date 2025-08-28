@@ -57,12 +57,15 @@ class SyncService {
     try {
       const pendingChanges = await cacheService.getPendingChanges();
       
-      if (pendingChanges.length === 0) {
+      // Filtrar cambios pendientes para excluir contact_tags (se maneja automáticamente)
+      const filteredChanges = pendingChanges.filter(change => change.table !== 'contact_tags');
+      
+      if (filteredChanges.length === 0) {
         return result;
       }
 
       // Group changes by table and operation for batch processing
-      const changesByTable = this.groupChangesByTable(pendingChanges);
+      const changesByTable = this.groupChangesByTable(filteredChanges);
 
       for (const [tableName, changes] of Object.entries(changesByTable)) {
         try {
@@ -90,10 +93,10 @@ class SyncService {
     const result = { success: true, downloadedRecords: 0, errors: [] as string[] };
 
     try {
-      // Clear all cached data first
-      await cacheService.clearAll();
+      // Clear all cached data first (excepto contact_tags que se maneja automáticamente)
+      await this.clearCacheExceptContactTags();
 
-      // Download fresh data for each table using specific table names
+      // Download fresh data for each table using specific table names (excluyendo contact_tags)
       const tableDownloads = [
         this.downloadTableData('transactions'),
         this.downloadTableData('accounts'),
@@ -105,10 +108,11 @@ class SyncService {
         this.downloadTableData('inventory')
       ];
 
+      const tableNames = ['transactions', 'accounts', 'categories', 'tags', 'contacts', 'debts', 'scheduled_payments', 'inventory'];
       const results = await Promise.allSettled(tableDownloads);
       
       results.forEach((tableResult, index) => {
-        const tableName = this.tables[index];
+        const tableName = tableNames[index];
         if (tableResult.status === 'fulfilled') {
           result.downloadedRecords += tableResult.value;
         } else {
@@ -124,11 +128,29 @@ class SyncService {
     return result;
   }
 
+  private async clearCacheExceptContactTags(): Promise<void> {
+    // Limpiar todas las tablas excepto contact_tags
+    const tablesToClear = [
+      'transactions', 'accounts', 'categories', 'tags',
+      'contacts', 'debts', 'scheduled_payments', 'inventory'
+    ];
+    
+    for (const table of tablesToClear) {
+      await cacheService.set(table as any, []);
+    }
+  }
+
   private async downloadTableData(tableName: string): Promise<number> {
-    const { data, error } = await (supabase as any)
+    let query = (supabase as any)
       .from(tableName)
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*');
+    
+    // Only order by created_at for tables that have this field
+    if (tableName !== 'contact_tags') {
+      query = query.order('created_at', { ascending: false });
+    }
+    
+    const { data, error } = await query;
 
     if (error) {
       throw new Error(`Failed to download ${tableName}: ${error.message}`);
@@ -186,6 +208,10 @@ class SyncService {
         delete cleanedData.totalExpenses;
         delete cleanedData.totalIncome;
         break;
+      case 'contact_tags':
+        // Remove the composite id field used for IndexedDB
+        delete cleanedData.id;
+        break;
       case 'products':
         // Remove any virtual fields for products if they exist
         delete cleanedData.category;
@@ -232,13 +258,28 @@ class SyncService {
     // Clean data before sending to Supabase
     const cleanedData = this.cleanDataForTable(tableName, data);
     
-    const { error } = await (supabase as any)
-      .from(tableName)
-      .update(cleanedData)
-      .eq('id', recordId);
+    // Handle tables with composite primary keys (like contact_tags)
+    if (tableName === 'contact_tags') {
+      // For contact_tags, recordId is in format "contact_id-tag_id"
+      const [contactId, tagId] = recordId.split('-');
+      const { error } = await (supabase as any)
+        .from(tableName)
+        .update(cleanedData)
+        .eq('contact_id', contactId)
+        .eq('tag_id', tagId);
 
-    if (error) {
-      throw new Error(error.message);
+      if (error) {
+        throw new Error(error.message);
+      }
+    } else {
+      const { error } = await (supabase as any)
+        .from(tableName)
+        .update(cleanedData)
+        .eq('id', recordId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
     }
   }
 
