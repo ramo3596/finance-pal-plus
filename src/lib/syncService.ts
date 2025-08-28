@@ -128,10 +128,16 @@ class SyncService {
   private async downloadTableData(tableName: string): Promise<number> {
     console.log(`Downloading data for table: ${tableName}`);
     
-    const { data, error } = await (supabase as any)
-      .from(tableName)
-      .select('*')
-      .order('created_at', { ascending: false });
+    // Build query based on table structure
+    let query = (supabase as any).from(tableName).select('*');
+    
+    // Only add ordering for tables that have created_at column
+    // contact_tags doesn't have created_at, it only has contact_id and tag_id
+    if (tableName !== 'contact_tags') {
+      query = query.order('created_at', { ascending: false });
+    }
+    
+    const { data, error } = await query;
 
     if (error) {
       console.error(`Failed to download ${tableName}:`, error);
