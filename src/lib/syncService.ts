@@ -93,17 +93,17 @@ class SyncService {
       // Clear all cached data first
       await cacheService.clearAll();
 
-      // Download fresh data for each table using correct table names
+      // Download fresh data for each table using specific table names
       const tableDownloads = [
         this.downloadTableData('transactions'),
         this.downloadTableData('accounts'),
         this.downloadTableData('categories'),
         this.downloadTableData('tags'),
         this.downloadTableData('contacts'),
-        this.downloadTableData('contact_tags'), // This was missing and was using 'inventory' instead
+        this.downloadTableData('contact_tags'),
         this.downloadTableData('debts'),
         this.downloadTableData('scheduled_payments'),
-        this.downloadTableData('products') // Changed from 'inventory' to 'products'
+        this.downloadTableData('inventory')
       ];
 
       const results = await Promise.allSettled(tableDownloads);
@@ -126,31 +126,20 @@ class SyncService {
   }
 
   private async downloadTableData(tableName: string): Promise<number> {
-    console.log(`Downloading data for table: ${tableName}`);
-    
-    // Build query based on table structure
-    let query = (supabase as any).from(tableName).select('*');
-    
-    // Only add ordering for tables that have created_at column
-    // contact_tags doesn't have created_at, it only has contact_id and tag_id
-    if (tableName !== 'contact_tags') {
-      query = query.order('created_at', { ascending: false });
-    }
-    
-    const { data, error } = await query;
+    const { data, error } = await (supabase as any)
+      .from(tableName)
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error(`Failed to download ${tableName}:`, error);
       throw new Error(`Failed to download ${tableName}: ${error.message}`);
     }
 
     if (data && data.length > 0) {
-      console.log(`Downloaded ${data.length} records for ${tableName}`);
       await cacheService.set(tableName as any, data);
       return data.length;
     }
 
-    console.log(`No data found for table: ${tableName}`);
     return 0;
   }
 
@@ -221,10 +210,10 @@ class SyncService {
     
     // Handle tables with composite primary keys (like contact_tags)
     if (tableName === 'contact_tags') {
-      // For contact_tags, use upsert to handle potential duplicates
+      // For contact_tags, use insert with ignoreDuplicates to handle potential duplicates
       const { error } = await (supabase as any)
         .from(tableName)
-        .upsert(cleanedData, { onConflict: 'contact_id,tag_id' });
+        .insert(cleanedData, { ignoreDuplicates: true });
 
       if (error) {
         throw new Error(error.message);

@@ -8,7 +8,6 @@ export interface CacheStore {
   templates: any[];
   filters: any[];
   contacts: any[];
-  contact_tags: any[]; // Make sure this is included
   debts: any[];
   debt_payments: any[];
   scheduled_payments: any[];
@@ -27,7 +26,7 @@ export interface PendingChange {
 
 class CacheService {
   private dbName = 'FinancePalCache';
-  private dbVersion = 3;
+  private dbVersion = 2;
   private db: IDBDatabase | null = null;
   private defaultTTL = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -49,24 +48,15 @@ class CacheService {
         // Create object stores for each data type
         const stores = [
           'transactions', 'accounts', 'categories', 'tags', 'templates', 'filters',
-          'contacts', 'contact_tags', 'debts', 'debt_payments', 'scheduled_payments', 'inventory', 'pending_changes'
+          'contacts', 'debts', 'debt_payments', 'scheduled_payments', 'inventory', 'pending_changes'
         ];
         
         stores.forEach(storeName => {
           if (!db.objectStoreNames.contains(storeName)) {
-            // Handle different key configurations for different stores
-            if (storeName === 'contact_tags') {
-              // contact_tags uses composite key, so we'll use auto-increment
-              const store = db.createObjectStore(storeName, { keyPath: null, autoIncrement: true });
-              store.createIndex('contact_id', 'contact_id', { unique: false });
-              store.createIndex('tag_id', 'tag_id', { unique: false });
-              store.createIndex('composite', ['contact_id', 'tag_id'], { unique: true });
-            } else {
-              const store = db.createObjectStore(storeName, { keyPath: 'id' });
-              if (storeName === 'pending_changes') {
-                store.createIndex('table', 'table', { unique: false });
-                store.createIndex('timestamp', 'timestamp', { unique: false });
-              }
+            const store = db.createObjectStore(storeName, { keyPath: 'id' });
+            if (storeName === 'pending_changes') {
+              store.createIndex('table', 'table', { unique: false });
+              store.createIndex('timestamp', 'timestamp', { unique: false });
             }
           }
         });
@@ -79,7 +69,7 @@ class CacheService {
     
     const stores = [
       'transactions', 'accounts', 'categories', 'tags', 'templates', 'filters',
-      'contacts', 'contact_tags', 'debts', 'debt_payments', 'scheduled_payments', 'inventory', 'pending_changes'
+      'contacts', 'debts', 'debt_payments', 'scheduled_payments', 'inventory', 'pending_changes'
     ];
     
     for (const storeName of stores) {
@@ -184,7 +174,7 @@ class CacheService {
     
     const stores = [
       'transactions', 'accounts', 'categories', 'tags', 
-      'contacts', 'contact_tags', 'debts', 'scheduled_payments', 'inventory'
+      'contacts', 'debts', 'scheduled_payments', 'inventory'
     ];
     
     const transaction = this.db!.transaction(stores, 'readwrite');
