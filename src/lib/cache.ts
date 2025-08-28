@@ -27,7 +27,7 @@ export interface PendingChange {
 
 class CacheService {
   private dbName = 'FinancePalCache';
-  private dbVersion = 2;
+  private dbVersion = 3;
   private db: IDBDatabase | null = null;
   private defaultTTL = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -54,10 +54,19 @@ class CacheService {
         
         stores.forEach(storeName => {
           if (!db.objectStoreNames.contains(storeName)) {
-            const store = db.createObjectStore(storeName, { keyPath: 'id' });
-            if (storeName === 'pending_changes') {
-              store.createIndex('table', 'table', { unique: false });
-              store.createIndex('timestamp', 'timestamp', { unique: false });
+            // Handle different key configurations for different stores
+            if (storeName === 'contact_tags') {
+              // contact_tags uses composite key, so we'll use auto-increment
+              const store = db.createObjectStore(storeName, { keyPath: null, autoIncrement: true });
+              store.createIndex('contact_id', 'contact_id', { unique: false });
+              store.createIndex('tag_id', 'tag_id', { unique: false });
+              store.createIndex('composite', ['contact_id', 'tag_id'], { unique: true });
+            } else {
+              const store = db.createObjectStore(storeName, { keyPath: 'id' });
+              if (storeName === 'pending_changes') {
+                store.createIndex('table', 'table', { unique: false });
+                store.createIndex('timestamp', 'timestamp', { unique: false });
+              }
             }
           }
         });
