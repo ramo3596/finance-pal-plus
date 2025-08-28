@@ -53,34 +53,7 @@ export function StatisticsMainSection({
 
       // Tag filter
       if (filters.selectedTags.length > 0) {
-        // Handle both array and string formats for tags
-        let tagsArray: string[] = [];
-        
-        if (Array.isArray(transaction.tags)) {
-          tagsArray = transaction.tags;
-        } else if (transaction.tags && typeof transaction.tags === 'string') {
-          const tagString = transaction.tags as string;
-          // If it's a string that looks like JSON array, try to parse it
-          if (tagString.startsWith('[') && tagString.endsWith(']')) {
-            try {
-              const parsed = JSON.parse(tagString);
-              if (Array.isArray(parsed)) {
-                tagsArray = parsed;
-              } else {
-                tagsArray = [tagString.trim()];
-              }
-            } catch {
-              tagsArray = [tagString.trim()];
-            }
-          } else {
-            // If it's a regular string, split by common separators or treat as single tag
-            tagsArray = tagString.includes(',') 
-              ? tagString.split(',').map(tag => tag.trim())
-              : [tagString.trim()];
-          }
-        }
-        
-        const hasMatchingTag = tagsArray.some(tagName => {
+        const hasMatchingTag = transaction.tags.some(tagName => {
           const tag = tags.find(t => t.name === tagName);
           return tag && filters.selectedTags.includes(tag.id);
         });
