@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "./useAuth";
-import { cacheService } from "@/lib/cache";
-import { contactTagsAutoSync } from "@/lib/contactTagsAutoSync";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useAuth } from "./useAuth";
 
 export interface Contact {
   id: string;
@@ -57,74 +54,72 @@ export function useContacts() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  const loadContactTags = async (contactId: string) => {
-    try {
-      // Obtener etiquetas en tiempo real desde Supabase
-      const contactTags = await contactTagsAutoSync.getContactTagsByContactId(contactId);
-      const cachedTags = await cacheService.get('tags').catch(() => []);
-      
-      // Mapear las etiquetas con su información completa
-      return contactTags.map(ct => {
-        const tag = cachedTags.find((t: any) => t.id === ct.tag_id);
-        return tag ? { id: tag.id, name: tag.name, color: tag.color } : null;
-      }).filter(Boolean);
-    } catch (error) {
-      console.error('Error loading contact tags:', error);
-      return [];
-    }
-  };
-
   const fetchContacts = async () => {
     if (!user) return;
 
     try {
       setLoading(true);
 
-      // Load contacts from cache with individual error handling
-      const cachedContacts = await cacheService.get('contacts').catch(err => {
-        console.warn('Error loading contacts from cache:', err);
-        return [];
-      });
-      
-      const cachedTransactions = await cacheService.get('transactions').catch(err => {
-        console.warn('Error loading transactions from cache:', err);
-        return [];
-      });
-      
-      // Filter contacts by user_id and calculate totals
-      const userContacts = await Promise.all(
-        cachedContacts
-          .filter((contact: any) => contact.user_id === user.id)
-          .map(async (contact: any) => {
-            // Calculate totals from cached transactions
-            const expenseTransactions = cachedTransactions.filter((t: any) => 
-              t.user_id === user.id && t.contact_id === contact.id && t.type === 'expense'
-            );
-            const incomeTransactions = cachedTransactions.filter((t: any) => 
-              t.user_id === user.id && t.payer_contact_id === contact.id && t.type === 'income'
-            );
+      // Fetch contacts with their tags
+      const { data: contactsData, error: contactsError } = await supabase
+        .from('contacts')
+        .select(`
+          *,
+          contact_tags(
+            tags(id, name, color)
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('name');
 
-            const totalExpenses = expenseTransactions.reduce((sum: number, t: any) => sum + Math.abs(Number(t.amount)), 0);
-            const totalIncome = incomeTransactions.reduce((sum: number, t: any) => sum + Math.abs(Number(t.amount)), 0);
+      if (contactsError) throw contactsError;
 
-            // Cargar etiquetas en tiempo real
-            const tags = await loadContactTags(contact.id);
+      // Fetch transaction totals for each contact
+      const contactsWithTotals = await Promise.all(
+        (contactsData || []).map(async (contact) => {
+          // Get expenses (where this contact is the beneficiary - contact_id field)
+          const { data: expenseData, error: expenseError } = await supabase
+            .from('transactions')
+            .select('amount')
+            .eq('user_id', user.id)
+            .eq('contact_id', contact.id)
+            .eq('type', 'expense');
 
-            return {
-              ...contact,
-              contact_type: contact.contact_type as 'persona' | 'empresa',
-              tags,
-              totalExpenses,
-              totalIncome,
-            };
-          })
+          if (expenseError) {
+            console.error('Error fetching expense data for contact:', contact.id, expenseError);
+          }
+
+          // Get income (where this contact is the payer - payer_contact_id field)
+          const { data: incomeData, error: incomeError } = await supabase
+            .from('transactions')
+            .select('amount')
+            .eq('user_id', user.id)
+            .eq('payer_contact_id', contact.id)
+            .eq('type', 'income');
+
+          if (incomeError) {
+            console.error('Error fetching income data for contact:', contact.id, incomeError);
+          }
+
+          // Calculate totals
+          const totalExpenses = expenseData?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0;
+          const totalIncome = incomeData?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0;
+
+          return {
+            ...contact,
+            contact_type: contact.contact_type as 'persona' | 'empresa',
+            tags: Array.isArray(contact.contact_tags) 
+              ? contact.contact_tags.map((ct: any) => ct.tags).filter(Boolean) 
+              : [],
+            totalExpenses,
+            totalIncome,
+          };
+        })
       );
 
-      const sortedContacts = userContacts.sort((a: any, b: any) => a.name.localeCompare(b.name));
-      setContacts(sortedContacts);
+      setContacts(contactsWithTotals);
     } catch (error) {
-      console.error('Error loading contacts from cache:', error);
-      toast.error('Error al cargar contactos desde caché');
+      console.error('Error fetching contacts:', error);
     } finally {
       setLoading(false);
     }
@@ -135,54 +130,30 @@ export function useContacts() {
 
     const { tagIds, ...contactInfo } = contactData;
 
-    // Create contact with cache
-    const newContact = {
-      id: crypto.randomUUID(),
-      ...contactInfo,
-      user_id: user.id,
-      tags: [],
-      totalExpenses: 0,
-      totalIncome: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    // Create contact
+    const { data: contact, error: contactError } = await supabase
+      .from('contacts')
+      .insert({
+        ...contactInfo,
+        user_id: user.id,
+      })
+      .select()
+      .single();
 
-    // Get tags from cache and add them to contact
+    if (contactError) throw contactError;
+
+    // Create contact-tag relationships
     if (tagIds.length > 0) {
-      const cachedTags = await cacheService.get('tags') || [];
-      newContact.tags = cachedTags.filter((tag: any) => tagIds.includes(tag.id));
-    }
+      const contactTags = tagIds.map(tagId => ({
+        contact_id: contact.id,
+        tag_id: tagId,
+      }));
 
-    // Update cache
-    await cacheService.updateCacheItem('contacts', newContact);
-    
-    // Register pending change for contact
-    await cacheService.addPendingChange({
-      table: 'contacts',
-      operation: 'create',
-      record_id: newContact.id,
-      data: newContact
-    });
+      const { error: tagsError } = await supabase
+        .from('contact_tags')
+        .insert(contactTags);
 
-    // Register pending changes for contact tags
-    if (tagIds.length > 0) {
-      for (const tagId of tagIds) {
-        const contactTagData = {
-          id: `${newContact.id}-${tagId}`,
-          contact_id: newContact.id,
-          tag_id: tagId
-        };
-        
-        // Add to contact_tags cache
-        await cacheService.updateCacheItem('contact_tags', contactTagData);
-        
-        await cacheService.addPendingChange({
-          table: 'contact_tags',
-          operation: 'create',
-          record_id: `${newContact.id}-${tagId}`,
-          data: contactTagData
-        });
-      }
+      if (tagsError) throw tagsError;
     }
 
     await fetchContacts();
@@ -193,90 +164,35 @@ export function useContacts() {
 
     const { tagIds, ...contactUpdates } = updates;
 
-    // First, verify if the contact exists in Supabase
-    const { data: existingContact, error: fetchError } = await supabase
+    // Update contact
+    const { error: contactError } = await supabase
       .from('contacts')
-      .select('id')
+      .update(contactUpdates)
       .eq('id', contactId)
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_id', user.id);
 
-    if (fetchError || !existingContact) {
-      toast.error('Por favor primero cree el contacto');
-      return;
-    }
-
-    // Get current contact from cache
-    const cachedContacts = await cacheService.get('contacts') || [];
-    const contactIndex = cachedContacts.findIndex((c: any) => c.id === contactId && c.user_id === user.id);
-    
-    if (contactIndex === -1) {
-      throw new Error('Contact not found in cache');
-    }
-
-    const updatedContact = {
-      ...cachedContacts[contactIndex],
-      ...contactUpdates,
-      updated_at: new Date().toISOString(),
-    };
+    if (contactError) throw contactError;
 
     // Update tags if provided
     if (tagIds !== undefined) {
-      const cachedTags = await cacheService.get('tags') || [];
-      updatedContact.tags = cachedTags.filter((tag: any) => tagIds.includes(tag.id));
-    }
+      // Delete existing tag relationships
+      await supabase
+        .from('contact_tags')
+        .delete()
+        .eq('contact_id', contactId);
 
-    // Update cache
-    cachedContacts[contactIndex] = updatedContact;
-    await cacheService.set('contacts', cachedContacts);
-    
-    // Register pending change for contact
-    await cacheService.addPendingChange({
-      table: 'contacts',
-      operation: 'update',
-      record_id: contactId,
-      data: updatedContact
-    });
+      // Create new tag relationships
+      if (tagIds.length > 0) {
+        const contactTags = tagIds.map(tagId => ({
+          contact_id: contactId,
+          tag_id: tagId,
+        }));
 
-    // Handle contact tags changes if provided - use direct Supabase sync
-    if (tagIds !== undefined) {
-      try {
-        // Delete existing contact tags from Supabase
-        const { error: deleteError } = await supabase
+        const { error: tagsError } = await supabase
           .from('contact_tags')
-          .delete()
-          .eq('contact_id', contactId);
+          .insert(contactTags);
 
-        if (deleteError) {
-          console.error('Error deleting contact tags:', deleteError);
-          toast.error('Error al actualizar etiquetas');
-          return;
-        }
-
-        // Add new tags to Supabase
-        if (tagIds.length > 0) {
-          const contactTagsData = tagIds.map(tagId => ({
-            contact_id: contactId,
-            tag_id: tagId
-          }));
-
-          const { error: insertError } = await supabase
-            .from('contact_tags')
-            .insert(contactTagsData);
-
-          if (insertError) {
-            console.error('Error inserting contact tags:', insertError);
-            toast.error('Error al actualizar etiquetas');
-            return;
-          }
-        }
-
-        // The contactTagsAutoSync service will handle cache updates automatically
-        toast.success('Etiquetas actualizadas correctamente');
-      } catch (error) {
-        console.error('Error updating contact tags:', error);
-        toast.error('Error al actualizar etiquetas');
-        return;
+        if (tagsError) throw tagsError;
       }
     }
 
@@ -286,42 +202,14 @@ export function useContacts() {
   const deleteContact = async (contactId: string) => {
     if (!user) throw new Error('User not authenticated');
 
-    // Get contact from cache before deleting
-    const cachedContacts = await cacheService.get('contacts') || [];
-    const contactToDelete = cachedContacts.find((c: any) => c.id === contactId && c.user_id === user.id);
-    
-    if (!contactToDelete) {
-      throw new Error('Contact not found');
-    }
+    // Delete contact (tags will be deleted by cascade)
+    const { error } = await supabase
+      .from('contacts')
+      .delete()
+      .eq('id', contactId)
+      .eq('user_id', user.id);
 
-    // Remove from cache
-    await cacheService.deleteCacheItem('contacts', contactId);
-    
-    // Register pending change for contact
-    await cacheService.addPendingChange({
-      table: 'contacts',
-      operation: 'delete',
-      record_id: contactId,
-      data: { id: contactId, user_id: user.id }
-    });
-
-    // Register pending changes to delete contact tags
-    if (contactToDelete.tags && contactToDelete.tags.length > 0) {
-      for (const tag of contactToDelete.tags) {
-        // Remove from contact_tags cache
-        await cacheService.deleteCacheItem('contact_tags', `${contactId}-${tag.id}`);
-        
-        await cacheService.addPendingChange({
-          table: 'contact_tags',
-          operation: 'delete',
-          record_id: `${contactId}-${tag.id}`,
-          data: {
-            contact_id: contactId,
-            tag_id: tag.id
-          }
-        });
-      }
-    }
+    if (error) throw error;
 
     await fetchContacts();
   };
@@ -329,14 +217,7 @@ export function useContacts() {
   useEffect(() => {
     if (user) {
       fetchContacts();
-      // Iniciar sincronización automática de etiquetas de contactos
-      contactTagsAutoSync.startAutoSync();
     }
-    
-    // Cleanup: detener sincronización automática al desmontar
-    return () => {
-      contactTagsAutoSync.stopAutoSync();
-    };
   }, [user]);
 
   return {

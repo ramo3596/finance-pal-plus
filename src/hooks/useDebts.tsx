@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react"
+import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "./useAuth"
 import { toast } from "sonner"
 import { useTransactions } from "./useTransactions"
 import { useSettings } from "./useSettings"
-import { cacheService } from "@/lib/cache"
-import { v4 as uuidv4 } from "uuid"
 
 export interface Debt {
   id: string
@@ -71,27 +70,29 @@ export function useDebts() {
 
   const calculateDebtBalance = async (debtId: string): Promise<number> => {
     try {
-      // Get debt information from cache with error handling
-      const cachedDebts = await cacheService.get('debts').catch(err => {
-        console.warn('Error loading debts from cache:', err);
-        return [];
-      });
-      const debt = cachedDebts.find((d: any) => d.id === debtId)
-      
-      if (!debt) throw new Error('Debt not found')
+      // Obtener información de la deuda para conocer su tipo
+      const { data: debt, error: debtError } = await supabase
+        .from('debts')
+        .select('type')
+        .eq('id', debtId)
+        .single()
 
-      // Get debt payments from cache with error handling
-      const cachedDebtPayments = await cacheService.get('debt_payments').catch(err => {
-        console.warn('Error loading debt payments from cache:', err);
-        return [];
-      });
-      const payments = cachedDebtPayments
-        .filter((p: any) => p.debt_id === debtId)
-        .sort((a: any, b: any) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime())
+      if (debtError) throw debtError
+
+      const { data: payments, error } = await supabase
+        .from('debt_payments')
+        .select('amount')
+        .eq('debt_id', debtId)
+        .order('payment_date', { ascending: true })
+
+      if (error) throw error
       
-      // Calculate balance by summing all records
-      const totalBalance = payments.reduce((sum: number, payment: any) => sum + payment.amount, 0)
-      // Multiply result by -1 according to the logic
+      // Calcular el saldo sumando todos los registros
+      // Los valores ya están almacenados con los signos correctos:
+      // - Deudas ("Me prestaron"): valores negativos
+      // - Préstamos ("Prestó"): valores positivos
+      const totalBalance = (payments || []).reduce((sum, payment) => sum + payment.amount, 0)
+      // Multiplicar el resultado por -1 según la nueva lógica
       return totalBalance * -1
     } catch (error) {
       console.error('Error calculating debt balance:', error)
@@ -103,44 +104,28 @@ export function useDebts() {
     if (!user) return
 
     try {
-      const cachedDebts = await cacheService.get('debts').catch(err => {
-        console.warn('Error loading debts from cache:', err);
-        return [];
-      });
-      const cachedContacts = await cacheService.get('contacts').catch(err => {
-        console.warn('Error loading contacts from cache:', err);
-        return [];
-      });
-      const cachedAccounts = await cacheService.get('accounts').catch(err => {
-        console.warn('Error loading accounts from cache:', err);
-        return [];
-      });
+      const { data, error } = await supabase
+        .from('debts')
+        .select(`
+          *,
+          contacts:contact_id (
+            id,
+            name,
+            image_url
+          ),
+          accounts:account_id (
+            id,
+            name
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
       
-      // Enrich debts with contact and account information
-      const enrichedDebts = cachedDebts
-        .filter((debt: any) => debt.user_id === user.id)
-        .map((debt: any) => {
-          const contact = cachedContacts.find((c: any) => c.id === debt.contact_id)
-          const account = cachedAccounts.find((a: any) => a.id === debt.account_id)
-          
-          return {
-            ...debt,
-            contacts: contact ? {
-              id: contact.id,
-              name: contact.name,
-              image_url: contact.image_url
-            } : undefined,
-            accounts: account ? {
-              id: account.id,
-              name: account.name
-            } : undefined
-          }
-        })
-        .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      
-      // Calculate balance for each debt
+      // Calcular el saldo real para cada deuda basado en la suma de registros
       const debtsWithCalculatedBalance = await Promise.all(
-        enrichedDebts.map(async (debt: any) => {
+        (data as Debt[] || []).map(async (debt) => {
           const calculatedBalance = await calculateDebtBalance(debt.id)
           return {
             ...debt,
@@ -151,53 +136,56 @@ export function useDebts() {
       
       setDebts(debtsWithCalculatedBalance)
     } catch (error) {
-      console.error('Error loading debts from cache:', error)
+      console.error('Error fetching debts:', error)
       toast.error('Error al cargar las deudas')
     }
   }
 
   const fetchDebtPayments = async (debtId: string) => {
     try {
-      // Get debt details from cache with error handling
-      const cachedDebts = await cacheService.get('debts').catch(err => {
-        console.warn('Error loading debts from cache:', err);
-        return [];
-      });
-      const cachedAccounts = await cacheService.get('accounts').catch(err => {
-        console.warn('Error loading accounts from cache:', err);
-        return [];
-      });
-      const debt = cachedDebts.find((d: any) => d.id === debtId)
-      
-      if (!debt) throw new Error('Debt not found')
-      
-      const account = cachedAccounts.find((a: any) => a.id === debt.account_id)
+      // Get the debt details first to determine category
+      const { data: debt, error: debtError } = await supabase
+        .from('debts')
+        .select(`
+          *,
+          accounts (
+            name
+          )
+        `)
+        .eq('id', debtId)
+        .single()
+
+      if (debtError) throw debtError
 
       // Get categories and subcategories for debt and loan using the new category structure
       const { incomeCategory, incomeSubcategory, expenseCategory, expenseSubcategory } = await ensureDebtCategories()
       
-      const cachedCategories = await cacheService.get('categories').catch(err => {
-        console.warn('Error loading categories from cache:', err);
-        return [];
-      });
-      const incomeCateg = cachedCategories.find((c: any) => c.id === incomeCategory)
-      const expenseCateg = cachedCategories.find((c: any) => c.id === expenseCategory)
-      
-      // Find subcategories
-      const prestamosSubcategory = incomeCateg?.subcategories?.find((s: any) => s.id === incomeSubcategory)
-      const comisionSubcategory = expenseCateg?.subcategories?.find((s: any) => s.id === expenseSubcategory)
+      const { data: categories, error: categoriesError } = await supabase
+        .from('categories')
+        .select(`
+          *,
+          subcategories (*)
+        `)
+        .in('id', [incomeCategory, expenseCategory].filter(Boolean))
 
-      // Get payments from cache with error handling
-      const cachedDebtPayments = await cacheService.get('debt_payments').catch(err => {
-        console.warn('Error loading debt payments from cache:', err);
-        return [];
-      });
-      const payments = cachedDebtPayments
-        .filter((p: any) => p.debt_id === debtId)
-        .sort((a: any, b: any) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime())
+      if (categoriesError) throw categoriesError
+
+      const incomeCateg = categories?.find(c => c.id === incomeCategory)
+      const expenseCateg = categories?.find(c => c.id === expenseCategory)
+      const prestamosSubcategory = incomeCateg?.subcategories?.find(s => s.id === incomeSubcategory)
+      const comisionSubcategory = expenseCateg?.subcategories?.find(s => s.id === expenseSubcategory)
+
+      // Get payments
+      const { data, error } = await supabase
+        .from('debt_payments')
+        .select('*')
+        .eq('debt_id', debtId)
+        .order('payment_date', { ascending: false })
+
+      if (error) throw error
 
       // Add category and subcategory info to each payment
-      const enrichedPayments = payments.map((payment: any) => {
+      const enrichedPayments = (data || []).map(payment => {
         // Determine category and subcategory based on amount sign (same logic as addDebtPayment)
         const isPositiveAmount = payment.amount > 0
         let selectedCategory, selectedSubcategory
@@ -220,14 +208,14 @@ export function useDebts() {
             account_id: debt?.account_id,
             categories: selectedCategory,
             subcategories: selectedSubcategory,
-            accounts: account ? { name: account.name } : undefined
+            accounts: debt?.accounts
           }
         }
       })
 
       return enrichedPayments
     } catch (error) {
-      console.error('Error loading debt payments from cache:', error)
+      console.error('Error fetching debt payments:', error)
       return []
     }
   }
@@ -235,9 +223,16 @@ export function useDebts() {
   const ensureDebtCategories = async () => {
     if (!user) return { debtCategoryId: null, loanCategoryId: null, debtSubcategoryId: null, loanSubcategoryId: null }
 
-    // Get categories from cache
-    const cachedCategories = await cacheService.get('categories') || []
-    const currentCategories = cachedCategories.filter((c: any) => c.user_id === user.id)
+    // Get fresh categories from database to avoid stale state
+    const { data: freshCategories } = await supabase
+      .from('categories')
+      .select(`
+        *,
+        subcategories (*)
+      `)
+      .eq('user_id', user.id)
+
+    const currentCategories = freshCategories || []
 
     // Find or create 'Gastos financieros' category (for negative amounts/expenses)
     let expenseCategory = currentCategories.find(c => c.name === 'Gastos financieros')
@@ -281,11 +276,18 @@ export function useDebts() {
       }
     }
 
-    // Get updated categories from cache after potential creation
-    const updatedCategories = await cacheService.get('categories') || []
-    const finalCategories = updatedCategories.filter((c: any) => c.user_id === user.id)
-    const finalExpenseCategory = finalCategories.find((c: any) => c.name === 'Gastos financieros')
-    const finalIncomeCategory = finalCategories.find((c: any) => c.name === 'Ingresos')
+    // Get updated categories after potential creation
+    const { data: updatedCategories } = await supabase
+      .from('categories')
+      .select(`
+        *,
+        subcategories (*)
+      `)
+      .eq('user_id', user.id)
+
+    const finalCategories = updatedCategories || []
+    const finalExpenseCategory = finalCategories.find(c => c.name === 'Gastos financieros')
+    const finalIncomeCategory = finalCategories.find(c => c.name === 'Ingresos')
 
     // Find or create 'Comisión' subcategory under 'Gastos financieros' (for negative amounts)
     let comisionSubcategory = finalExpenseCategory?.subcategories?.find(s => s.name === 'Comisión')
@@ -349,32 +351,32 @@ export function useDebts() {
       // Ensure debt/loan categories exist
       const { debtCategoryId, loanCategoryId, debtSubcategoryId, loanSubcategoryId } = await ensureDebtCategories()
 
-      // Get contact information from cache
-      const cachedContacts = await cacheService.get('contacts') || []
-      const contact = cachedContacts.find((c: any) => c.id === debtData.contact_id)
-      const contactName = contact?.name || 'contacto'
+      // Get contact information for the transaction
+      const { data: contactData } = await supabase
+        .from('contacts')
+        .select('name')
+        .eq('id', debtData.contact_id)
+        .single()
 
-      // Create new debt with UUID
-      const newDebt = {
-        id: uuidv4(),
-        ...debtData,
-        user_id: user.id,
-        current_balance: debtData.initial_amount,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
+      const { data, error } = await supabase
+        .from('debts')
+        .insert({
+          ...debtData,
+          user_id: user.id,
+          current_balance: debtData.initial_amount
+        })
+        .select()
+        .single()
 
-      // Update debts cache
-      const cachedDebts = await cacheService.get('debts') || []
-      await cacheService.updateCacheItem('debts', [...cachedDebts, newDebt])
+      if (error) throw error
 
       // Create initial transaction for manual debts/loans (not for inventory-based ones)
       if (!options?.skipTransaction) {
         const transactionType = debtData.type === 'debt' ? 'income' : 'expense'
         const categoryId = debtData.type === 'debt' ? debtCategoryId : loanCategoryId
         const description = debtData.type === 'debt' 
-          ? `Deuda - ${contactName}` 
-          : `Préstamo - ${contactName}`
+          ? `Deuda - ${contactData?.name || 'contacto'}` 
+          : `Préstamo - ${contactData?.name || 'contacto'}`
 
         await createTransaction({
           type: transactionType,
@@ -383,7 +385,7 @@ export function useDebts() {
           category_id: categoryId,
           subcategory_id: debtData.type === 'debt' ? debtSubcategoryId : loanSubcategoryId,
           description,
-          beneficiary: contactName,
+          beneficiary: contactData?.name,
           note: debtData.description,
           transaction_date: debtData.debt_date,
           tags: selectedTags
@@ -391,40 +393,24 @@ export function useDebts() {
       }
 
       // Create initial payment record in debt_payments for history tracking
+      // Para que las deudas muestren valores negativos y los préstamos positivos:
+      // - Para deudas ("Me prestaron"): monto positivo (se invierte con el *-1 en calculateDebtBalance)
+      // - Para préstamos ("Prestó"): monto negativo (se invierte con el *-1 en calculateDebtBalance)
       const initialPaymentAmount = debtData.type === 'debt' ? debtData.initial_amount : -debtData.initial_amount
       
-      const newDebtPayment = {
-        id: uuidv4(),
-        debt_id: newDebt.id,
-        amount: initialPaymentAmount,
-        payment_date: debtData.debt_date,
-        description: `Registro inicial - ${debtData.type === 'loan' ? 'Préstamo' : 'Deuda'}`,
-        created_at: new Date().toISOString()
-      }
-
-      // Update debt_payments cache
-      const cachedDebtPayments = await cacheService.get('debt_payments') || []
-      await cacheService.updateCacheItem('debt_payments', [...cachedDebtPayments, newDebtPayment])
-      
-      // Register pending changes
-      await cacheService.addPendingChange({
-        operation: 'create',
-        table: 'debts',
-        record_id: newDebt.id,
-        data: newDebt
-      })
-
-      await cacheService.addPendingChange({
-        operation: 'create',
-        table: 'debt_payments',
-        record_id: newDebtPayment.id,
-        data: newDebtPayment
-      })
+      await supabase
+        .from('debt_payments')
+        .insert({
+          debt_id: data.id,
+          amount: initialPaymentAmount,
+          payment_date: debtData.debt_date,
+          description: `Registro inicial - ${debtData.type === 'loan' ? 'Préstamo' : 'Deuda'}`
+        })
       
       await fetchDebts()
       refetchTransactions() // Refresh transactions to show in Records page
       toast.success('Deuda creada exitosamente')
-      return newDebt
+      return data
     } catch (error) {
       console.error('Error creating debt:', error)
       toast.error('Error al crear la deuda')
@@ -434,41 +420,88 @@ export function useDebts() {
 
   const updateDebt = async (id: string, updates: Partial<Debt>) => {
     try {
-      // Get current debt data from cache
-      const cachedDebts = await cacheService.get('debts') || []
-      const cachedContacts = await cacheService.get('contacts') || []
-      const currentDebt = cachedDebts.find((d: any) => d.id === id)
+      // Get current debt data before updating
+      const { data: currentDebt } = await supabase
+        .from('debts')
+        .select('*, contacts(name)')
+        .eq('id', id)
+        .single()
 
       if (!currentDebt) throw new Error('Debt not found')
 
-      // Get contact information
-      const currentContact = cachedContacts.find((c: any) => c.id === currentDebt.contact_id)
-      let contactName = currentContact?.name || ''
-      
-      if (updates.contact_id && updates.contact_id !== currentDebt.contact_id) {
-        const newContact = cachedContacts.find((c: any) => c.id === updates.contact_id)
-        contactName = newContact?.name || ''
+      // Update the debt
+      const { error } = await supabase
+        .from('debts')
+        .update(updates)
+        .eq('id', id)
+
+      if (error) throw error
+
+      // Handle synchronization with linked transactions
+      // 1. Update initial transaction if debt details changed
+      if (updates.initial_amount !== undefined || 
+          updates.debt_date !== undefined || 
+          updates.contact_id !== undefined) {
+        
+        // Get contact name for transaction description
+        let contactName = currentDebt.contacts?.name || ''
+        if (updates.contact_id && updates.contact_id !== currentDebt.contact_id) {
+          const { data: newContact } = await supabase
+            .from('contacts')
+            .select('name')
+            .eq('id', updates.contact_id)
+            .single()
+          contactName = newContact?.name || ''
+        }
+
+        // Find and update the initial transaction
+        const initialDescription = `${currentDebt.type === 'loan' ? 'Préstamo' : 'Deuda'} - ${contactName}`
+        
+        const transactionUpdates: any = {}
+        if (updates.initial_amount !== undefined) {
+          transactionUpdates.amount = updates.initial_amount
+        }
+        if (updates.debt_date !== undefined) {
+          transactionUpdates.transaction_date = updates.debt_date
+        }
+        if (contactName && (updates.contact_id !== undefined)) {
+          transactionUpdates.description = initialDescription
+          transactionUpdates.beneficiary = contactName
+        }
+
+        // Update the initial transaction if there are changes
+        if (Object.keys(transactionUpdates).length > 0) {
+          await supabase
+            .from('transactions')
+            .update(transactionUpdates)
+            .eq('description', `${currentDebt.type === 'loan' ? 'Préstamo' : 'Deuda'} - ${currentDebt.contacts?.name || ''}`)
+            .eq('transaction_date', currentDebt.debt_date)
+        }
       }
 
-      // Update the debt in cache
-      const updatedDebt = {
-        ...currentDebt,
-        ...updates,
-        updated_at: new Date().toISOString()
+      // 2. Update debt payments and their linked transactions if account changed
+      if (updates.account_id !== undefined && updates.account_id !== currentDebt.account_id) {
+        // Get all debt payments with transaction IDs
+        const { data: debtPayments } = await supabase
+          .from('debt_payments')
+          .select('transaction_id')
+          .eq('debt_id', id)
+          .not('transaction_id', 'is', null)
+
+        // Update all linked transactions to use the new account
+        if (debtPayments && debtPayments.length > 0) {
+          const transactionIds = debtPayments
+            .filter(p => p.transaction_id)
+            .map(p => p.transaction_id)
+          
+          if (transactionIds.length > 0) {
+            await supabase
+              .from('transactions')
+              .update({ account_id: updates.account_id })
+              .in('id', transactionIds)
+          }
+        }
       }
-
-      const updatedDebts = cachedDebts.map((d: any) => 
-        d.id === id ? updatedDebt : d
-      )
-      await cacheService.updateCacheItem('debts', updatedDebts)
-
-      // Register pending change
-      await cacheService.addPendingChange({
-        operation: 'update',
-        table: 'debts',
-        record_id: id,
-        data: updatedDebt
-      })
       
       await fetchDebts()
       refetchTransactions() // Refresh transactions to show changes in Records page
@@ -481,39 +514,68 @@ export function useDebts() {
 
   const deleteDebt = async (id: string) => {
     try {
-      // Get debt and debt payments from cache
-      const cachedDebts = await cacheService.get('debts') || []
-      const cachedDebtPayments = await cacheService.get('debt_payments') || []
-      
-      const debt = cachedDebts.find((d: any) => d.id === id)
-      if (!debt) throw new Error('Debt not found')
+      // Get the debt information to find the initial transaction
+      const { data: debt } = await supabase
+        .from('debts')
+        .select('contact_id, type, debt_date')
+        .eq('id', id)
+        .single()
 
-      // Remove debt from cache
-      const updatedDebts = cachedDebts.filter((d: any) => d.id !== id)
-      await cacheService.updateCacheItem('debts', updatedDebts)
-
-      // Remove associated debt payments from cache
-      const updatedDebtPayments = cachedDebtPayments.filter((p: any) => p.debt_id !== id)
-      await cacheService.updateCacheItem('debt_payments', updatedDebtPayments)
-
-      // Register pending changes
-      await cacheService.addPendingChange({
-        operation: 'delete',
-        table: 'debts',
-        record_id: id,
-        data: debt
-      })
-
-      // Register pending changes for debt payments
-      const debtPaymentsToDelete = cachedDebtPayments.filter((p: any) => p.debt_id === id)
-      for (const payment of debtPaymentsToDelete) {
-        await cacheService.addPendingChange({
-          operation: 'delete',
-          table: 'debt_payments',
-          record_id: payment.id,
-          data: payment
-        })
+      // Get contact name for transaction description matching
+      let contactName = ''
+      if (debt?.contact_id) {
+        const { data: contact } = await supabase
+          .from('contacts')
+          .select('name')
+          .eq('id', debt.contact_id)
+          .single()
+        contactName = contact?.name || ''
       }
+
+      // Find and delete the initial transaction based on description pattern
+      if (debt && contactName) {
+        const initialDescription = `${debt.type === 'loan' ? 'Préstamo a' : 'Deuda con'} ${contactName}`
+        
+        await supabase
+          .from('transactions')
+          .delete()
+          .eq('description', initialDescription)
+          .eq('transaction_date', debt.debt_date)
+      }
+
+      // Get all debt payments to delete associated transactions
+      const { data: payments } = await supabase
+        .from('debt_payments')
+        .select('transaction_id')
+        .eq('debt_id', id)
+
+      // Delete associated transactions from payments
+      if (payments && payments.length > 0) {
+        const transactionIds = payments
+          .filter(p => p.transaction_id)
+          .map(p => p.transaction_id)
+        
+        if (transactionIds.length > 0) {
+          await supabase
+            .from('transactions')
+            .delete()
+            .in('id', transactionIds)
+        }
+      }
+
+      // Delete debt payments first
+      await supabase
+        .from('debt_payments')
+        .delete()
+        .eq('debt_id', id)
+
+      // Delete the debt
+      const { error } = await supabase
+        .from('debts')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
       
       await fetchDebts()
       refetchTransactions() // Refresh transactions to show changes in Records page
@@ -533,31 +595,24 @@ export function useDebts() {
       // Ensure debt/loan categories exist
       const { incomeCategory, incomeSubcategory, expenseCategory, expenseSubcategory } = await ensureDebtCategories()
 
-      // Get contact information from cache
-      const cachedContacts = await cacheService.get('contacts') || []
-      const contactData = cachedContacts.find((c: any) => c.id === debt.contact_id)
+      // Get contact information for the transaction
+      const { data: contactData } = await supabase
+        .from('contacts')
+        .select('name')
+        .eq('id', debt.contact_id)
+        .single()
 
-      // Create payment record
-      const paymentId = uuidv4()
-      const payment = {
-        id: paymentId,
-        ...paymentData,
-        debt_id: debtId,
-        created_at: new Date().toISOString()
-      }
+      // Create payment record with account_id
+      const { data: payment, error: paymentError } = await supabase
+        .from('debt_payments')
+        .insert({
+          ...paymentData,
+          debt_id: debtId
+        })
+        .select()
+        .single()
 
-      // Add payment to cache
-      const cachedDebtPayments = await cacheService.get('debt_payments') || []
-      const updatedDebtPayments = [...cachedDebtPayments, payment]
-      await cacheService.updateCacheItem('debt_payments', updatedDebtPayments)
-
-      // Register pending change
-      await cacheService.addPendingChange({
-        operation: 'create',
-        table: 'debt_payments',
-        record_id: paymentId,
-        data: payment
-      })
+      if (paymentError) throw paymentError
 
       // NEW LOGIC: Simple categorization based on amount sign
       // Positive amount → "Ingresos" with "Préstamos, alquileres" subcategory
@@ -614,21 +669,12 @@ export function useDebts() {
         }
       }
 
-      // Update the payment record with the transaction ID in cache
+      // Update the payment record with the transaction ID
       if (transactionId) {
-        const cachedDebtPayments = await cacheService.get('debt_payments') || []
-        const updatedPayments = cachedDebtPayments.map((p: any) => 
-          p.id === payment.id ? { ...p, transaction_id: transactionId } : p
-        )
-        await cacheService.updateCacheItem('debt_payments', updatedPayments)
-        
-        // Register pending change for the update
-        await cacheService.addPendingChange({
-          operation: 'update',
-          table: 'debt_payments',
-          record_id: payment.id,
-          data: { ...payment, transaction_id: transactionId }
-        })
+        await supabase
+          .from('debt_payments')
+          .update({ transaction_id: transactionId })
+          .eq('id', payment.id)
       }
 
       // Recalcular el saldo basado en la suma de todos los registros
@@ -677,23 +723,38 @@ export function useDebts() {
 
   const deleteDebtPayment = async (paymentId: string, debtId: string) => {
     try {
-      // Get payment details from cache
-      const cachedDebtPayments = await cacheService.get('debt_payments') || []
-      const payment = cachedDebtPayments.find((p: any) => p.id === paymentId)
+      // Get payment details before deleting, including transaction_id
+      const { data: payment } = await supabase
+        .from('debt_payments')
+        .select('amount, transaction_id')
+        .eq('id', paymentId)
+        .single()
 
       if (!payment) throw new Error('Payment not found')
 
-      // Remove payment from cache
-      const updatedDebtPayments = cachedDebtPayments.filter((p: any) => p.id !== paymentId)
-      await cacheService.updateCacheItem('debt_payments', updatedDebtPayments)
+      // Delete associated transaction if it exists
+      if (payment.transaction_id) {
+        try {
+          const { error: transactionError } = await supabase
+            .from('transactions')
+            .delete()
+            .eq('id', payment.transaction_id)
+          
+          if (transactionError) {
+            console.error('Error deleting associated transaction:', transactionError)
+          }
+        } catch (transactionErr) {
+          console.error('Error deleting transaction:', transactionErr)
+        }
+      }
 
-      // Register pending change
-      await cacheService.addPendingChange({
-        operation: 'delete',
-        table: 'debt_payments',
-        record_id: paymentId,
-        data: payment
-      })
+      // Delete payment
+      const { error } = await supabase
+        .from('debt_payments')
+        .delete()
+        .eq('id', paymentId)
+
+      if (error) throw error
 
       // Recalcular el saldo basado en la suma de todos los registros restantes
       const newBalance = await calculateDebtBalance(debtId)
@@ -713,9 +774,12 @@ export function useDebts() {
 
   const updateDebtPayment = async (paymentId: string, debtId: string, updatedData: Partial<DebtPayment>) => {
     try {
-      // Get current payment details from cache
-      const cachedDebtPayments = await cacheService.get('debt_payments') || []
-      const currentPayment = cachedDebtPayments.find((p: any) => p.id === paymentId)
+      // Get current payment details, including transaction_id
+      const { data: currentPayment } = await supabase
+        .from('debt_payments')
+        .select('amount, transaction_id, payment_date, description')
+        .eq('id', paymentId)
+        .single()
 
       if (!currentPayment) throw new Error('Payment not found')
 
@@ -723,34 +787,58 @@ export function useDebts() {
       const debt = debts.find(d => d.id === debtId)
       if (!debt) throw new Error('Debt not found')
 
-      // Update payment in cache
-      const updatedPayment = {
-        ...currentPayment,
-        ...updatedData,
-        updated_at: new Date().toISOString()
+      // Update payment
+      const { error } = await supabase
+        .from('debt_payments')
+        .update(updatedData)
+        .eq('id', paymentId)
+
+      if (error) throw error
+
+      // Update associated transaction if it exists and relevant fields changed
+      if (currentPayment.transaction_id && 
+          (updatedData.amount !== undefined || 
+           updatedData.payment_date !== undefined || 
+           updatedData.description !== undefined)) {
+        
+        const transactionUpdates: any = {}
+        
+        if (updatedData.amount !== undefined) {
+          // Mantener el signo original del monto para preservar la naturaleza de la transacción
+          transactionUpdates.amount = updatedData.amount
+        }
+        if (updatedData.payment_date !== undefined) {
+          transactionUpdates.transaction_date = updatedData.payment_date
+        }
+        if (updatedData.description !== undefined) {
+          transactionUpdates.note = updatedData.description
+        }
+
+        try {
+          const { error: transactionError } = await supabase
+            .from('transactions')
+            .update(transactionUpdates)
+            .eq('id', currentPayment.transaction_id)
+          
+          if (transactionError) {
+            console.error('Error updating associated transaction:', transactionError)
+          }
+        } catch (transactionErr) {
+          console.error('Error updating transaction:', transactionErr)
+        }
       }
-
-      const updatedDebtPayments = cachedDebtPayments.map((p: any) => 
-        p.id === paymentId ? updatedPayment : p
-      )
-      await cacheService.updateCacheItem('debt_payments', updatedDebtPayments)
-
-      // Register pending change
-      await cacheService.addPendingChange({
-        operation: 'update',
-        table: 'debt_payments',
-        record_id: paymentId,
-        data: updatedPayment
-      })
 
       // If amount changed, update debt balance
       if (updatedData.amount !== undefined) {
         const isInitialRecord = currentPayment.description?.includes('Registro inicial')
         
         if (isInitialRecord) {
-          // For initial records, update the debt's initial_amount in cache
+          // For initial records, update the debt's initial_amount
           const newInitialAmount = Math.abs(updatedData.amount)
-          await updateDebt(debtId, { initial_amount: newInitialAmount })
+          await supabase
+            .from('debts')
+            .update({ initial_amount: newInitialAmount })
+            .eq('id', debtId)
         }
         
         // Recalcular el saldo basado en la suma de todos los registros
@@ -807,20 +895,12 @@ export function useDebts() {
 
   const reactivateDebt = async (id: string) => {
     try {
-      // Update debt status in cache
-      const currentDebt = cacheService.getRecord('debts', id)
-      if (!currentDebt) {
-        throw new Error('Debt not found')
-      }
+      const { error } = await supabase
+        .from('debts')
+        .update({ status: 'active' })
+        .eq('id', id)
 
-      const updatedDebt = { ...currentDebt, status: 'active' }
-      cacheService.updateRecord('debts', id, updatedDebt)
-      cacheService.addPendingChange({
-        table: 'debts',
-        operation: 'update',
-        record_id: id,
-        data: { status: 'active' }
-      })
+      if (error) throw error
       
       await fetchDebts()
       toast.success('Deuda reactivada exitosamente')

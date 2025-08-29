@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { CacheProvider } from "@/components/CacheProvider";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Settings from "./pages/Settings";
@@ -30,36 +29,34 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <CacheProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/settings/accounts" element={<AccountsSettings />} />
-              <Route path="/settings/categories" element={<CategoriesSettings />} />
-              <Route path="/settings/tags" element={<TagsSettings />} />
-              <Route path="/settings/templates" element={<TemplatesSettings />} />
-              <Route path="/settings/filters" element={<FiltersSettings />} />
-              <Route path="/settings/profile" element={<ProfileSettings />} />
-              <Route path="/settings/notifications" element={<NotificationsSettings />} />
-              <Route path="/records" element={<Records />} />
-              <Route path="/inventory" element={<Inventory />} />
-              <Route path="/statistics" element={<Statistics />} />
-              <Route path="/statistics/products" element={<ProductStatistics />} />
-              <Route path="/contacts" element={<Contacts />} />
-              <Route path="/debts" element={<Debts />} />
-              <Route path="/scheduled-payments" element={<ScheduledPayments />} />
-              <Route path="/notifications" element={<Notifications />} />
-              {/* Catch all route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </CacheProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/accounts" element={<AccountsSettings />} />
+            <Route path="/settings/categories" element={<CategoriesSettings />} />
+            <Route path="/settings/tags" element={<TagsSettings />} />
+            <Route path="/settings/templates" element={<TemplatesSettings />} />
+            <Route path="/settings/filters" element={<FiltersSettings />} />
+            <Route path="/settings/profile" element={<ProfileSettings />} />
+            <Route path="/settings/notifications" element={<NotificationsSettings />} />
+            <Route path="/records" element={<Records />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/statistics" element={<Statistics />} />
+            <Route path="/statistics/products" element={<ProductStatistics />} />
+            <Route path="/contacts" element={<Contacts />} />
+            <Route path="/debts" element={<Debts />} />
+            <Route path="/scheduled-payments" element={<ScheduledPayments />} />
+            <Route path="/notifications" element={<Notifications />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

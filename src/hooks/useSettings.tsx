@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { cacheService } from '@/lib/cache';
 
 export interface Account {
   id: string;
@@ -100,81 +99,86 @@ export const useSettings = () => {
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch all data from cache
+  // Fetch all data
   const fetchData = async () => {
     if (!user) return;
     
     setLoading(true);
     try {
-      // Load all data from cache with individual error handling
-      const accountsData = await cacheService.get('accounts').catch(err => {
-        console.warn('Error loading accounts from cache:', err);
-        return [];
-      });
+    // Fetch accounts ordered by display_order
+    const { data: accountsData } = await supabase
+      .from('accounts')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('display_order', { ascending: true });
       
-      const categoriesData = await cacheService.get('categories').catch(err => {
-        console.warn('Error loading categories from cache:', err);
-        return [];
-      });
+      // Fetch categories with subcategories ordered by display_order
+      const { data: categoriesData } = await supabase
+        .from('categories')
+        .select(`
+          *,
+          subcategories (*)
+        `)
+        .eq('user_id', user.id)
+        .order('display_order', { ascending: true });
       
-      const tagsData = await cacheService.get('tags').catch(err => {
-        console.warn('Error loading tags from cache:', err);
-        return [];
-      });
+    // Fetch tags ordered by display_order
+    const { data: tagsData } = await supabase
+      .from('tags')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('display_order', { ascending: true });
       
-      const templatesData = await cacheService.get('templates').catch(err => {
-        console.warn('Error loading templates from cache:', err);
-        return [];
-      });
+      // Fetch templates with tags
+      const { data: templatesData } = await supabase
+        .from('templates')
+        .select(`
+          *,
+          tags:template_tags(
+            tag:tags(*)
+          )
+        `)
+        .eq('user_id', user.id);
+
+      // Process templates data to flatten tags
+      const processedTemplates = templatesData?.map(template => ({
+        ...template,
+        tags: template.tags?.map((t: any) => t.tag) || []
+      })) || [];
       
-      const filtersData = await cacheService.get('filters').catch(err => {
-        console.warn('Error loading filters from cache:', err);
-        return [];
-      });
+      // Fetch filters
+      const { data: filtersData } = await supabase
+        .from('filters')
+        .select('*')
+        .eq('user_id', user.id);
       
-      // Filter data by user_id and sort
-      const userAccounts = accountsData
-        .filter(a => a.user_id === user.id)
-        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-        
-      const userCategories = categoriesData
-        .filter(c => c.user_id === user.id)
-        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
-        .map(category => ({
-          ...category,
-          subcategories: category.subcategories?.map((subcategory: any) => ({
-            ...subcategory,
-            icon: subcategory.icon || '📦'
-          })) || []
-        }));
-        
-      const userTags = tagsData
-        .filter(t => t.user_id === user.id)
-        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-        
-      const userTemplates = templatesData
-        .filter(t => t.user_id === user.id)
-        .map(template => ({
-          ...template,
-          tags: template.tags || []
-        }));
-        
-      const userFilters = filtersData.filter(f => f.user_id === user.id);
-      
-      // For user settings, we'll need to handle this differently since it's not in cache yet
-      // For now, we'll set it to null and it will be loaded during sync
-      
-      setAccounts(userAccounts);
-      setCategories(userCategories);
-      setTags(userTags);
-      setTemplates(userTemplates);
-      setFilters(userFilters);
-      setUserSettings(null); // Will be loaded during sync
+      // Fetch user settings
+      const { data: settingsData } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      // Process categories to ensure subcategories have icons
+      const processedCategories = categoriesData?.map(category => ({
+        ...category,
+        subcategories: category.subcategories?.map((subcategory: any) => ({
+          ...subcategory,
+          icon: subcategory.icon || '📦' // Default icon if not present
+        })) || []
+      })) || [];
+
+      setAccounts(accountsData || []);
+      setCategories(processedCategories);
+      setTags(tagsData || []);
+      setTemplates(processedTemplates);
+      setFilters(filtersData || []);
+      setUserSettings(settingsData);
     } catch (error) {
-      console.error('Error loading settings data from cache:', error);
+      console.error('Error fetching settings data:', error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los datos de configuración desde caché.",
+        description: "No se pudieron cargar los datos de configuración.",
         variant: "destructive",
       });
     } finally {
@@ -219,131 +223,89 @@ export const useSettings = () => {
   const createAccount = async (account: Omit<Account, 'id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
     
-    try {
-      const newAccount = {
-        ...account,
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+    const { data, error } = await supabase
+      .from('accounts')
+      .insert([{ ...account, user_id: user.id }])
+      .select()
+      .single();
 
-      // Update local state
-      setAccounts(prev => [...prev, newAccount]);
-      
-      // Update cache and register pending change
-      await cacheService.updateCacheItem('accounts', newAccount);
-      await cacheService.addPendingChange({
-        table: 'accounts',
-        record_id: newAccount.id,
-        operation: 'create',
-        data: newAccount
-      });
-
-      toast({
-        title: "Éxito",
-        description: "Cuenta creada exitosamente.",
-      });
-    } catch (error) {
+    if (error) {
       toast({
         title: "Error",
         description: "No se pudo crear la cuenta.",
         variant: "destructive",
       });
+      return;
     }
+
+    setAccounts(prev => [...prev, data]);
+    toast({
+      title: "Éxito",
+      description: "Cuenta creada exitosamente.",
+    });
   };
 
   const updateAccount = async (id: string, updates: Partial<Account>) => {
-    try {
-      const updatedAccount = {
-        ...accounts.find(a => a.id === id),
-        ...updates,
-        updated_at: new Date().toISOString()
-      };
+    const { data, error } = await supabase
+      .from('accounts')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-      // Update local state
-      setAccounts(prev => prev.map(item => item.id === id ? updatedAccount : item));
-      
-      // Update cache and register pending change
-      await cacheService.updateCacheItem('accounts', updatedAccount);
-      await cacheService.addPendingChange({
-        table: 'accounts',
-        record_id: id,
-        operation: 'update',
-        data: updatedAccount
-      });
-
-      toast({
-        title: "Éxito",
-        description: "Cuenta actualizada exitosamente.",
-      });
-    } catch (error) {
+    if (error) {
       toast({
         title: "Error",
         description: "No se pudo actualizar la cuenta.",
         variant: "destructive",
       });
+      return;
     }
+
+    setAccounts(prev => prev.map(item => item.id === id ? data : item));
+    toast({
+      title: "Éxito",
+      description: "Cuenta actualizada exitosamente.",
+    });
   };
 
   const deleteAccount = async (id: string) => {
-    try {
-      // Update local state
-      setAccounts(prev => prev.filter(item => item.id !== id));
-      
-      // Remove from cache and register pending change
-      await cacheService.deleteCacheItem('accounts', id);
-      await cacheService.addPendingChange({
-        table: 'accounts',
-        record_id: id,
-        operation: 'delete'
-      });
+    const { error } = await supabase
+      .from('accounts')
+      .delete()
+      .eq('id', id);
 
-      toast({
-        title: "Éxito",
-        description: "Cuenta eliminada exitosamente.",
-      });
-    } catch (error) {
+    if (error) {
       toast({
         title: "Error",
         description: "No se pudo eliminar la cuenta.",
         variant: "destructive",
       });
+      return;
     }
+
+    setAccounts(prev => prev.filter(item => item.id !== id));
+    toast({
+      title: "Éxito",
+      description: "Cuenta eliminada exitosamente.",
+    });
   };
 
   // Category CRUD operations
   const createCategory = async (category: Omit<Category, 'id' | 'created_at' | 'updated_at'>) => {
     if (!user) return null;
     
-    try {
-      const newCategory = {
-        ...category,
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        subcategories: []
-      };
+    console.log('Creating category with data:', { ...category, user_id: user.id });
+    
+    const { data, error } = await supabase
+      .from('categories')
+      .insert([{ ...category, user_id: user.id }])
+      .select()
+      .single();
+    
+    console.log('Category creation result:', { data, error });
 
-      // Update local state
-      setCategories(prev => [...prev, newCategory]);
-      
-      // Update cache and register pending change
-      await cacheService.updateCacheItem('categories', newCategory);
-      await cacheService.addPendingChange({
-        table: 'categories',
-        record_id: newCategory.id,
-        operation: 'create',
-        data: newCategory
-      });
-
-      toast({
-        title: "Éxito",
-        description: "Categoría creada exitosamente.",
-      });
-      return newCategory as Category;
-    } catch (error) {
+    if (error) {
       toast({
         title: "Error",
         description: "No se pudo crear la categoría.",
@@ -351,106 +313,74 @@ export const useSettings = () => {
       });
       return null;
     }
+
+    setCategories(prev => [...prev, data]);
+    toast({
+      title: "Éxito",
+      description: "Categoría creada exitosamente.",
+    });
+    return data as Category;
   };
 
   const updateCategory = async (id: string, updates: Partial<Category>) => {
-    try {
-      const updatedCategory = {
-        ...categories.find(c => c.id === id),
-        ...updates,
-        updated_at: new Date().toISOString()
-      };
+    const { data, error } = await supabase
+      .from('categories')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-      // Update local state
-      setCategories(prev => prev.map(item => item.id === id ? updatedCategory : item));
-      
-      // Update cache and register pending change
-      await cacheService.updateCacheItem('categories', updatedCategory);
-      await cacheService.addPendingChange({
-        table: 'categories',
-        record_id: id,
-        operation: 'update',
-        data: updatedCategory
-      });
-
-      toast({
-        title: "Éxito",
-        description: "Categoría actualizada exitosamente.",
-      });
-    } catch (error) {
+    if (error) {
       toast({
         title: "Error",
         description: "No se pudo actualizar la categoría.",
         variant: "destructive",
       });
+      return;
     }
+
+    setCategories(prev => prev.map(item => item.id === id ? data : item));
+    toast({
+      title: "Éxito",
+      description: "Categoría actualizada exitosamente.",
+    });
   };
 
   const deleteCategory = async (id: string) => {
-    try {
-      // Update local state
-      setCategories(prev => prev.filter(item => item.id !== id));
-      
-      // Remove from cache and register pending change
-      await cacheService.deleteCacheItem('categories', id);
-      await cacheService.addPendingChange({
-        table: 'categories',
-        record_id: id,
-        operation: 'delete'
-      });
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', id);
 
-      toast({
-        title: "Éxito",
-        description: "Categoría eliminada exitosamente.",
-      });
-    } catch (error) {
+    if (error) {
       toast({
         title: "Error",
         description: "No se pudo eliminar la categoría.",
         variant: "destructive",
       });
+      return;
     }
+
+    setCategories(prev => prev.filter(item => item.id !== id));
+    toast({
+      title: "Éxito",
+      description: "Categoría eliminada exitosamente.",
+    });
   };
 
   // Subcategory CRUD operations
   const createSubcategory = async (subcategory: Omit<Subcategory, 'id' | 'created_at'>) => {
-    try {
-      const newSubcategory = {
-        ...subcategory,
-        id: crypto.randomUUID(),
-        created_at: new Date().toISOString()
-      };
+    console.log('Creating subcategory with data:', subcategory);
+    
+    const { data, error } = await supabase
+      .from('subcategories')
+      .insert([subcategory])
+      .select()
+      .single();
+    
+    console.log('Subcategory creation result:', { data, error });
 
-      // Update the categories state to include the new subcategory
-      setCategories(prev => prev.map(category => 
-        category.id === subcategory.category_id 
-          ? { ...category, subcategories: [...(category.subcategories || []), newSubcategory] }
-          : category
-      ));
-      
-      // Update cache - we need to update the entire categories array
-      const updatedCategories = categories.map(category => 
-        category.id === subcategory.category_id 
-          ? { ...category, subcategories: [...(category.subcategories || []), newSubcategory] }
-          : category
-      );
-      await cacheService.set('categories', updatedCategories);
-      
-      // Register pending change for subcategory
-      await cacheService.addPendingChange({
-        table: 'subcategories',
-        record_id: newSubcategory.id,
-        operation: 'create',
-        data: newSubcategory
-      });
-      
-      toast({
-        title: "Éxito",
-        description: "Subcategoría creada exitosamente.",
-      });
-      
-      return newSubcategory as Subcategory;
-    } catch (error) {
+    if (error) {
       toast({
         title: "Error",
         description: "No se pudo crear la subcategoría.",
@@ -458,191 +388,148 @@ export const useSettings = () => {
       });
       return null;
     }
+
+    // Update the categories state to include the new subcategory
+    setCategories(prev => prev.map(category => 
+      category.id === subcategory.category_id 
+        ? { ...category, subcategories: [...(category.subcategories || []), data] }
+        : category
+    ));
+    
+    toast({
+      title: "Éxito",
+      description: "Subcategoría creada exitosamente.",
+    });
+    
+    return data as Subcategory;
   };
 
   const updateSubcategory = async (id: string, updates: Partial<Subcategory>) => {
-    try {
-      // Find current subcategory
-      let currentSubcategory = null;
-      for (const category of categories) {
-        const found = category.subcategories?.find(sub => sub.id === id);
-        if (found) {
-          currentSubcategory = found;
-          break;
-        }
-      }
-      
-      if (!currentSubcategory) return;
-      
-      const updatedSubcategory = {
-        ...currentSubcategory,
-        ...updates
-      };
+    const { data, error } = await supabase
+      .from('subcategories')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-      // Update the categories state
-      setCategories(prev => prev.map(category => ({
-        ...category,
-        subcategories: category.subcategories?.map(sub => sub.id === id ? updatedSubcategory : sub)
-      })));
-      
-      // Update cache
-      const updatedCategories = categories.map(category => ({
-        ...category,
-        subcategories: category.subcategories?.map(sub => sub.id === id ? updatedSubcategory : sub)
-      }));
-      await cacheService.set('categories', updatedCategories);
-      
-      // Register pending change
-      await cacheService.addPendingChange({
-        table: 'subcategories',
-        record_id: id,
-        operation: 'update',
-        data: updatedSubcategory
-      });
-      
-      toast({
-        title: "Éxito",
-        description: "Subcategoría actualizada exitosamente.",
-      });
-    } catch (error) {
+    if (error) {
       toast({
         title: "Error",
         description: "No se pudo actualizar la subcategoría.",
         variant: "destructive",
       });
+      return;
     }
+
+    // Update the categories state
+    setCategories(prev => prev.map(category => ({
+      ...category,
+      subcategories: category.subcategories?.map(sub => sub.id === id ? data : sub)
+    })));
+    
+    toast({
+      title: "Éxito",
+      description: "Subcategoría actualizada exitosamente.",
+    });
   };
 
   const deleteSubcategory = async (id: string) => {
-    try {
-      // Update the categories state
-      setCategories(prev => prev.map(category => ({
-        ...category,
-        subcategories: category.subcategories?.filter(sub => sub.id !== id)
-      })));
-      
-      // Update cache
-      const updatedCategories = categories.map(category => ({
-        ...category,
-        subcategories: category.subcategories?.filter(sub => sub.id !== id)
-      }));
-      await cacheService.set('categories', updatedCategories);
-      
-      // Register pending change
-      await cacheService.addPendingChange({
-        table: 'subcategories',
-        record_id: id,
-        operation: 'delete'
-      });
-      
-      toast({
-        title: "Éxito",
-        description: "Subcategoría eliminada exitosamente.",
-      });
-    } catch (error) {
+    const { error } = await supabase
+      .from('subcategories')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
       toast({
         title: "Error",
         description: "No se pudo eliminar la subcategoría.",
         variant: "destructive",
       });
+      return;
     }
+
+    // Update the categories state
+    setCategories(prev => prev.map(category => ({
+      ...category,
+      subcategories: category.subcategories?.filter(sub => sub.id !== id)
+    })));
+    
+    toast({
+      title: "Éxito",
+      description: "Subcategoría eliminada exitosamente.",
+    });
   };
 
   // Tag CRUD operations
   const createTag = async (tag: Omit<Tag, 'id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
     
-    try {
-      const newTag = {
-        ...tag,
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+    const { data, error } = await supabase
+      .from('tags')
+      .insert([{ ...tag, user_id: user.id }])
+      .select()
+      .single();
 
-      // Update local state
-      setTags(prev => [...prev, newTag]);
-      
-      // Update cache and register pending change
-      await cacheService.updateCacheItem('tags', newTag);
-      await cacheService.addPendingChange({
-        table: 'tags',
-        record_id: newTag.id,
-        operation: 'create',
-        data: newTag
-      });
-
-      toast({
-        title: "Éxito",
-        description: "Etiqueta creada exitosamente.",
-      });
-    } catch (error) {
+    if (error) {
       toast({
         title: "Error",
         description: "No se pudo crear la etiqueta.",
         variant: "destructive",
       });
+      return;
     }
+
+    setTags(prev => [...prev, data]);
+    toast({
+      title: "Éxito",
+      description: "Etiqueta creada exitosamente.",
+    });
   };
 
   const updateTag = async (id: string, updates: Partial<Tag>) => {
-    try {
-      const updatedTag = {
-        ...tags.find(t => t.id === id),
-        ...updates,
-        updated_at: new Date().toISOString()
-      };
+    const { data, error } = await supabase
+      .from('tags')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-      // Update local state
-      setTags(prev => prev.map(item => item.id === id ? updatedTag : item));
-      
-      // Update cache and register pending change
-      await cacheService.updateCacheItem('tags', updatedTag);
-      await cacheService.addPendingChange({
-        table: 'tags',
-        record_id: id,
-        operation: 'update',
-        data: updatedTag
-      });
-
-      toast({
-        title: "Éxito",
-        description: "Etiqueta actualizada exitosamente.",
-      });
-    } catch (error) {
+    if (error) {
       toast({
         title: "Error",
         description: "No se pudo actualizar la etiqueta.",
         variant: "destructive",
       });
+      return;
     }
+
+    setTags(prev => prev.map(item => item.id === id ? data : item));
+    toast({
+      title: "Éxito",
+      description: "Etiqueta actualizada exitosamente.",
+    });
   };
 
   const deleteTag = async (id: string) => {
-    try {
-      // Update local state
-      setTags(prev => prev.filter(item => item.id !== id));
-      
-      // Remove from cache and register pending change
-      await cacheService.deleteCacheItem('tags', id);
-      await cacheService.addPendingChange({
-        table: 'tags',
-        record_id: id,
-        operation: 'delete'
-      });
+    const { error } = await supabase
+      .from('tags')
+      .delete()
+      .eq('id', id);
 
-      toast({
-        title: "Éxito",
-        description: "Etiqueta eliminada exitosamente.",
-      });
-    } catch (error) {
+    if (error) {
       toast({
         title: "Error",
         description: "No se pudo eliminar la etiqueta.",
         variant: "destructive",
       });
+      return;
     }
+
+    setTags(prev => prev.filter(item => item.id !== id));
+    toast({
+      title: "Éxito",
+      description: "Etiqueta eliminada exitosamente.",
+    });
   };
 
   // Template CRUD operations
