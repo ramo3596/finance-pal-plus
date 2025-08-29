@@ -210,7 +210,32 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
           });
         }
       } else {
-        // For debt sales: Create income transactions, debt AND update inventory
+        // For debt sales: Create income transactions, opposite transactions, debt AND update inventory
+        
+        // Find the "Colecciones" subcategory in any category and get its parent category
+        let inversionesCategory = null;
+        let coleccionesSubcategory = null;
+        
+        // Debug: Log available categories
+        console.log('Available categories:', categories.map(c => ({ name: c.name, id: c.id, subcategories: c.subcategories?.map(s => s.name) })));
+        
+        for (const category of categories) {
+          const foundSubcategory = category.subcategories?.find(sub => sub.name.toLowerCase() === 'colecciones');
+          if (foundSubcategory) {
+            coleccionesSubcategory = foundSubcategory;
+            inversionesCategory = category; // Use the parent category of the subcategory
+            break;
+          }
+        }
+        
+        // If no "Colecciones" subcategory found, fallback to finding an "Inversiones" category
+        if (!inversionesCategory) {
+          inversionesCategory = categories.find(cat => cat.name.toLowerCase() === 'inversiones');
+        }
+        
+        // Debug: Log found categories
+        console.log('Found Inversiones category:', inversionesCategory);
+        console.log('Found Colecciones subcategory:', coleccionesSubcategory);
         
         // 1. Create income transaction for each product (for statistics tracking)
         for (const item of selectedProducts) {
@@ -228,6 +253,24 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
             payer_contact_id: data.customer_id,
             note: data.description || `Venta a crédito a ${customer?.name}${totalDiscount > 0 ? ` - Descuento aplicado: $${totalDiscount.toFixed(2)}` : ''}`,
           });
+          
+          // 1.1. Create opposite transaction for accounting purposes (Colecciones)
+          if (inversionesCategory && coleccionesSubcategory) {
+            await createTransaction({
+              type: "expense",
+              amount: item.quantity * item.unitPrice,
+              description: `Registro contable - Venta a crédito: ${item.product.name} (${item.quantity} ${item.quantity === 1 ? 'unidad' : 'unidades'})`,
+              category_id: inversionesCategory.id,
+              subcategory_id: coleccionesSubcategory.id,
+              account_id: accounts[0]?.id || "", // Same account as the income transaction
+              payment_method: "credito",
+              transaction_date: new Date(`${data.date}T${new Date().toTimeString().slice(0, 5)}`).toISOString(),
+              tags: item.product.tags || [],
+              beneficiary: customer?.name,
+              payer_contact_id: data.customer_id,
+              note: `Registro contable opuesto - ${data.description || `Venta a crédito a ${customer?.name}`}${totalDiscount > 0 ? ` - Descuento aplicado: $${totalDiscount.toFixed(2)}` : ''}`,
+            });
+          }
         }
 
         // 2. Create debt (customer owes us money)

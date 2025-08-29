@@ -42,6 +42,7 @@ export function EditTransaction({
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [beneficiary, setBeneficiary] = useState("");
+  const [description, setDescription] = useState("");
   const [note, setNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [location, setLocation] = useState("");
@@ -69,6 +70,7 @@ export function EditTransaction({
       }));
       
       setBeneficiary(transaction.beneficiary || "");
+      setDescription(transaction.description || "");
       setNote(transaction.note || "");
       setPaymentMethod(transaction.payment_method || "");
       setLocation(transaction.location || "");
@@ -88,7 +90,7 @@ export function EditTransaction({
           account_id: selectedAccount,
           to_account_id: toAccount || undefined,
           category_id: selectedCategory || undefined,
-          description: 'Transferencia',
+          description: description || 'Transferencia',
           beneficiary,
           note,
           payment_method: paymentMethod,
@@ -107,7 +109,7 @@ export function EditTransaction({
           amount: adjustedAmount,
           account_id: selectedAccount,
           category_id: selectedCategory || undefined,
-          description: beneficiary || `${transactionType} transaction`,
+          description: description || beneficiary || `${transactionType} transaction`,
           beneficiary,
           note,
           payment_method: paymentMethod,
@@ -315,6 +317,16 @@ export function EditTransaction({
                 placeholder={transactionType === "expense" ? "Nombre del beneficiario" : transactionType === "income" ? "Nombre del pagador" : "Nombre del beneficiario"} 
                 value={beneficiary} 
                 onChange={e => setBeneficiary(e.target.value)} 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Descripción</Label>
+              <Input 
+                id="description" 
+                placeholder="Descripción de la transacción" 
+                value={description} 
+                onChange={e => setDescription(e.target.value)} 
               />
             </div>
 
