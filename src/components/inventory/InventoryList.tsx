@@ -68,7 +68,8 @@ export function InventoryList({ filters, onEditProduct, onDeleteProduct }: Inven
       {filteredProducts.map((product) => (
         <Card key={product.id} className="hover:shadow-md transition-shadow">
           <CardContent className="p-4">
-            <div className="space-y-3">
+            {/* Desktop Layout */}
+            <div className="hidden md:block space-y-3">
               {/* Product Image */}
               <div className="w-full h-32 bg-muted rounded-md flex items-center justify-center overflow-hidden">
                 {product.image_url ? (
@@ -152,6 +153,93 @@ export function InventoryList({ filters, onEditProduct, onDeleteProduct }: Inven
                   onClick={() => onDeleteProduct(product)}
                 >
                   <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Mobile Layout */}
+            <div className="md:hidden flex items-center space-x-3">
+              {/* Product Image - Left */}
+              <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center overflow-hidden flex-shrink-0">
+                {product.image_url ? (
+                  <img 
+                    src={product.image_url} 
+                    alt={product.name}
+                    className="w-full h-full object-contain rounded-md"
+                  />
+                ) : (
+                  <Package className="h-6 w-6 text-muted-foreground" />
+                )}
+              </div>
+
+              {/* Product Details - Center */}
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-sm line-clamp-2">{product.name}</h3>
+                {product.category && (
+                  <div className="flex items-center space-x-1 mt-1">
+                    <span className="text-xs">{product.category.icon}</span>
+                    <span className="text-xs text-muted-foreground">{product.category.name}</span>
+                  </div>
+                )}
+                
+                <div className="space-y-1 mt-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Cantidad:</span>
+                    <div className="flex items-center space-x-2">
+                      <span className={`text-xs px-2 py-1 rounded flex-shrink-0 ${
+                        product.quantity > 0 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-red-100 text-red-700'
+                      }`}>
+                        {product.quantity > 0 ? 'Disponibles' : 'No disponible'}
+                      </span>
+                      <span className="font-medium">{product.quantity}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Precio:</span>
+                    <span className="font-medium">${product.price}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Costo:</span>
+                    <span className="font-medium">${product.cost}</span>
+                  </div>
+                </div>
+
+                {/* Tags */}
+                {product.tags && product.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {product.tags.slice(0, 2).map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {product.tags.length > 2 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{product.tags.length - 2}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons - Right */}
+              <div className="flex flex-col space-y-2 flex-shrink-0">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="w-10 h-10 p-0"
+                  onClick={() => onEditProduct(product)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="w-10 h-10 p-0 text-destructive hover:text-destructive"
+                  onClick={() => onDeleteProduct(product)}
+                >
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </div>
