@@ -8,6 +8,7 @@ import { Loader2, Package, TrendingUp, DollarSign, BarChart3 } from "lucide-reac
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RecordsFilters as RecordsFiltersComponent } from "@/components/records/RecordsFilters";
+import { ProductStatisticsHeader } from "@/components/statistics/ProductStatisticsHeader";
 import { StatisticsFilters } from "@/pages/Statistics";
 import { subDays, isWithinInterval } from "date-fns";
 
@@ -64,10 +65,12 @@ export default function ProductStatistics() {
     }));
   };
 
+
+
   // Filtrar transacciones de venta aplicando todos los filtros
   const salesTransactions = transactions.filter(transaction => {
-    // Solo transacciones de venta (gastos con descripción "Venta:")
-    if (transaction.type !== 'expense' || !transaction.description.includes('Venta:')) return false;
+    // Solo transacciones de venta (ingresos con descripción "Venta:")
+    if (transaction.type !== 'income' || !transaction.description.includes('Venta:')) return false;
     
     // Filtro de fecha
     if (filters.dateRange?.from && filters.dateRange?.to) {
@@ -151,8 +154,31 @@ export default function ProductStatistics() {
 
   productSalesMap.forEach(sale => productSales.push(sale));
   
-  // Ordenar por ingresos
-  productSales.sort((a, b) => b.revenue - a.revenue);
+  // Aplicar ordenamiento según filtros
+  productSales.sort((a, b) => {
+    switch (filters.sortBy) {
+      case "date-desc":
+      case "date-asc":
+        // Para productos, ordenamos por ingresos como fallback
+        return filters.sortBy === "date-desc" ? b.revenue - a.revenue : a.revenue - b.revenue;
+      case "quantity-desc":
+        return b.quantity - a.quantity;
+      case "quantity-asc":
+        return a.quantity - b.quantity;
+      case "revenue-desc":
+        return b.revenue - a.revenue;
+      case "revenue-asc":
+        return a.revenue - b.revenue;
+      case "profit-desc":
+        return b.profit - a.profit;
+      case "profit-asc":
+        return a.profit - b.profit;
+      case "name":
+        return a.productName.localeCompare(b.productName);
+      default:
+        return b.revenue - a.revenue;
+    }
+  });
 
   // Calcular totales
   const totalRevenue = productSales.reduce((sum, sale) => sum + sale.revenue, 0);
@@ -173,12 +199,10 @@ export default function ProductStatistics() {
         {/* Main Content */}
         <div className="flex-1 space-y-6">
           {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Estadísticas de Venta de Productos</h1>
-            <p className="text-muted-foreground">
-              Analíticas y métricas de las ventas de productos del inventario
-            </p>
-          </div>
+          <ProductStatisticsHeader
+            filters={filters}
+            onFilterChange={handleFilterChange}
+          />
 
           {/* KPI Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

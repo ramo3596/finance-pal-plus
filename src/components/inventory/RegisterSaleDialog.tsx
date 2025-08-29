@@ -185,21 +185,23 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
       if (saleType === "paid") {
         // For paid sales: Create income transaction AND update inventory
         
-        // 1. Create income transaction
-        await createTransaction({
-          type: "income",
-          amount: totalAmount,
-          description: data.description || `Venta de productos - ${customer?.name}`,
-          category_id: ventasCategory?.id,
-          subcategory_id: ventasSubcategory?.id,
-          account_id: data.account_id!,
-          payment_method: data.payment_method!,
-          transaction_date: new Date(`${data.date}T${new Date().toTimeString().slice(0, 5)}`).toISOString(),
-          tags: selectedProducts.flatMap(p => p.product.tags || []),
-          beneficiary: customer?.name,
-          payer_contact_id: data.customer_id,
-          note: `Productos vendidos: ${selectedProducts.map(p => `${p.product.name} (${p.quantity})`).join(', ')}${totalDiscount > 0 ? ` - Descuento aplicado: $${totalDiscount.toFixed(2)}` : ''}`,
-        });
+        // 1. Create income transaction for each product (for statistics tracking)
+        for (const item of selectedProducts) {
+          await createTransaction({
+            type: "income",
+            amount: item.quantity * item.unitPrice,
+            description: `Venta: ${item.product.name} (${item.quantity} ${item.quantity === 1 ? 'unidad' : 'unidades'})`,
+            category_id: ventasCategory?.id,
+            subcategory_id: ventasSubcategory?.id,
+            account_id: data.account_id!,
+            payment_method: data.payment_method!,
+            transaction_date: new Date(`${data.date}T${new Date().toTimeString().slice(0, 5)}`).toISOString(),
+            tags: item.product.tags || [],
+            beneficiary: customer?.name,
+            payer_contact_id: data.customer_id,
+            note: data.description || `Venta a ${customer?.name}${totalDiscount > 0 ? ` - Descuento aplicado: $${totalDiscount.toFixed(2)}` : ''}`,
+          });
+        }
 
         // 2. Reduce inventory quantities
         for (const item of selectedProducts) {
@@ -208,9 +210,27 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
           });
         }
       } else {
-        // For debt sales: Create debt (loan for us) AND update inventory (NO transaction)
+        // For debt sales: Create income transactions, debt AND update inventory
         
-        // 1. Create debt (customer owes us money)
+        // 1. Create income transaction for each product (for statistics tracking)
+        for (const item of selectedProducts) {
+          await createTransaction({
+            type: "income",
+            amount: item.quantity * item.unitPrice,
+            description: `Venta: ${item.product.name} (${item.quantity} ${item.quantity === 1 ? 'unidad' : 'unidades'})`,
+            category_id: ventasCategory?.id,
+            subcategory_id: ventasSubcategory?.id,
+            account_id: accounts[0]?.id || "", // Use first available account
+            payment_method: "credito",
+            transaction_date: new Date(`${data.date}T${new Date().toTimeString().slice(0, 5)}`).toISOString(),
+            tags: item.product.tags || [],
+            beneficiary: customer?.name,
+            payer_contact_id: data.customer_id,
+            note: data.description || `Venta a crédito a ${customer?.name}${totalDiscount > 0 ? ` - Descuento aplicado: $${totalDiscount.toFixed(2)}` : ''}`,
+          });
+        }
+
+        // 2. Create debt (customer owes us money)
         await createDebt({
           type: "loan", // Loan = money they owe us
           initial_amount: totalAmount,
@@ -222,7 +242,7 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
           debt_date: new Date(`${data.date}T${new Date().toTimeString().slice(0, 5)}`).toISOString(),
         }, [], { skipTransaction: true });
 
-        // 2. Reduce inventory quantities (products are delivered)
+        // 3. Reduce inventory quantities (products are delivered)
         for (const item of selectedProducts) {
           await updateProduct(item.product.id, {
             quantity: item.product.quantity - item.quantity,
@@ -234,7 +254,7 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
         title: "Éxito",
         description: saleType === "paid" 
           ? "Venta registrada exitosamente" 
-          : "Venta a crédito registrada - El inventario se ha actualizado y se creó el registro de deuda",
+          : "Venta a crédito registrada exitosamente",
       });
 
       // Reset form and flow
@@ -607,7 +627,7 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
               {saleType === "debt" && (
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
                   <p className="text-sm text-blue-800">
-                    <strong>Nota:</strong> Al registrar como deuda, el inventario se actualizará pero no se afectarán las cuentas financieras. El registro de cobro se hará cuando se reciba el pago.
+                    <strong>Nota:</strong> Al registrar como deuda, se creará la transacción de ingreso, el registro de deuda y se actualizará el inventario.
                   </p>
                 </div>
               )}
