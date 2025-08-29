@@ -74,7 +74,7 @@ export default function Debts() {
 
   return (
     <Layout>
-      <div className={cn("container mx-auto space-y-6", isMobile ? "w-full px-4" : "")}>
+      <div className={cn("container mx-auto space-y-6", isMobile ? "w-full max-w-none px-0" : "")}>
         {/* Header */}
         <div className="flex flex-col space-y-4 md:flex-row md:justify-between md:items-center md:space-y-0">
           <h1 className="text-3xl font-bold">Deudas</h1>
