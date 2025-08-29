@@ -36,7 +36,6 @@ const menuItems = [
   { title: "Inicio", url: "/", icon: Home },
   { title: "Registros", url: "/records", icon: List },
   { title: "Inventario", url: "/inventory", icon: Package },
-  { title: "Inversiones", url: "/investments", icon: TrendingUp },
   { 
     title: "Estadística", 
     icon: BarChart3,
@@ -48,6 +47,7 @@ const menuItems = [
   { title: "Pagos programados", url: "/scheduled-payments", icon: Calendar },
   { title: "Deudas", url: "/debts", icon: Target },
   { title: "Contactos", url: "/contacts", icon: Users },
+  { title: "Inversiones", url: "/investments", icon: TrendingUp },
   { title: "Configuración", url: "/settings", icon: Settings },
 ]
 
