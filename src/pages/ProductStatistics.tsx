@@ -109,7 +109,9 @@ export default function ProductStatistics() {
 
     // Filtro de rango de cantidad
     const amount = Math.abs(transaction.amount);
-    if (amount < filters.amountRange.min || amount > filters.amountRange.max) return false;
+    if (filters.amountRange.max > filters.amountRange.min) {
+      if (amount < filters.amountRange.min || amount > filters.amountRange.max) return false;
+    }
 
     return true;
   });

@@ -43,7 +43,7 @@ const Records = () => {
       selectedCategories: [],
       selectedTags: [],
       selectedTypes: [],
-      amountRange: { min: 0, max: 0 },
+      amountRange: { min: 0, max: 10000 },
       selectedPaymentMethods: [],
       status: "Todo",
       dateRange: { from: thirtyDaysAgo, to: now },

@@ -98,7 +98,7 @@ export function RecordsMainSection({
 
       // Amount range filter
       const absAmount = Math.abs(transaction.amount);
-      if (filters.amountRange.max > 0) {
+      if (filters.amountRange.max > filters.amountRange.min) {
         if (absAmount < filters.amountRange.min || absAmount > filters.amountRange.max) {
           return false;
         }
