@@ -9,6 +9,8 @@ import { TrendingUp, TrendingDown, Edit, Trash2, X } from "lucide-react"
 import { type Debt, type DebtPayment } from "@/hooks/useDebts"
 import { useDebts } from "@/hooks/useDebts"
 import { EditPaymentDialog } from "./EditPaymentDialog"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { cn } from "@/lib/utils"
 
 interface DebtHistoryDialogProps {
   open: boolean
@@ -21,6 +23,7 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
   const [editingPayment, setEditingPayment] = useState<DebtPayment | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const { fetchDebtPayments, deleteDebtPayment, deleteDebt, reactivateDebt } = useDebts()
+  const isMobile = useIsMobile()
 
   const refreshPayments = async () => {
     if (debt.id) {
@@ -82,18 +85,20 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
+      <DialogContent className={cn(
+        isMobile ? "max-w-full w-full h-full m-0 rounded-none" : "max-w-2xl max-h-[80vh]"
+      )}>
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle>
-              Historial de {isDebt ? 'Deuda' : 'Préstamo'} - {contactName}
+            <DialogTitle className={cn("truncate", isMobile ? "text-lg" : "text-xl")}>
+              {isMobile ? debt.description : `${isDebt ? 'Historial de Deuda' : 'Historial de Préstamo'} - ${contactName}`}
             </DialogTitle>
             <div className="flex items-center space-x-2">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Eliminar {isDebt ? 'Deuda' : 'Préstamo'}
+                  <Button variant="destructive" size={isMobile ? "sm" : "default"}>
+                    <Trash2 className="h-4 w-4" />
+                    {!isMobile && <span className="ml-2">Eliminar</span>}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -111,62 +116,86 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-                <X className="h-4 w-4" />
-              </Button>
+              {!isMobile && (
+                <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Resumen de la deuda */}
-          <div className="bg-muted/50 rounded-lg p-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Descripción:</span>
-                <p className="font-medium">{debt.description}</p>
+          {/* Desktop: Información completa de la deuda */}
+          {!isMobile && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Descripción:</span>
+                  <p className="font-medium">{debt.description}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Cuenta:</span>
+                  <p className="font-medium">{debt.accounts?.name}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Monto inicial:</span>
+                  <p className="font-medium">{formatCurrency(debt.initial_amount)}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Saldo actual:</span>
+                  <p className={cn(
+                    "font-medium",
+                    debt.current_balance < 0 ? 'text-red-600' : 'text-green-600'
+                  )}>
+                    {formatCurrency(debt.current_balance)}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Fecha:</span>
+                  <p className="font-medium">{format(new Date(debt.debt_date), 'dd/MM/yyyy')}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Estado:</span>
+                  <Badge variant={debt.status === 'active' ? 'default' : 'secondary'}>
+                    {debt.status === 'active' ? 'Activo' : 'Cerrado'}
+                  </Badge>
+                </div>
               </div>
-              <div>
-                <span className="text-muted-foreground">Cuenta:</span>
-                <p className="font-medium">{debt.accounts?.name}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Monto inicial:</span>
-                <p className="font-medium">{formatCurrency(isDebt ? debt.initial_amount : -Math.abs(debt.initial_amount))}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Saldo actual:</span>
-                <p className={`font-semibold ${debt.current_balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+            </div>
+          )}
+
+          {/* Mobile: Saldo prominente */}
+          {isMobile && (
+            <div className="bg-muted/50 rounded-lg p-4 text-center">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {isDebt ? 'DEBO' : 'ME DEBEN'} a {contactName}
+                </p>
+                <p className={cn(
+                  "font-bold text-3xl",
+                  debt.current_balance < 0 ? 'text-red-600' : 'text-green-600'
+                )}>
                   {formatCurrency(debt.current_balance)}
                 </p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Fecha:</span>
-                <p className="font-medium">{format(new Date(debt.debt_date), 'dd/MM/yyyy')}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Estado:</span>
-                <Badge variant={debt.status === 'active' ? 'default' : 'secondary'}>
-                  {debt.status === 'active' ? 'Activo' : 'Cerrado'}
-                </Badge>
                 {debt.status === 'closed' && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => reactivateDebt(debt.id)}
-                    className="text-xs"
+                    className="text-xs ml-2"
                   >
                     Reactivar
                   </Button>
                 )}
               </div>
             </div>
-          </div>
+          )}
 
           {/* Historial de pagos */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">Historial de Movimientos</h3>
-            <ScrollArea className="h-[300px] border rounded-lg p-4">
+            {!isMobile && <h3 className="font-semibold mb-3 text-lg">Historial de Movimientos</h3>}
+            <ScrollArea className={cn("border rounded-lg p-4", isMobile ? "h-[calc(100vh-300px)] border-0 p-2" : "h-[300px]")}>
               {payments.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   No hay historial de pagos disponible
@@ -174,84 +203,170 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
               ) : (
                 <div className="space-y-3">
                   {payments.map((payment) => (
-                    <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
-                      <div className="flex items-center space-x-3 flex-1">
-                        <div 
-                          className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
-                          style={{ 
-                            backgroundColor: payment.transactions?.categories?.color || 'hsl(var(--primary))' 
-                          }}
-                        >
-                          {(payment.transactions?.subcategories?.icon || payment.transactions?.categories?.icon) && (
-                            <span className="text-sm">
-                              {payment.transactions?.subcategories?.icon || payment.transactions?.categories?.icon}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-foreground">
-                            {payment.transactions?.subcategories?.name || payment.transactions?.categories?.name || getPaymentType(payment.amount)}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {payment.transactions?.accounts?.name}
-                          </p>
+                    <div key={payment.id} className={cn(
+                      "rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors",
+                      isMobile ? "p-3" : "p-3 flex items-center justify-between"
+                    )}>
+                      {isMobile ? (
+                        /* Layout móvil - Vertical */
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3 flex-1">
+                              <div 
+                                className="w-8 h-8 rounded-lg flex items-center justify-center text-white flex-shrink-0"
+                                style={{ 
+                                  backgroundColor: payment.transactions?.categories?.color || 'hsl(var(--primary))' 
+                                }}
+                              >
+                                {(payment.transactions?.subcategories?.icon || payment.transactions?.categories?.icon) && (
+                                  <span className="text-xs">
+                                    {payment.transactions?.subcategories?.icon || payment.transactions?.categories?.icon}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-foreground text-sm truncate">
+                                  {payment.transactions?.subcategories?.name || payment.transactions?.categories?.name || getPaymentType(payment.amount)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(payment.payment_date), 'dd/MM/yyyy')}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <p className={`font-bold text-sm ${getPaymentColor(payment.amount)}`}>
+                                {payment.amount > 0 ? '+' : ''}{formatCurrency(payment.amount)}
+                              </p>
+                              <div className="flex items-center space-x-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditPayment(payment)}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                {!isInitialRecord(payment) && (
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>¿Eliminar registro?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Esta acción eliminará permanentemente este registro de pago. Esta acción no se puede deshacer.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction 
+                                          onClick={() => handleDeletePayment(payment.id)}
+                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        >
+                                          Eliminar
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                           {payment.description && (
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs text-muted-foreground pl-11">
                               {payment.description}
                             </p>
                           )}
                         </div>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <div className="text-right">
-                          <p className={`font-bold ${getPaymentColor(payment.amount)}`}>
-                            {payment.amount > 0 ? '+' : ''}{formatCurrency(payment.amount)}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(payment.payment_date), 'dd/MM/yyyy')}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditPayment(payment)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          {!isInitialRecord(payment) && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>¿Eliminar registro?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Esta acción eliminará permanentemente este registro de pago. Esta acción no se puede deshacer.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction 
-                                    onClick={() => handleDeletePayment(payment.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Eliminar
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
-                        </div>
-                      </div>
+                      ) : (
+                        /* Layout escritorio - Horizontal */
+                        <>
+                          <div className="flex items-center space-x-3 flex-1">
+                            <div 
+                              className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
+                              style={{ 
+                                backgroundColor: payment.transactions?.categories?.color || 'hsl(var(--primary))' 
+                              }}
+                            >
+                              {(payment.transactions?.subcategories?.icon || payment.transactions?.categories?.icon) && (
+                                <span className="text-sm">
+                                  {payment.transactions?.subcategories?.icon || payment.transactions?.categories?.icon}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-foreground">
+                                {payment.transactions?.subcategories?.name || payment.transactions?.categories?.name || getPaymentType(payment.amount)}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {payment.transactions?.accounts?.name}
+                              </p>
+                              {payment.description && (
+                                <p className="text-sm text-muted-foreground">
+                                  {payment.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <div className="text-right">
+                              <p className={`font-bold ${getPaymentColor(payment.amount)}`}>
+                                {payment.amount > 0 ? '+' : ''}{formatCurrency(payment.amount)}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(payment.payment_date), 'dd/MM/yyyy')}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditPayment(payment)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              {!isInitialRecord(payment) && (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>¿Eliminar registro?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Esta acción eliminará permanentemente este registro de pago. Esta acción no se puede deshacer.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                      <AlertDialogAction 
+                                        onClick={() => handleDeletePayment(payment.id)}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        Eliminar
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
