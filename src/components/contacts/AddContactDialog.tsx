@@ -224,7 +224,7 @@ export function AddContactDialog({ open, onOpenChange }: AddContactDialogProps) 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    {contactType === "persona" ? "Número de identificación" : "NIT"}
+                    {contactType === "persona" ? "Número de identificación" : "RUC"}
                   </FormLabel>
                   <FormControl>
                     <Input {...field} />

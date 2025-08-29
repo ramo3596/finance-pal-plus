@@ -284,7 +284,7 @@ export function EditContactDialog({ contact, open, onOpenChange }: EditContactDi
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    {contact.contact_type === "persona" ? "Número de identificación" : "NIT"}
+                    {contact.contact_type === "persona" ? "Número de identificación" : "RUC"}
                   </FormLabel>
                   <FormControl>
                     <Input {...field} />
