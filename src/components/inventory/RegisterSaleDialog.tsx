@@ -20,6 +20,7 @@ import { PaymentMethodSelect } from "@/components/shared/PaymentMethodSelect";
 import { ProductSelectionDialog } from "./ProductSelectionDialog";
 import { toast } from "@/hooks/use-toast";
 import { ShoppingCart, ArrowLeft, CheckCircle2, AlertTriangle } from "lucide-react";
+import { getCurrentLocalDate } from "@/utils/dateUtils";
 
 // Schema for paid sales
 const paidSaleSchema = z.object({
@@ -76,7 +77,7 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
   const form = useForm<SaleFormData>({
     resolver: zodResolver(getSaleSchema(saleType)),
     defaultValues: {
-      date: new Date().toISOString().split('T')[0],
+      date: getCurrentLocalDate(),
       discount_percentage: 0,
       discount_amount: 0,
     },

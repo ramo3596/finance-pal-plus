@@ -19,6 +19,7 @@ import { PaymentMethodSelect } from "@/components/shared/PaymentMethodSelect";
 import { ProductSelectionDialog } from "./ProductSelectionDialog";
 import { toast } from "@/hooks/use-toast";
 import { ShoppingCart } from "lucide-react";
+import { getCurrentLocalDate } from "@/utils/dateUtils";
 
 // Schema for paid transactions
 const paidPurchaseSchema = z.object({
@@ -77,7 +78,7 @@ export function RegisterPurchaseDialog({ open, onOpenChange }: RegisterPurchaseD
   const form = useForm<PurchaseFormData>({
     resolver: zodResolver(getPurchaseSchema(transactionType)),
     defaultValues: {
-      date: new Date().toISOString().split('T')[0],
+      date: getCurrentLocalDate(),
       total_amount: 0,
     },
   });
