@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { useInventory } from "@/hooks/useInventory";
 import { Edit, Trash2, Package } from "lucide-react";
 import { Product } from "@/hooks/useInventory";
+import { ImageModal } from "@/components/shared/ImageModal";
+import { useState } from "react";
 
 interface InventoryListProps {
   filters: {
@@ -17,6 +19,7 @@ interface InventoryListProps {
 
 export function InventoryList({ filters, onEditProduct, onDeleteProduct }: InventoryListProps) {
   const { products, loading } = useInventory();
+  const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null);
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = filters.search === "" || 
@@ -76,7 +79,8 @@ export function InventoryList({ filters, onEditProduct, onDeleteProduct }: Inven
                   <img 
                     src={product.image_url} 
                     alt={product.name}
-                    className="w-full h-full object-contain rounded-md"
+                    className="w-full h-full object-contain rounded-md cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => setSelectedImage({ url: product.image_url!, alt: product.name })}
                   />
                 ) : (
                   <Package className="h-8 w-8 text-muted-foreground" />
@@ -165,7 +169,8 @@ export function InventoryList({ filters, onEditProduct, onDeleteProduct }: Inven
                   <img 
                     src={product.image_url} 
                     alt={product.name}
-                    className="w-full h-full object-contain rounded-md"
+                    className="w-full h-full object-contain rounded-md cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => setSelectedImage({ url: product.image_url!, alt: product.name })}
                   />
                 ) : (
                   <Package className="h-6 w-6 text-muted-foreground" />
@@ -246,6 +251,16 @@ export function InventoryList({ filters, onEditProduct, onDeleteProduct }: Inven
           </CardContent>
         </Card>
       ))}
+      
+      {/* Image Modal */}
+      {selectedImage && (
+        <ImageModal
+          isOpen={!!selectedImage}
+          onClose={() => setSelectedImage(null)}
+          imageUrl={selectedImage.url}
+          altText={selectedImage.alt}
+        />
+      )}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { RecordsFilters as RecordsFiltersComponent } from "@/components/records/
 import { ProductStatisticsHeader } from "@/components/statistics/ProductStatisticsHeader";
 import { StatisticsFilters } from "@/pages/Statistics";
 import { subDays, isWithinInterval } from "date-fns";
+import { ImageModal } from "@/components/shared/ImageModal";
 
 interface ProductSale {
   productId: string;
@@ -26,6 +27,7 @@ export default function ProductStatistics() {
   const { products, loading: productsLoading } = useInventory();
   const { transactions, loading: transactionsLoading } = useTransactions();
   const navigate = useNavigate();
+  const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null);
 
   const [filters, setFilters] = useState<StatisticsFilters>({
     searchTerm: "",
@@ -283,36 +285,64 @@ export default function ProductStatistics() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {productSales.slice(0, 10).map((sale, index) => (
-                    <div key={sale.productId} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="text-xs">
-                          #{index + 1}
-                        </Badge>
-                        <div>
-                          <h3 className="font-medium">{sale.productName}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {sale.quantity} unidades vendidas
-                          </p>
+                  {productSales.slice(0, 10).map((sale, index) => {
+                    const product = products.find(p => p.id === sale.productId);
+                    return (
+                      <div key={sale.productId} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline" className="text-xs">
+                            #{index + 1}
+                          </Badge>
+                          
+                          {/* Product Image */}
+                           <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center overflow-hidden flex-shrink-0">
+                             {product?.image_url ? (
+                               <img 
+                                 src={product.image_url} 
+                                 alt={sale.productName}
+                                 className="w-full h-full object-contain rounded-md cursor-pointer hover:opacity-80 transition-opacity"
+                                 onClick={() => setSelectedImage({ url: product.image_url!, alt: sale.productName })}
+                               />
+                             ) : (
+                               <Package className="h-6 w-6 text-muted-foreground" />
+                             )}
+                           </div>
+                          
+                          <div>
+                            <h3 className="font-medium">{sale.productName}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {sale.quantity} unidades vendidas
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                          <div className="font-semibold">
+                            ${sale.revenue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Ganancia: ${sale.profit.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                          </div>
                         </div>
                       </div>
-                      
-                      <div className="text-right">
-                        <div className="font-semibold">
-                          ${sale.revenue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Ganancia: ${sale.profit.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
       </div>
+      
+      {/* Image Modal */}
+      {selectedImage && (
+        <ImageModal
+          isOpen={!!selectedImage}
+          onClose={() => setSelectedImage(null)}
+          imageUrl={selectedImage.url}
+          altText={selectedImage.alt}
+        />
+      )}
     </Layout>
   );
 }
