@@ -15,6 +15,7 @@ import { AddPaymentDialog } from "@/components/debts/AddPaymentDialog"
 import { DebtHistoryDialog } from "@/components/debts/DebtHistoryDialog"
 import { FloatingActionButton } from "@/components/shared/FloatingActionButton"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { cn } from "@/lib/utils"
 
 export default function Debts() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -73,7 +74,7 @@ export default function Debts() {
 
   return (
     <Layout>
-      <div className="container mx-auto space-y-6">
+      <div className={cn("container mx-auto space-y-6", isMobile ? "w-full px-4" : "")}>
         {/* Header */}
         <div className="flex flex-col space-y-4 md:flex-row md:justify-between md:items-center md:space-y-0">
           <h1 className="text-3xl font-bold">Deudas</h1>
@@ -107,17 +108,17 @@ export default function Debts() {
             <TabsTrigger value="closed">CERRADO</TabsTrigger>
           </TabsList>
 
-          <TabsContent value={statusFilter} className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TabsContent value={statusFilter} className={cn(isMobile ? "space-y-6 w-full" : "space-y-6")}>
+            <div className={cn(isMobile ? "space-y-6 w-full" : "grid gap-6 grid-cols-1 lg:grid-cols-2")}>
               {/* Debts Section */}
-              <div className="space-y-4">
+              <div className={cn("space-y-4", isMobile ? "w-full" : "")}>
                 <h2 className="text-xl font-semibold text-red-600">Me prestaron</h2>
                 {myDebts.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     No tienes deudas {statusFilter === 'active' ? 'activas' : 'cerradas'}
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className={cn("space-y-3", isMobile ? "w-full" : "grid grid-cols-1 gap-3")}>
                     {myDebts.map((debt) => (
                       <DebtCard
                         key={debt.id}
@@ -131,14 +132,14 @@ export default function Debts() {
               </div>
 
               {/* Loans Section */}
-              <div className="space-y-4">
+              <div className={cn("space-y-4", isMobile ? "w-full" : "")}>
                 <h2 className="text-xl font-semibold text-green-600">Prestó</h2>
                 {myLoans.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     No tienes préstamos {statusFilter === 'active' ? 'activos' : 'cerrados'}
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className={cn("space-y-3", isMobile ? "w-full" : "grid grid-cols-1 gap-3")}>
                     {myLoans.map((debt) => (
                       <DebtCard
                         key={debt.id}

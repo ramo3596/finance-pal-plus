@@ -7,6 +7,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Eye, Trash2 } from "lucide-react"
 import { type Debt } from "@/hooks/useDebts"
 import { useDebts } from "@/hooks/useDebts"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { cn } from "@/lib/utils"
 
 interface DebtCardProps {
   debt: Debt
@@ -15,6 +17,7 @@ interface DebtCardProps {
 }
 
 export function DebtCard({ debt, onAddPayment, onViewHistory }: DebtCardProps) {
+  const isMobile = useIsMobile()
   const { deleteDebt } = useDebts()
   const isDebt = debt.type === 'debt'
   const contactName = debt.contacts?.name || 'Contacto'
@@ -32,11 +35,12 @@ export function DebtCard({ debt, onAddPayment, onViewHistory }: DebtCardProps) {
 
   return (
     <Card 
-      className="cursor-pointer hover:shadow-md transition-shadow"
+      className={cn("cursor-pointer hover:shadow-md transition-shadow h-full", isMobile ? "w-full" : "")}
       onClick={onViewHistory}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
+      <CardContent className="p-4 h-full flex flex-col">
+        {/* Desktop Layout */}
+        <div className="hidden md:flex items-start justify-between">
           <div className="flex items-center space-x-3 flex-1">
             <Avatar className="h-12 w-12">
               <AvatarImage src={debt.contacts?.image_url} />
@@ -133,6 +137,36 @@ export function DebtCard({ debt, onAddPayment, onViewHistory }: DebtCardProps) {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+          </div>
+        </div>
+
+        {/* Mobile Layout - Simplified */}
+        <div className="md:hidden flex items-center w-full space-x-3">
+          {/* Avatar */}
+          <Avatar className="h-12 w-12 flex-shrink-0">
+            <AvatarImage src={debt.contacts?.image_url} />
+            <AvatarFallback>
+              {contactName.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          
+          {/* Content - Takes remaining space */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2 mb-1">
+              <span className="text-sm font-medium text-muted-foreground">
+                {isDebt ? 'DEBO' : 'ME DEBEN'}
+              </span>
+              <span className="font-semibold truncate">{contactName}</span>
+            </div>
+            
+            <div className="flex items-center justify-between text-sm">
+              <span className={`font-semibold ${debt.current_balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {formatCurrency(debt.current_balance)}
+              </span>
+              <span className="text-muted-foreground text-xs">
+                {format(new Date(debt.updated_at), 'dd/MM/yyyy')}
+              </span>
+            </div>
           </div>
         </div>
       </CardContent>
