@@ -224,9 +224,7 @@ export const useTransactions = () => {
           debtPaymentUpdates.amount = updates.amount;
           
           // Recalcular el saldo basado en la suma de todos los registros
-          // Importar useDebts y usar calculateDebtBalance
-          const { useDebts } = await import('./useDebts');
-          const { calculateDebtBalance } = useDebts();
+          const { calculateDebtBalance } = await import('@/utils/debtUtils');
           const newBalance = await calculateDebtBalance(linkedDebtPayment.debt_id);
           
           await supabase
@@ -438,8 +436,7 @@ export const useTransactions = () => {
             .eq('id', linkedDebtPayment.id);
           
           // Recalcular el saldo basado en la suma de todos los registros restantes
-          const { useDebts } = await import('./useDebts');
-          const { calculateDebtBalance } = useDebts();
+          const { calculateDebtBalance } = await import('@/utils/debtUtils');
           const newBalance = await calculateDebtBalance(linkedDebtPayment.debt_id);
           
           await supabase
