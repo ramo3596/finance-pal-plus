@@ -9,6 +9,8 @@ import { Plus } from "lucide-react";
 import { Template } from "@/hooks/useSettings";
 import { PaymentMethodSelect } from "@/components/shared/PaymentMethodSelect";
 import { useContacts } from "@/hooks/useContacts";
+import { Autocomplete } from "@/components/ui/autocomplete";
+import { MultiSelectAutocomplete } from "@/components/ui/multi-select-autocomplete";
 
 interface AddTemplateDialogProps {
   onAdd: (template: Omit<Template, 'id' | 'created_at' | 'updated_at'>) => void;
@@ -104,29 +106,21 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags }: AddTemp
           </div>
           <div>
             <Label htmlFor="account_id">Cuenta</Label>
-            <Select value={formData.account_id} onValueChange={(value) => setFormData({ ...formData, account_id: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar cuenta" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Autocomplete
+              options={accounts.map(account => ({ id: account.id, name: account.name }))}
+              value={formData.account_id}
+              onValueChange={(value) => setFormData({ ...formData, account_id: value })}
+              placeholder="Buscar y seleccionar cuenta..."
+            />
           </div>
           <div>
             <Label htmlFor="category_id">Categoría</Label>
-            <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Autocomplete
+              options={categories.map(category => ({ id: category.id, name: category.name }))}
+              value={formData.category_id}
+              onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+              placeholder="Buscar y seleccionar categoría..."
+            />
           </div>
           <div>
             <Label htmlFor="payment_method">Método de pago</Label>
@@ -137,29 +131,20 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags }: AddTemp
           </div>
           <div>
             <Label htmlFor="beneficiary">Beneficiario</Label>
-            <Select 
-              value={contacts.find(c => c.name === formData.beneficiary)?.id || ""} 
+            <Autocomplete
+              options={contacts.map(contact => ({ 
+                id: contact.id, 
+                name: `${contact.name} (${contact.contact_type})` 
+              }))}
+              value={contacts.find(c => c.name === formData.beneficiary)?.id || ""}
               onValueChange={(value) => {
                 const contact = contacts.find(c => c.id === value);
                 if (contact) {
                   setFormData({ ...formData, beneficiary: contact.name });
                 }
               }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar contacto o escribir manual" />
-              </SelectTrigger>
-              <SelectContent>
-                {contacts.map((contact) => (
-                  <SelectItem key={contact.id} value={contact.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{contact.name}</span>
-                      <span className="text-xs text-muted-foreground">({contact.contact_type})</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Buscar contacto o escribir manual..."
+            />
             <Input
               placeholder="O escribir nombre manual"
               value={formData.beneficiary}
@@ -178,33 +163,18 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags }: AddTemp
           </div>
           <div>
             <Label htmlFor="tags">Etiquetas (opcional)</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {tags.map((tag) => (
-                <div key={tag.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                  <input
-                    type="checkbox"
-                    id={`tag-${tag.id}`}
-                    checked={formData.tag_ids.includes(tag.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setFormData({ 
-                          ...formData, 
-                          tag_ids: [...formData.tag_ids, tag.id] 
-                        });
-                      } else {
-                        setFormData({ 
-                          ...formData, 
-                          tag_ids: formData.tag_ids.filter(id => id !== tag.id) 
-                        });
-                      }
-                    }}
-                    className="rounded"
-                  />
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }}></div>
-                  <Label htmlFor={`tag-${tag.id}`} className="text-sm">{tag.name}</Label>
-                </div>
-              ))}
-            </div>
+            <MultiSelectAutocomplete
+              options={tags.map(tag => ({ 
+                id: tag.id, 
+                name: tag.name, 
+                color: tag.color 
+              }))}
+              selectedValues={formData.tag_ids}
+              onSelectionChange={(values) => setFormData({ ...formData, tag_ids: values })}
+              placeholder="Buscar y seleccionar etiquetas..."
+              showColors={true}
+              className="mt-2"
+            />
             {tags.length === 0 && (
               <p className="text-sm text-muted-foreground mt-2">
                 No hay etiquetas disponibles. Crea etiquetas en la sección de Etiquetas.
