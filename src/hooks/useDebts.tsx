@@ -68,38 +68,6 @@ export function useDebts() {
   const { createTransaction, refetch: refetchTransactions } = useTransactions()
   const { categories, createCategory, createSubcategory, refetch: refetchSettings } = useSettings()
 
-  const calculateDebtBalance = async (debtId: string): Promise<number> => {
-    try {
-      // Obtener información de la deuda para conocer su tipo
-      const { data: debt, error: debtError } = await supabase
-        .from('debts')
-        .select('type')
-        .eq('id', debtId)
-        .single()
-
-      if (debtError) throw debtError
-
-      const { data: payments, error } = await supabase
-        .from('debt_payments')
-        .select('amount')
-        .eq('debt_id', debtId)
-        .order('payment_date', { ascending: true })
-
-      if (error) throw error
-      
-      // Calcular el saldo sumando todos los registros
-      // Los valores ya están almacenados con los signos correctos:
-      // - Deudas ("Me prestaron"): valores negativos
-      // - Préstamos ("Prestó"): valores positivos
-      const totalBalance = (payments || []).reduce((sum, payment) => sum + payment.amount, 0)
-      // Multiplicar el resultado por -1 según la nueva lógica
-      return totalBalance * -1
-    } catch (error) {
-      console.error('Error calculating debt balance:', error)
-      return 0
-    }
-  }
-
   const fetchDebts = async () => {
     if (!user) return
 
@@ -124,15 +92,16 @@ export function useDebts() {
       if (error) throw error
       
       // Calcular el saldo real para cada deuda basado en la suma de registros
-      const debtsWithCalculatedBalance = await Promise.all(
-        (data as Debt[] || []).map(async (debt) => {
-          const calculatedBalance = await calculateDebtBalance(debt.id)
-          return {
-            ...debt,
-            current_balance: calculatedBalance
-          }
-        })
-      )
+        const debtsWithCalculatedBalance = await Promise.all(
+          (data as Debt[] || []).map(async (debt) => {
+            const { calculateDebtBalance } = await import('@/utils/debtUtils');
+            const calculatedBalance = await calculateDebtBalance(debt.id)
+            return {
+              ...debt,
+              current_balance: calculatedBalance
+            }
+          })
+        )
       
       setDebts(debtsWithCalculatedBalance)
     } catch (error) {
@@ -678,6 +647,7 @@ export function useDebts() {
       }
 
       // Recalcular el saldo basado en la suma de todos los registros
+      const { calculateDebtBalance } = await import('@/utils/debtUtils');
       const newBalance = await calculateDebtBalance(debtId)
       
       // Check if balance reaches exactly zero to close debt/loan
@@ -757,6 +727,7 @@ export function useDebts() {
       if (error) throw error
 
       // Recalcular el saldo basado en la suma de todos los registros restantes
+      const { calculateDebtBalance } = await import('@/utils/debtUtils');
       const newBalance = await calculateDebtBalance(debtId)
       await updateDebt(debtId, { 
         current_balance: newBalance,
@@ -842,6 +813,7 @@ export function useDebts() {
         }
         
         // Recalcular el saldo basado en la suma de todos los registros
+        const { calculateDebtBalance } = await import('@/utils/debtUtils');
         const newBalance = await calculateDebtBalance(debtId)
         
         // Check if balance reaches exactly zero to close debt/loan
@@ -922,7 +894,6 @@ export function useDebts() {
     addDebtPayment,
     deleteDebtPayment,
     updateDebtPayment,
-    reactivateDebt,
-    calculateDebtBalance
+    reactivateDebt
   }
 }
