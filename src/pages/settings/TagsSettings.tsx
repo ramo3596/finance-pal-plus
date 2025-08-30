@@ -68,7 +68,11 @@ export default function TagsSettings() {
           onClick={() => setShowAddTagDialog(true)}
         />
 
-        <AddTagDialog onAdd={createTag} />
+        <AddTagDialog 
+          open={showAddTagDialog}
+          onOpenChange={setShowAddTagDialog}
+          onAdd={createTag} 
+        />
       </div>
     </Layout>
   );
