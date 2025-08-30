@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import { useDebts } from "@/hooks/useDebts"
 import { useSettings } from "@/hooks/useSettings"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 const debtSchema = z.object({
   type: z.enum(['debt', 'loan']),
@@ -67,6 +68,7 @@ export function AddDebtDialog({ open, onOpenChange, contacts, accounts }: AddDeb
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const { createDebt } = useDebts()
   const { tags } = useSettings()
+  const isMobile = useIsMobile()
 
   const form = useForm<DebtFormData>({
     resolver: zodResolver(debtSchema),
@@ -105,7 +107,10 @@ export function AddDebtDialog({ open, onOpenChange, contacts, accounts }: AddDeb
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className={cn(
+        isMobile ? "max-w-full w-full h-full m-0 rounded-none" : "max-w-md max-h-[90vh]",
+        "overflow-y-auto"
+      )}>
         <DialogHeader>
           <DialogTitle>Nueva Deuda</DialogTitle>
         </DialogHeader>

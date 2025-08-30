@@ -20,8 +20,10 @@ import {
   Users,
   TrendingUp,
   Settings,
-  Shield
+  Shield,
+  ArrowLeft
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/hooks/useSettings";
@@ -34,6 +36,7 @@ export default function NotificationsSettings() {
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const { userSettings, updateUserSettings } = useSettings();
   const {
     notifications,
@@ -110,11 +113,23 @@ export default function NotificationsSettings() {
     <Layout>
       <div className="container mx-auto p-4 space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Configuración de Notificaciones</h1>
-            <p className="text-muted-foreground">
-              Gestiona tus preferencias de notificaciones y revisa las notificaciones recientes.
-            </p>
+          <div className="flex items-center gap-3">
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(-1)}
+                className="p-1 h-8 w-8"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Configuración de Notificaciones</h1>
+              <p className="text-muted-foreground">
+                Gestiona tus preferencias de notificaciones y revisa las notificaciones recientes.
+              </p>
+            </div>
           </div>
         </div>
 

@@ -1,16 +1,21 @@
 import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CreditCard, ArrowLeft } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import { AddAccountDialog } from "@/components/settings/AddAccountDialog";
 import { EditAccountDialog } from "@/components/settings/EditAccountDialog";
 import { DraggableAccountList } from "@/components/settings/DraggableAccountList";
 import { FloatingActionButton } from "@/components/shared/FloatingActionButton";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useNavigate } from "react-router-dom";
 
 export default function AccountsSettings() {
   const [showAddAccountDialog, setShowAddAccountDialog] = useState(false);
   const [editAccountId, setEditAccountId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
   const {
     accounts,
@@ -40,6 +45,11 @@ export default function AccountsSettings() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
+                {isMobile && (
+                  <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2">
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                )}
                 <CreditCard className="h-5 w-5" />
                 Gestión de Cuentas
               </span>

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { TrendingUp, TrendingDown, Edit, Trash2, X } from "lucide-react"
+import { TrendingUp, TrendingDown, Edit, Trash2, X, ArrowLeft } from "lucide-react"
 import { type Debt, type DebtPayment } from "@/hooks/useDebts"
 import { useDebts } from "@/hooks/useDebts"
 import { EditPaymentDialog } from "./EditPaymentDialog"
@@ -90,8 +90,17 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
       )}>
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className={cn("truncate", isMobile ? "text-lg" : "text-xl")}>
-              {isMobile ? debt.description : `${isDebt ? 'Historial de Deuda' : 'Historial de Préstamo'} - ${contactName}`}
+            {isMobile && (
+              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="mr-2">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <DialogTitle className={cn("flex-1 min-w-0", isMobile ? "text-lg" : "text-xl")}>
+              {isMobile ? (
+                <span className="truncate block">{debt.description}</span>
+              ) : (
+                <span className="truncate block">{`${isDebt ? 'Historial de Deuda' : 'Historial de Préstamo'} - ${contactName}`}</span>
+              )}
             </DialogTitle>
             <div className="flex items-center space-x-2">
               <AlertDialog>

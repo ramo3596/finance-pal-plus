@@ -12,7 +12,8 @@ import {
   Loader2,
   RotateCcw,
   Trash2,
-  Plus
+  Plus,
+  ArrowLeft
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -20,11 +21,13 @@ import { useSettings } from "@/hooks/useSettings";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 export default function ProfileSettings() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -296,6 +299,11 @@ export default function ProfileSettings() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
+                {isMobile && (
+                  <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2">
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                )}
                 <User className="h-5 w-5" />
                 Perfil de Usuario
               </span>

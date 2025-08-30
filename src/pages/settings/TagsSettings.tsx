@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tag, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useSettings } from "@/hooks/useSettings";
 import { AddTagDialog } from "@/components/settings/AddTagDialog";
 import { DraggableTagList } from "@/components/settings/DraggableTagList";
@@ -9,6 +12,8 @@ import { FloatingActionButton } from "@/components/shared/FloatingActionButton";
 
 export default function TagsSettings() {
   const [showAddTagDialog, setShowAddTagDialog] = useState(false);
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   const {
     tags,
@@ -36,6 +41,16 @@ export default function TagsSettings() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
+                {isMobile && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(-1)}
+                    className="p-1 h-8 w-8"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                )}
                 <Tag className="h-5 w-5" />
                 Definir Etiquetas
               </span>

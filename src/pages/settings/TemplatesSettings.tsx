@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Trash2 } from "lucide-react";
+import { FileText, Trash2, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useSettings } from "@/hooks/useSettings";
 import { AddTemplateDialog } from "@/components/settings/AddTemplateDialog";
 import { EditTemplateDialog } from "@/components/settings/EditTemplateDialog";
@@ -10,6 +12,8 @@ import { FloatingActionButton } from "@/components/shared/FloatingActionButton";
 
 export default function TemplatesSettings() {
   const [showAddTemplateDialog, setShowAddTemplateDialog] = useState(false);
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   const {
     templates,
@@ -35,6 +39,16 @@ export default function TemplatesSettings() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
+                {isMobile && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(-1)}
+                    className="p-1 h-8 w-8"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                )}
                 <FileText className="h-5 w-5" />
                 Administrar Plantillas
               </span>

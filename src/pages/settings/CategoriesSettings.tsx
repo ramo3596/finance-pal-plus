@@ -3,7 +3,9 @@ import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FolderOpen, Trash2 } from "lucide-react";
+import { FolderOpen, Trash2, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useSettings } from "@/hooks/useSettings";
 import { AddCategoryDialog } from "@/components/settings/AddCategoryDialog";
 import { AddSubcategoryDialog } from "@/components/settings/AddSubcategoryDialog";
@@ -14,6 +16,8 @@ import { FloatingActionButton } from "@/components/shared/FloatingActionButton";
 export default function CategoriesSettings() {
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   const {
     categories,
@@ -40,6 +44,16 @@ export default function CategoriesSettings() {
       <div className="container mx-auto p-6 pb-24">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(-1)}
+                className="p-1 h-8 w-8"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
             <FolderOpen className="h-5 w-5" />
             <h2 className="text-xl font-semibold">Administrar Categorías</h2>
           </div>
