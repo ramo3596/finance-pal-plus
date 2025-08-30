@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useInventory } from "@/hooks/useInventory";
+import { useSettings } from "@/hooks/useSettings";
 import { Edit, Trash2, Package } from "lucide-react";
 import { Product } from "@/hooks/useInventory";
 import { ImageModal } from "@/components/shared/ImageModal";
@@ -19,7 +20,14 @@ interface InventoryListProps {
 
 export function InventoryList({ filters, onEditProduct, onDeleteProduct }: InventoryListProps) {
   const { products, loading } = useInventory();
+  const { tags } = useSettings();
   const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null);
+
+  // Función para obtener el color de una etiqueta por su nombre
+  const getTagColor = (tagName: string) => {
+    const tag = tags.find(t => t.name === tagName);
+    return tag?.color || '#6b7280'; // Color por defecto si no se encuentra
+  };
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = filters.search === "" || 
@@ -127,7 +135,12 @@ export function InventoryList({ filters, onEditProduct, onDeleteProduct }: Inven
               {product.tags && product.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {product.tags.slice(0, 2).map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
+                    <Badge 
+                      key={index} 
+                      variant="secondary" 
+                      className="text-xs text-white"
+                      style={{ backgroundColor: getTagColor(tag) }}
+                    >
                       {tag}
                     </Badge>
                   ))}
@@ -215,7 +228,12 @@ export function InventoryList({ filters, onEditProduct, onDeleteProduct }: Inven
                 {product.tags && product.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {product.tags.slice(0, 2).map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
+                      <Badge 
+                        key={index} 
+                        variant="secondary" 
+                        className="text-xs text-white"
+                        style={{ backgroundColor: getTagColor(tag) }}
+                      >
                         {tag}
                       </Badge>
                     ))}
