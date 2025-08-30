@@ -43,7 +43,13 @@ export default function CategoriesSettings() {
             <FolderOpen className="h-5 w-5" />
             <h2 className="text-xl font-semibold">Administrar Categorías</h2>
           </div>
-
+          <div className="hidden md:block">
+            <AddCategoryDialog 
+              open={showAddCategoryDialog}
+              onOpenChange={setShowAddCategoryDialog}
+              onAdd={createCategory} 
+            />
+          </div>
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
