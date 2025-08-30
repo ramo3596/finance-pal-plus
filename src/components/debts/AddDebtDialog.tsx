@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Autocomplete } from "@/components/ui/autocomplete"
 import {
   Popover,
   PopoverContent,
@@ -137,20 +138,14 @@ export function AddDebtDialog({ open, onOpenChange, contacts, accounts }: AddDeb
                     <FormLabel>
                       {debtType === 'debt' ? 'Quien me ha prestado' : 'A quien he prestado'}
                     </FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona un contacto" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {contacts.map((contact) => (
-                          <SelectItem key={contact.id} value={contact.id}>
-                            {contact.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Autocomplete
+                        options={contacts}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Selecciona un contacto"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -179,20 +174,14 @@ export function AddDebtDialog({ open, onOpenChange, contacts, accounts }: AddDeb
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Cuenta</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona una cuenta" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {accounts.map((account) => (
-                          <SelectItem key={account.id} value={account.id}>
-                            {account.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Autocomplete
+                        options={accounts}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Selecciona una cuenta"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -303,33 +292,19 @@ export function AddDebtDialog({ open, onOpenChange, contacts, accounts }: AddDeb
               {/* Tags */}
               <div className="space-y-2">
                 <Label>Etiquetas</Label>
-                <Select
+                <Autocomplete
+                  options={tags
+                    .filter(tag => !selectedTags.includes(tag.name))
+                    .map(tag => ({ id: tag.name, name: tag.name }))
+                  }
+                  value=""
                   onValueChange={(value) => {
                     if (value && !selectedTags.includes(value)) {
                       setSelectedTags([...selectedTags, value])
                     }
                   }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar etiqueta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tags
-                      .filter(tag => !selectedTags.includes(tag.name))
-                      .map((tag) => (
-                        <SelectItem key={tag.id} value={tag.name}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: tag.color }}
-                            />
-                            {tag.name}
-                          </div>
-                        </SelectItem>
-                      ))
-                    }
-                  </SelectContent>
-                </Select>
+                  placeholder="Seleccionar etiqueta"
+                />
                 
                 {selectedTags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
