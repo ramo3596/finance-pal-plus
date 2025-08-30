@@ -9,6 +9,7 @@ import { Plus } from "lucide-react";
 import { Template } from "@/hooks/useSettings";
 import { PaymentMethodSelect } from "@/components/shared/PaymentMethodSelect";
 import { useContacts } from "@/hooks/useContacts";
+import { Autocomplete } from "@/components/ui/autocomplete";
 
 interface AddTemplateDialogProps {
   onAdd: (template: Omit<Template, 'id' | 'created_at' | 'updated_at'>) => void;
@@ -33,7 +34,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
     type: "Gastos",
     beneficiary: "",
     note: "",
-    tag_ids: [] as string[]
+    tag_id: ""
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -44,7 +45,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
       category_id: formData.category_id || undefined,
       beneficiary: formData.beneficiary || undefined,
       note: formData.note || undefined,
-      tag_ids: formData.tag_ids.length > 0 ? formData.tag_ids : undefined
+      tag_ids: formData.tag_id ? [formData.tag_id] : undefined
     } as any);
     setFormData({ 
       name: "", 
@@ -55,7 +56,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
       type: "Gastos",
       beneficiary: "",
       note: "",
-      tag_ids: []
+      tag_id: ""
     });
     setOpen(false);
   };
@@ -183,34 +184,17 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
             />
           </div>
           <div>
-            <Label htmlFor="tags">Etiquetas (opcional)</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {tags.map((tag) => (
-                <div key={tag.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                  <input
-                    type="checkbox"
-                    id={`tag-${tag.id}`}
-                    checked={formData.tag_ids.includes(tag.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setFormData({ 
-                          ...formData, 
-                          tag_ids: [...formData.tag_ids, tag.id] 
-                        });
-                      } else {
-                        setFormData({ 
-                          ...formData, 
-                          tag_ids: formData.tag_ids.filter(id => id !== tag.id) 
-                        });
-                      }
-                    }}
-                    className="rounded"
-                  />
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }}></div>
-                  <Label htmlFor={`tag-${tag.id}`} className="text-sm">{tag.name}</Label>
-                </div>
-              ))}
-            </div>
+            <Label htmlFor="tags">Etiqueta (opcional)</Label>
+            <Autocomplete
+              options={tags.map(tag => ({
+                id: tag.id,
+                name: tag.name
+              }))}
+              value={formData.tag_id}
+              onValueChange={(value) => setFormData({ ...formData, tag_id: value })}
+              placeholder="Buscar etiqueta..."
+              className="mt-2"
+            />
             {tags.length === 0 && (
               <p className="text-sm text-muted-foreground mt-2">
                 No hay etiquetas disponibles. Crea etiquetas en la sección de Etiquetas.
