@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Autocomplete } from '@/components/ui/autocomplete';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -146,20 +147,15 @@ export const TransferScheduledForm = ({ onClose }: TransferScheduledFormProps) =
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Cuenta origen *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar cuenta origen" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {accounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Autocomplete
+                    options={accounts.map((account) => ({
+                      id: account.id,
+                      name: account.name,
+                    }))}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder="Seleccionar cuenta origen"
+                  />
                   <FormMessage />
                 </FormItem>
               )}
@@ -172,20 +168,15 @@ export const TransferScheduledForm = ({ onClose }: TransferScheduledFormProps) =
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Cuenta destino *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar cuenta destino" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {availableToAccounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Autocomplete
+                    options={availableToAccounts.map((account) => ({
+                      id: account.id,
+                      name: account.name,
+                    }))}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder="Seleccionar cuenta destino"
+                  />
                   <FormMessage />
                 </FormItem>
               )}
@@ -245,20 +236,15 @@ export const TransferScheduledForm = ({ onClose }: TransferScheduledFormProps) =
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Contacto relacionado</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar contacto" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {contacts.map((contact) => (
-                        <SelectItem key={contact.id} value={contact.id}>
-                          {contact.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Autocomplete
+                    options={contacts.map((contact) => ({
+                      id: contact.id,
+                      name: contact.name,
+                    }))}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder="Seleccionar contacto"
+                  />
                   <FormMessage />
                 </FormItem>
               )}

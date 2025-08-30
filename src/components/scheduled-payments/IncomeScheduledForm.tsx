@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Autocomplete } from '@/components/ui/autocomplete';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -143,23 +144,17 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoría</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar categoría" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {incomeCategories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          <div className="flex items-center gap-2">
-                            <span>{category.icon}</span>
-                            <span>{category.name}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <Autocomplete
+                       options={categories.map(category => ({
+                         id: category.id,
+                         name: category.name
+                       }))}
+                       value={field.value}
+                       onValueChange={field.onChange}
+                       placeholder="Seleccionar categoría"
+                     />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -172,20 +167,17 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Cuenta *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar cuenta" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {accounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <Autocomplete
+                       options={accounts.map(account => ({
+                         id: account.id,
+                         name: account.name
+                       }))}
+                       value={field.value}
+                       onValueChange={field.onChange}
+                       placeholder="Seleccionar cuenta"
+                     />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -245,20 +237,17 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Pagador</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar contacto" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {contacts.map((contact) => (
-                        <SelectItem key={contact.id} value={contact.id}>
-                          {contact.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <Autocomplete
+                       options={contacts.map(contact => ({
+                         id: contact.id,
+                         name: contact.name
+                       }))}
+                       value={field.value}
+                       onValueChange={field.onChange}
+                       placeholder="Seleccionar contacto"
+                     />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
