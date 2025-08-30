@@ -165,45 +165,53 @@ export function TransactionItem({
           </div>
           
           <div className="flex items-center space-x-2">
-            {/* Amount */}
-            <span className={cn(
-              "text-sm font-bold min-w-[80px] text-right",
-              (() => {
-                // Lógica específica para categorías de deudas y préstamos
-                if (categoryData?.name === 'Ingresos') {
-                  return "text-green-600"; // Ingresos siempre positivos
-                }
-                if (categoryData?.name === 'Gastos financieros') {
-                  return "text-red-600"; // Gastos financieros siempre negativos
-                }
-                return transaction.amount >= 0 ? "text-green-600" : "text-red-600";
-              })()
-            )}>
-              {(() => {
-                // Lógica específica para categorías de deudas y préstamos
-                if (categoryData?.name === 'Ingresos') {
-                  // Ingresos siempre mostrar como positivo
-                  const displayAmount = Math.abs(transaction.amount);
-                  return `+${new Intl.NumberFormat('en-US', {
+            {/* Amount and Date */}
+            <div className="flex flex-col items-end min-w-[80px]">
+              <span className={cn(
+                "text-sm font-bold text-right",
+                (() => {
+                  // Lógica específica para categorías de deudas y préstamos
+                  if (categoryData?.name === 'Ingresos') {
+                    return "text-green-600"; // Ingresos siempre positivos
+                  }
+                  if (categoryData?.name === 'Gastos financieros') {
+                    return "text-red-600"; // Gastos financieros siempre negativos
+                  }
+                  return transaction.amount >= 0 ? "text-green-600" : "text-red-600";
+                })()
+              )}>
+                {(() => {
+                  // Lógica específica para categorías de deudas y préstamos
+                  if (categoryData?.name === 'Ingresos') {
+                    // Ingresos siempre mostrar como positivo
+                    const displayAmount = Math.abs(transaction.amount);
+                    return `+${new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: 'USD'
+                    }).format(displayAmount)}`;
+                  }
+                  if (categoryData?.name === 'Gastos financieros') {
+                    // Gastos financieros siempre mostrar como negativo
+                    const displayAmount = Math.abs(transaction.amount);
+                    return `-${new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: 'USD'
+                    }).format(displayAmount)}`;
+                  }
+                  // Para otras categorías, usar lógica normal
+                  return `${transaction.amount > 0 ? '+' : ''}${new Intl.NumberFormat('en-US', {
                     style: 'currency',
                     currency: 'USD'
-                  }).format(displayAmount)}`;
-                }
-                if (categoryData?.name === 'Gastos financieros') {
-                  // Gastos financieros siempre mostrar como negativo
-                  const displayAmount = Math.abs(transaction.amount);
-                  return `-${new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD'
-                  }).format(displayAmount)}`;
-                }
-                // Para otras categorías, usar lógica normal
-                return `${transaction.amount > 0 ? '+' : ''}${new Intl.NumberFormat('en-US', {
-                  style: 'currency',
-                  currency: 'USD'
-                }).format(transaction.amount)}`;
-              })()}
-            </span>
+                  }).format(transaction.amount)}`;
+                })()}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {new Date(transaction.transaction_date).toLocaleDateString('es-ES', {
+                  day: 'numeric',
+                  month: 'short'
+                })}
+              </span>
+            </div>
             
             {/* Actions Menu */}
             {(onEdit || onDelete) && (
