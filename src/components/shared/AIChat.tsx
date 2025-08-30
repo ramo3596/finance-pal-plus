@@ -16,7 +16,11 @@ interface Message {
   timestamp: Date;
 }
 
-export function AIChat() {
+interface AIChatProps {
+  isDashboard?: boolean;
+}
+
+export function AIChat({ isDashboard = false }: AIChatProps) {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -129,7 +133,12 @@ export function AIChat() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className={cn(
+      "fixed z-50",
+      isDashboard 
+        ? "bottom-[88px] right-6" // Above the (+) button on mobile dashboard
+        : "bottom-6 right-6"      // Normal position on other pages
+    )}>
       {!isOpen ? (
         <Button
           onClick={() => setIsOpen(true)}

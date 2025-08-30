@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader } from "lucide-react";
 import { FloatingActionButton } from "@/components/shared/FloatingActionButton";
 import { AddTransaction } from "@/components/AddTransaction";
+import { AIChat } from "@/components/shared/AIChat";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -37,6 +38,8 @@ const Index = () => {
       <FloatingActionButton 
         onClick={() => setShowAddTransaction(true)}
       />
+
+      <AIChat isDashboard={true} />
 
       <AddTransaction
         open={showAddTransaction}
