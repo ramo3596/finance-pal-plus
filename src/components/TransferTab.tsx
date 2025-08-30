@@ -1,7 +1,7 @@
 import { Wallet, ArrowRightLeft } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Autocomplete } from "@/components/ui/autocomplete";
 import { Account } from "@/hooks/useSettings";
 
 interface TransferTabProps {
@@ -28,52 +28,28 @@ export function TransferTab({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="fromAccount">Cuenta origen</Label>
-          <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-            <SelectTrigger>
-              <div className="flex items-center space-x-2">
-                <Wallet className="h-4 w-4" />
-                <SelectValue placeholder="Desde cuenta" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {accounts.filter(acc => acc.id !== toAccount).map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  <div className="flex items-center space-x-2">
-                    <span>{account.icon}</span>
-                    <span>{account.name}</span>
-                    <span className="text-muted-foreground text-xs">
-                      (${account.balance?.toFixed(2) || '0.00'})
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Autocomplete
+            options={accounts.filter(acc => acc.id !== toAccount).map(account => ({
+              id: account.id,
+              name: `${account.icon} ${account.name} ($${account.balance?.toFixed(2) || '0.00'})`
+            }))}
+            value={selectedAccount}
+            onValueChange={setSelectedAccount}
+            placeholder="Buscar cuenta origen..."
+          />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="toAccount">Cuenta destino</Label>
-          <Select value={toAccount} onValueChange={setToAccount}>
-            <SelectTrigger>
-              <div className="flex items-center space-x-2">
-                <Wallet className="h-4 w-4" />
-                <SelectValue placeholder="Hacia cuenta" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {accounts.filter(acc => acc.id !== selectedAccount).map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  <div className="flex items-center space-x-2">
-                    <span>{account.icon}</span>
-                    <span>{account.name}</span>
-                    <span className="text-muted-foreground text-xs">
-                      (${account.balance?.toFixed(2) || '0.00'})
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Autocomplete
+            options={accounts.filter(acc => acc.id !== selectedAccount).map(account => ({
+              id: account.id,
+              name: `${account.icon} ${account.name} ($${account.balance?.toFixed(2) || '0.00'})`
+            }))}
+            value={toAccount}
+            onValueChange={setToAccount}
+            placeholder="Buscar cuenta destino..."
+          />
         </div>
       </div>
 

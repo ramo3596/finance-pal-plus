@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Autocomplete } from "@/components/ui/autocomplete";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExpenseTab } from "./ExpenseTab";
@@ -316,24 +317,18 @@ export function AddTransaction({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Categoría</Label>
-              <Select value={selectedCategory} onValueChange={(value) => {
-                setSelectedCategory(value);
-                setSelectedSubcategory(""); // Reset subcategory when category changes
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{category.icon}</span>
-                        <span>{category.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Autocomplete
+                options={categories.map(category => ({
+                  id: category.id,
+                  name: `${category.icon} ${category.name}`
+                }))}
+                value={selectedCategory}
+                onValueChange={(value) => {
+                  setSelectedCategory(value);
+                  setSelectedSubcategory(""); // Reset subcategory when category changes
+                }}
+                placeholder="Buscar categoría..."
+              />
               
               {/* Subcategory selector - only show if category is selected and has subcategories */}
               {selectedCategory && (() => {
@@ -363,31 +358,22 @@ export function AddTransaction({
 
             <div className="space-y-2">
               <Label htmlFor="tags">Etiquetas</Label>
-              <Select value={selectedTags.length > 0 ? selectedTags[0] : "none"} onValueChange={(value) => {
-                if (value && value !== "none") {
-                  const selectedTag = tags.find(tag => tag.id === value);
-                  if (selectedTag && !selectedTags.includes(selectedTag.name)) {
-                    setSelectedTags([...selectedTags, selectedTag.name]);
+              <Autocomplete
+                options={tags.filter(tag => tag.id && tag.id.trim() !== '').map(tag => ({
+                  id: tag.id,
+                  name: tag.name
+                }))}
+                value={""}
+                onValueChange={(value) => {
+                  if (value) {
+                    const selectedTag = tags.find(tag => tag.id === value);
+                    if (selectedTag && !selectedTags.includes(selectedTag.name)) {
+                      setSelectedTags([...selectedTags, selectedTag.name]);
+                    }
                   }
-                }
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar etiquetas" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tags.filter(tag => tag.id && tag.id.trim() !== '').map((tag) => (
-                    <SelectItem key={tag.id} value={tag.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: tag.color }}
-                        />
-                        <span>{tag.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                }}
+                placeholder="Buscar etiquetas..."
+              />
               {selectedTags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {selectedTags.map((tagName, index) => {
@@ -431,21 +417,15 @@ export function AddTransaction({
                 <Label htmlFor="contact">
                   {transactionType === "expense" ? "Beneficiario (Contacto)" : transactionType === "income" ? "Pagador (Contacto)" : "Contacto"}
                 </Label>
-                <Select value={selectedContact} onValueChange={setSelectedContact}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar contacto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contacts.map((contact) => (
-                      <SelectItem key={contact.id} value={contact.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{contact.name}</span>
-                          <span className="text-xs text-muted-foreground">({contact.contact_type})</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Autocomplete
+                  options={contacts.map(contact => ({
+                    id: contact.id,
+                    name: `${contact.name} (${contact.contact_type})`
+                  }))}
+                  value={selectedContact}
+                  onValueChange={setSelectedContact}
+                  placeholder="Buscar contacto..."
+                />
               </div>
 
               <div className="space-y-2">
