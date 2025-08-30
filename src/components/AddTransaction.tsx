@@ -5,8 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Autocomplete } from "@/components/ui/autocomplete";
-import { MultiSelectAutocomplete } from "@/components/ui/multi-select-autocomplete";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExpenseTab } from "./ExpenseTab";
@@ -18,12 +16,10 @@ import { useContacts } from "@/hooks/useContacts";
 interface AddTransactionProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  defaultTab?: "expense" | "income" | "transfer";
 }
 export function AddTransaction({
   open,
-  onOpenChange,
-  defaultTab = "expense"
+  onOpenChange
 }: AddTransactionProps) {
   const { 
     accounts, 
@@ -36,7 +32,7 @@ export function AddTransaction({
   const { createTransaction } = useTransactions();
   const { contacts } = useContacts();
   
-  const [transactionType, setTransactionType] = useState<"expense" | "income" | "transfer">(defaultTab);
+  const [transactionType, setTransactionType] = useState<"expense" | "income" | "transfer">("expense");
   const [amount, setAmount] = useState("0");
   const [selectedAccount, setSelectedAccount] = useState("");
   const [toAccount, setToAccount] = useState(""); // For transfers
@@ -62,12 +58,6 @@ export function AddTransaction({
   const [paymentMethod, setPaymentMethod] = useState("");
   const [location, setLocation] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState("");
-  
-  // Update transaction type when defaultTab changes
-  useEffect(() => {
-    setTransactionType(defaultTab);
-  }, [defaultTab]);
-  
   // Function to apply template data
   const applyTemplate = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
@@ -326,18 +316,24 @@ export function AddTransaction({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Categoría</Label>
-              <Autocomplete
-                 value={selectedCategory}
-                 onValueChange={(value) => {
-                   setSelectedCategory(value);
-                   setSelectedSubcategory(""); // Reset subcategory when category changes
-                 }}
-                 options={categories.map(category => ({
-                    id: category.id,
-                    name: `${category.icon} ${category.name}`
-                  }))}
-                 placeholder="Seleccionar categoría"
-               />
+              <Select value={selectedCategory} onValueChange={(value) => {
+                setSelectedCategory(value);
+                setSelectedSubcategory(""); // Reset subcategory when category changes
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{category.icon}</span>
+                        <span>{category.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               
               {/* Subcategory selector - only show if category is selected and has subcategories */}
               {selectedCategory && (() => {
@@ -367,16 +363,54 @@ export function AddTransaction({
 
             <div className="space-y-2">
               <Label htmlFor="tags">Etiquetas</Label>
-              <MultiSelectAutocomplete
-                selectedValues={selectedTags}
-                onSelectionChange={setSelectedTags}
-                options={tags.filter(tag => tag.id && tag.id.trim() !== '').map(tag => ({
-                  id: tag.id,
-                  name: tag.name,
-                  color: tag.color
-                }))}
-                placeholder="Seleccionar etiquetas"
-              />
+              <Select value={selectedTags.length > 0 ? selectedTags[0] : "none"} onValueChange={(value) => {
+                if (value && value !== "none") {
+                  const selectedTag = tags.find(tag => tag.id === value);
+                  if (selectedTag && !selectedTags.includes(selectedTag.name)) {
+                    setSelectedTags([...selectedTags, selectedTag.name]);
+                  }
+                }
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar etiquetas" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tags.filter(tag => tag.id && tag.id.trim() !== '').map((tag) => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        <span>{tag.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedTags.map((tagName, index) => {
+                    const tag = tags.find(t => t.name === tagName);
+                    return tag ? (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded"
+                        style={{ backgroundColor: tag.color, color: 'white' }}
+                      >
+                        {tag.name}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTags(selectedTags.filter((_, i) => i !== index))}
+                          className="ml-1 hover:bg-black/20 rounded-full w-4 h-4 flex items-center justify-center"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -397,15 +431,21 @@ export function AddTransaction({
                 <Label htmlFor="contact">
                   {transactionType === "expense" ? "Beneficiario (Contacto)" : transactionType === "income" ? "Pagador (Contacto)" : "Contacto"}
                 </Label>
-                <Autocomplete
-                   value={selectedContact}
-                   onValueChange={setSelectedContact}
-                   options={contacts.map(contact => ({
-                     id: contact.id,
-                     name: `${contact.name} (${contact.contact_type})`
-                   }))}
-                   placeholder="Seleccionar contacto"
-                 />
+                <Select value={selectedContact} onValueChange={setSelectedContact}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar contacto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contacts.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{contact.name}</span>
+                          <span className="text-xs text-muted-foreground">({contact.contact_type})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

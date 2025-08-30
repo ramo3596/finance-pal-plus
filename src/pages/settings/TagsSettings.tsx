@@ -34,9 +34,14 @@ export default function TagsSettings() {
       <div className="container mx-auto p-6 pb-24">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Tag className="h-5 w-5" />
-              Definir Etiquetas
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Tag className="h-5 w-5" />
+                Definir Etiquetas
+              </span>
+              <div className="hidden md:block">
+                <AddTagDialog onAdd={createTag} />
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -63,11 +68,7 @@ export default function TagsSettings() {
           onClick={() => setShowAddTagDialog(true)}
         />
 
-        <AddTagDialog 
-          open={showAddTagDialog}
-          onOpenChange={setShowAddTagDialog}
-          onAdd={createTag} 
-        />
+        <AddTagDialog onAdd={createTag} />
       </div>
     </Layout>
   );

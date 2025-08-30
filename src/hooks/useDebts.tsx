@@ -2,8 +2,8 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "./useAuth"
 import { toast } from "sonner"
-import { createTransactionDirectly } from "@/utils/transactionUtils"
-import { createCategoryDirectly, createSubcategoryDirectly, fetchCategoriesDirectly } from "@/utils/settingsUtils"
+import { useTransactions } from "./useTransactions"
+import { useSettings } from "./useSettings"
 
 export interface Debt {
   id: string
@@ -65,6 +65,40 @@ export function useDebts() {
   const [debtPayments, setDebtPayments] = useState<DebtPayment[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
+  const { createTransaction, refetch: refetchTransactions } = useTransactions()
+  const { categories, createCategory, createSubcategory, refetch: refetchSettings } = useSettings()
+
+  const calculateDebtBalance = async (debtId: string): Promise<number> => {
+    try {
+      // Obtener información de la deuda para conocer su tipo
+      const { data: debt, error: debtError } = await supabase
+        .from('debts')
+        .select('type')
+        .eq('id', debtId)
+        .single()
+
+      if (debtError) throw debtError
+
+      const { data: payments, error } = await supabase
+        .from('debt_payments')
+        .select('amount')
+        .eq('debt_id', debtId)
+        .order('payment_date', { ascending: true })
+
+      if (error) throw error
+      
+      // Calcular el saldo sumando todos los registros
+      // Los valores ya están almacenados con los signos correctos:
+      // - Deudas ("Me prestaron"): valores negativos
+      // - Préstamos ("Prestó"): valores positivos
+      const totalBalance = (payments || []).reduce((sum, payment) => sum + payment.amount, 0)
+      // Multiplicar el resultado por -1 según la nueva lógica
+      return totalBalance * -1
+    } catch (error) {
+      console.error('Error calculating debt balance:', error)
+      return 0
+    }
+  }
 
   const fetchDebts = async () => {
     if (!user) return
@@ -90,16 +124,15 @@ export function useDebts() {
       if (error) throw error
       
       // Calcular el saldo real para cada deuda basado en la suma de registros
-        const debtsWithCalculatedBalance = await Promise.all(
-          (data as Debt[] || []).map(async (debt) => {
-            const { calculateDebtBalance } = await import('@/utils/debtUtils');
-            const calculatedBalance = await calculateDebtBalance(debt.id)
-            return {
-              ...debt,
-              current_balance: calculatedBalance
-            }
-          })
-        )
+      const debtsWithCalculatedBalance = await Promise.all(
+        (data as Debt[] || []).map(async (debt) => {
+          const calculatedBalance = await calculateDebtBalance(debt.id)
+          return {
+            ...debt,
+            current_balance: calculatedBalance
+          }
+        })
+      )
       
       setDebts(debtsWithCalculatedBalance)
     } catch (error) {
@@ -205,7 +238,7 @@ export function useDebts() {
     let expenseCategory = currentCategories.find(c => c.name === 'Gastos financieros')
     if (!expenseCategory) {
       try {
-        const newExpenseCategory = await createCategoryDirectly(user.id, {
+        const newExpenseCategory = await createCategory({
           name: 'Gastos financieros',
           color: '#ef4444', // Red color for expenses
           icon: '💰',
@@ -214,6 +247,8 @@ export function useDebts() {
         if (newExpenseCategory) {
           expenseCategory = newExpenseCategory as any
           console.log('Created expense category:', expenseCategory)
+          // Refresh settings to update local state
+          await refetchSettings()
         }
       } catch (error) {
         console.error('Error creating expense category:', error)
@@ -224,7 +259,7 @@ export function useDebts() {
     let incomeCategory = currentCategories.find(c => c.name === 'Ingresos')
     if (!incomeCategory) {
       try {
-        const newIncomeCategory = await createCategoryDirectly(user.id, {
+        const newIncomeCategory = await createCategory({
           name: 'Ingresos',
           color: '#22c55e', // Green color for income
           icon: '💵',
@@ -233,6 +268,8 @@ export function useDebts() {
         if (newIncomeCategory) {
           incomeCategory = newIncomeCategory as any
           console.log('Created income category:', incomeCategory)
+          // Refresh settings to update local state
+          await refetchSettings()
         }
       } catch (error) {
         console.error('Error creating income category:', error)
@@ -256,7 +293,7 @@ export function useDebts() {
     let comisionSubcategory = finalExpenseCategory?.subcategories?.find(s => s.name === 'Comisión')
     if (!comisionSubcategory && finalExpenseCategory) {
       try {
-        const newComisionSubcategory = await createSubcategoryDirectly({
+        const newComisionSubcategory = await createSubcategory({
           name: 'Comisión',
           category_id: finalExpenseCategory.id,
           icon: '💳'
@@ -264,6 +301,8 @@ export function useDebts() {
         if (newComisionSubcategory) {
           comisionSubcategory = newComisionSubcategory as any
           console.log('Created comision subcategory:', comisionSubcategory)
+          // Refresh settings to update local state
+          await refetchSettings()
         }
       } catch (error) {
         console.error('Error creating comision subcategory:', error)
@@ -274,7 +313,7 @@ export function useDebts() {
     let prestamosSubcategory = finalIncomeCategory?.subcategories?.find(s => s.name === 'Préstamos, alquileres')
     if (!prestamosSubcategory && finalIncomeCategory) {
       try {
-        const newPrestamosSubcategory = await createSubcategoryDirectly({
+        const newPrestamosSubcategory = await createSubcategory({
           name: 'Préstamos, alquileres',
           category_id: finalIncomeCategory.id,
           icon: '🏠'
@@ -282,6 +321,8 @@ export function useDebts() {
         if (newPrestamosSubcategory) {
           prestamosSubcategory = newPrestamosSubcategory as any
           console.log('Created prestamos subcategory:', prestamosSubcategory)
+          // Refresh settings to update local state
+          await refetchSettings()
         }
       } catch (error) {
         console.error('Error creating prestamos subcategory:', error)
@@ -337,7 +378,7 @@ export function useDebts() {
           ? `Deuda - ${contactData?.name || 'contacto'}` 
           : `Préstamo - ${contactData?.name || 'contacto'}`
 
-        await createTransactionDirectly(user.id, {
+        await createTransaction({
           type: transactionType,
           amount: debtData.initial_amount,
           account_id: debtData.account_id,
@@ -367,6 +408,7 @@ export function useDebts() {
         })
       
       await fetchDebts()
+      refetchTransactions() // Refresh transactions to show in Records page
       toast.success('Deuda creada exitosamente')
       return data
     } catch (error) {
@@ -462,6 +504,7 @@ export function useDebts() {
       }
       
       await fetchDebts()
+      refetchTransactions() // Refresh transactions to show changes in Records page
       toast.success('Deuda actualizada exitosamente')
     } catch (error) {
       console.error('Error updating debt:', error)
@@ -535,6 +578,7 @@ export function useDebts() {
       if (error) throw error
       
       await fetchDebts()
+      refetchTransactions() // Refresh transactions to show changes in Records page
       toast.success('Deuda eliminada exitosamente')
     } catch (error) {
       console.error('Error deleting debt:', error)
@@ -610,7 +654,7 @@ export function useDebts() {
         }
 
         try {
-          const createdTransaction = await createTransactionDirectly(user.id, transactionData)
+          const createdTransaction = await createTransaction(transactionData)
           console.log('Created transaction for debt payment:', createdTransaction)
           if (createdTransaction && typeof createdTransaction === 'object') {
             if (Array.isArray(createdTransaction) && createdTransaction.length > 0) {
@@ -634,7 +678,6 @@ export function useDebts() {
       }
 
       // Recalcular el saldo basado en la suma de todos los registros
-      const { calculateDebtBalance } = await import('@/utils/debtUtils');
       const newBalance = await calculateDebtBalance(debtId)
       
       // Check if balance reaches exactly zero to close debt/loan
@@ -669,7 +712,7 @@ export function useDebts() {
         }
       }
 
-      // Debt payment processed successfully
+      refetchTransactions() // Refresh transactions to show in Records page
       return payment
     } catch (error) {
       console.error('Error adding debt payment:', error)
@@ -714,7 +757,6 @@ export function useDebts() {
       if (error) throw error
 
       // Recalcular el saldo basado en la suma de todos los registros restantes
-      const { calculateDebtBalance } = await import('@/utils/debtUtils');
       const newBalance = await calculateDebtBalance(debtId)
       await updateDebt(debtId, { 
         current_balance: newBalance,
@@ -722,6 +764,7 @@ export function useDebts() {
       })
 
       await fetchDebts()
+      refetchTransactions() // Refresh transactions to show in Records page
       toast.success('Registro eliminado exitosamente')
     } catch (error) {
       console.error('Error deleting debt payment:', error)
@@ -799,7 +842,6 @@ export function useDebts() {
         }
         
         // Recalcular el saldo basado en la suma de todos los registros
-        const { calculateDebtBalance } = await import('@/utils/debtUtils');
         const newBalance = await calculateDebtBalance(debtId)
         
         // Check if balance reaches exactly zero to close debt/loan
@@ -832,6 +874,7 @@ export function useDebts() {
       }
 
       await fetchDebts()
+      refetchTransactions() // Refresh transactions to show in Records page
       toast.success('Registro actualizado exitosamente')
       
       // Force re-fetch of debt payments to reflect updated categories
@@ -879,6 +922,7 @@ export function useDebts() {
     addDebtPayment,
     deleteDebtPayment,
     updateDebtPayment,
-    reactivateDebt
+    reactivateDebt,
+    calculateDebtBalance
   }
 }

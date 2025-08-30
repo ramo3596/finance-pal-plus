@@ -6,23 +6,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader } from "lucide-react";
 import { FloatingActionButton } from "@/components/shared/FloatingActionButton";
 import { AddTransaction } from "@/components/AddTransaction";
-import { AIChat } from "@/components/shared/AIChat";
 
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [showAddTransaction, setShowAddTransaction] = useState(false);
-  const [defaultTransactionTab, setDefaultTransactionTab] = useState<"expense" | "income" | "transfer">("expense");
-
-  const handleNewTransaction = () => {
-    setDefaultTransactionTab("expense");
-    setShowAddTransaction(true);
-  };
-
-  const handleTransfer = () => {
-    setDefaultTransactionTab("transfer");
-    setShowAddTransaction(true);
-  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -47,16 +35,13 @@ const Index = () => {
       <Dashboard />
 
       <FloatingActionButton 
-        onClick={handleNewTransaction}
+        onClick={() => setShowAddTransaction(true)}
       />
 
       <AddTransaction
         open={showAddTransaction}
         onOpenChange={setShowAddTransaction}
-        defaultTab={defaultTransactionTab}
       />
-      
-      <AIChat />
     </Layout>
   );
 };

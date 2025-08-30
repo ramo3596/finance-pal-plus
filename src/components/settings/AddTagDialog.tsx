@@ -3,20 +3,16 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { Tag } from "@/hooks/useSettings";
 
 interface AddTagDialogProps {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
   onAdd: (tag: Omit<Tag, 'id' | 'created_at' | 'updated_at'>) => void;
 }
 
-export function AddTagDialog({ open: externalOpen, onOpenChange, onAdd }: AddTagDialogProps) {
-  const [internalOpen, setInternalOpen] = useState(false);
-  const open = externalOpen !== undefined ? externalOpen : internalOpen;
-  const setOpen = onOpenChange || setInternalOpen;
+export function AddTagDialog({ onAdd }: AddTagDialogProps) {
+  const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     color: "#ef4444"
@@ -31,6 +27,12 @@ export function AddTagDialog({ open: externalOpen, onOpenChange, onAdd }: AddTag
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Agregar etiqueta
+        </Button>
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Agregar Nueva Etiqueta</DialogTitle>
