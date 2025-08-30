@@ -8,6 +8,7 @@ import { MessageCircle, Send, X, Bot, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Message {
   id: string;
@@ -16,8 +17,14 @@ interface Message {
   timestamp: Date;
 }
 
-export function AIChat() {
+interface AIChatProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function AIChat({ open, onOpenChange }: AIChatProps) {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -31,6 +38,15 @@ export function AIChat() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  
+  // Use external control if provided, otherwise use internal state
+  const chatOpen = open !== undefined ? open : isOpen;
+  const setChatOpen = onOpenChange || setIsOpen;
+  
+  // Don't render on mobile devices
+  if (isMobile) {
+    return null;
+  }
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -130,9 +146,9 @@ export function AIChat() {
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
-      {!isOpen ? (
+      {!chatOpen ? (
         <Button
-          onClick={() => setIsOpen(true)}
+          onClick={() => setChatOpen(true)}
           className="h-14 w-14 rounded-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-300 group"
           size="icon"
         >
@@ -153,7 +169,7 @@ export function AIChat() {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 hover:bg-destructive/10"
-                onClick={() => setIsOpen(false)}
+                onClick={() => setChatOpen(false)}
               >
                 <X className="h-4 w-4" />
               </Button>
