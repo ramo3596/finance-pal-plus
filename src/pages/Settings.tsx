@@ -1011,10 +1011,10 @@ export default function Settings() {
           <div className="space-y-3">
             {settingsNavItems.map((item) => (
               <Card key={item.href}>
-                <CardContent className="p-4">
+                <CardContent className="p-0">
                   <Link
                     to={item.href}
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors w-full"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-full bg-primary/10">
