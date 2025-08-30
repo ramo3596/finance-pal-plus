@@ -18,12 +18,14 @@ import {
   Settings,
   Eye,
   EyeOff,
+  Edit,
   icons
 } from "lucide-react"
 import { AddTransaction } from "./AddTransaction"
 import { EditTransaction } from "./EditTransaction"
 import { DashboardCard } from "./DashboardCard"
 import { AddAccountDialog } from "./settings/AddAccountDialog"
+import { EditAccountDialog } from "./settings/EditAccountDialog"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useSettings } from "@/hooks/useSettings"
 import { AccountManagerDialog } from "./settings/AccountManagerDialog"
@@ -84,11 +86,13 @@ export function Dashboard() {
   const [isCardManagerOpen, setIsCardManagerOpen] = useState(false)
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false)
   const [isAccountManagerOpen, setIsAccountManagerOpen] = useState(false)
+  const [isEditAccountDialogOpen, setIsEditAccountDialogOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<{
     id: string;
     name: string;
     balance: number;
-    color?: string;
+    color: string;
+    icon: string;
   } | null>(null)
   
   // Date range filter state
@@ -159,7 +163,7 @@ export function Dashboard() {
   const netFlow = totalIncome - totalExpenses
   const recentTransactions = filteredTransactions.slice(0, 5)
 
-  const handleEditAccount = (account: { id: string; name: string; balance: number; color?: string }) => {
+  const handleEditAccount = (account: { id: string; name: string; balance: number; color: string; icon: string }) => {
     setEditingAccount(account);
     setIsAccountManagerOpen(false);
     navigate(`/settings?tab=accounts&edit=${account.id}`);
@@ -256,6 +260,23 @@ export function Dashboard() {
                 className="text-xs"
               >
                 Seleccionar todas
+              </Button>
+            )}
+            {selectedAccountIds.length === 1 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const selectedAccount = accounts.find(acc => acc.id === selectedAccountIds[0])
+                  if (selectedAccount) {
+                    setEditingAccount(selectedAccount)
+                    setIsEditAccountDialogOpen(true)
+                  }
+                }}
+                className="text-xs"
+              >
+                <Edit className="w-3 h-3 mr-1" />
+                Editar
               </Button>
             )}
             <Button
@@ -1247,6 +1268,21 @@ export function Dashboard() {
         onEditAccount={handleEditAccount}
         onDeleteAccount={handleDeleteAccount}
       />
+
+      {/* Edit Account Dialog */}
+      {editingAccount && (
+        <EditAccountDialog
+          account={editingAccount}
+          onUpdate={updateAccount}
+          open={isEditAccountDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditAccountDialogOpen(open)
+            if (!open) {
+              setEditingAccount(null)
+            }
+          }}
+        />
+      )}
 
 
     </div>
