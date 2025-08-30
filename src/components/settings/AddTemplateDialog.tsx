@@ -15,10 +15,14 @@ interface AddTemplateDialogProps {
   accounts: Array<{ id: string; name: string }>;
   categories: Array<{ id: string; name: string }>;
   tags: Array<{ id: string; name: string; color: string }>;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddTemplateDialog({ onAdd, accounts, categories, tags }: AddTemplateDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: externalOpen, onOpenChange }: AddTemplateDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const { contacts } = useContacts();
   const [formData, setFormData] = useState({
     name: "",
@@ -58,12 +62,14 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags }: AddTemp
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Agregar plantilla
-        </Button>
-      </DialogTrigger>
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar plantilla
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Agregar Nueva Plantilla</DialogTitle>

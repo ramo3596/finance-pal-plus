@@ -106,6 +106,8 @@ export default function TemplatesSettings() {
         />
 
         <AddTemplateDialog 
+          open={showAddTemplateDialog}
+          onOpenChange={setShowAddTemplateDialog}
           onAdd={createTemplate}
           accounts={accounts}
           categories={categories}
