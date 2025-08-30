@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Autocomplete } from "@/components/ui/autocomplete";
 import { Plus } from "lucide-react";
 import { Filter } from "@/hooks/useSettings";
 
@@ -22,9 +23,9 @@ export function AddFilterDialog({ onAdd, accounts, categories, tags }: AddFilter
     payment_method: "Todos",
     transfers: "Excluir",
     debts: "Excluir",
-    account_ids: [] as string[],
-    category_ids: [] as string[],
-    tag_ids: [] as string[]
+    account_id: "",
+    category_id: "",
+    tag_id: ""
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -32,9 +33,9 @@ export function AddFilterDialog({ onAdd, accounts, categories, tags }: AddFilter
     onAdd({
       ...formData,
       payment_method: formData.payment_method !== "Todos" ? formData.payment_method : undefined,
-      account_ids: formData.account_ids.length > 0 ? formData.account_ids : undefined,
-      category_ids: formData.category_ids.length > 0 ? formData.category_ids : undefined,
-      tag_ids: formData.tag_ids.length > 0 ? formData.tag_ids : undefined
+      account_ids: formData.account_id ? [formData.account_id] : undefined,
+      category_ids: formData.category_id ? [formData.category_id] : undefined,
+      tag_ids: formData.tag_id ? [formData.tag_id] : undefined
     } as any);
     setFormData({ 
       name: "", 
@@ -42,9 +43,9 @@ export function AddFilterDialog({ onAdd, accounts, categories, tags }: AddFilter
       payment_method: "Todos", 
       transfers: "Excluir", 
       debts: "Excluir",
-      account_ids: [],
-      category_ids: [],
-      tag_ids: []
+      account_id: "",
+      category_id: "",
+      tag_id: ""
     });
     setOpen(false);
   };
@@ -127,33 +128,17 @@ export function AddFilterDialog({ onAdd, accounts, categories, tags }: AddFilter
             </Select>
           </div>
           <div>
-            <Label htmlFor="accounts">Cuentas (opcional)</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {accounts.map((account) => (
-                <div key={account.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                  <input
-                    type="checkbox"
-                    id={`account-${account.id}`}
-                    checked={formData.account_ids.includes(account.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setFormData({ 
-                          ...formData, 
-                          account_ids: [...formData.account_ids, account.id] 
-                        });
-                      } else {
-                        setFormData({ 
-                          ...formData, 
-                          account_ids: formData.account_ids.filter(id => id !== account.id) 
-                        });
-                      }
-                    }}
-                    className="rounded"
-                  />
-                  <Label htmlFor={`account-${account.id}`} className="text-sm">{account.name}</Label>
-                </div>
-              ))}
-            </div>
+            <Label htmlFor="accounts">Cuenta (opcional)</Label>
+            <Autocomplete
+              options={accounts.map(account => ({
+                id: account.id,
+                name: account.name
+              }))}
+              value={formData.account_id}
+              onValueChange={(value) => setFormData({ ...formData, account_id: value })}
+              placeholder="Buscar cuenta..."
+              className="mt-2"
+            />
             {accounts.length === 0 && (
               <p className="text-sm text-muted-foreground mt-2">
                 No hay cuentas disponibles. Crea cuentas en la sección de Cuentas.
@@ -161,33 +146,17 @@ export function AddFilterDialog({ onAdd, accounts, categories, tags }: AddFilter
             )}
           </div>
           <div>
-            <Label htmlFor="categories">Categorías (opcional)</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {categories.map((category) => (
-                <div key={category.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                  <input
-                    type="checkbox"
-                    id={`category-${category.id}`}
-                    checked={formData.category_ids.includes(category.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setFormData({ 
-                          ...formData, 
-                          category_ids: [...formData.category_ids, category.id] 
-                        });
-                      } else {
-                        setFormData({ 
-                          ...formData, 
-                          category_ids: formData.category_ids.filter(id => id !== category.id) 
-                        });
-                      }
-                    }}
-                    className="rounded"
-                  />
-                  <Label htmlFor={`category-${category.id}`} className="text-sm">{category.name}</Label>
-                </div>
-              ))}
-            </div>
+            <Label htmlFor="categories">Categoría (opcional)</Label>
+            <Autocomplete
+              options={categories.map(category => ({
+                id: category.id,
+                name: category.name
+              }))}
+              value={formData.category_id}
+              onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+              placeholder="Buscar categoría..."
+              className="mt-2"
+            />
             {categories.length === 0 && (
               <p className="text-sm text-muted-foreground mt-2">
                 No hay categorías disponibles. Crea categorías en la sección de Categorías.
@@ -195,34 +164,17 @@ export function AddFilterDialog({ onAdd, accounts, categories, tags }: AddFilter
             )}
           </div>
           <div>
-            <Label htmlFor="tags">Etiquetas (opcional)</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {tags.map((tag) => (
-                <div key={tag.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                  <input
-                    type="checkbox"
-                    id={`tag-${tag.id}`}
-                    checked={formData.tag_ids.includes(tag.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setFormData({ 
-                          ...formData, 
-                          tag_ids: [...formData.tag_ids, tag.id] 
-                        });
-                      } else {
-                        setFormData({ 
-                          ...formData, 
-                          tag_ids: formData.tag_ids.filter(id => id !== tag.id) 
-                        });
-                      }
-                    }}
-                    className="rounded"
-                  />
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }}></div>
-                  <Label htmlFor={`tag-${tag.id}`} className="text-sm">{tag.name}</Label>
-                </div>
-              ))}
-            </div>
+            <Label htmlFor="tags">Etiqueta (opcional)</Label>
+            <Autocomplete
+              options={tags.map(tag => ({
+                id: tag.id,
+                name: tag.name
+              }))}
+              value={formData.tag_id}
+              onValueChange={(value) => setFormData({ ...formData, tag_id: value })}
+              placeholder="Buscar etiqueta..."
+              className="mt-2"
+            />
             {tags.length === 0 && (
               <p className="text-sm text-muted-foreground mt-2">
                 No hay etiquetas disponibles. Crea etiquetas en la sección de Etiquetas.
