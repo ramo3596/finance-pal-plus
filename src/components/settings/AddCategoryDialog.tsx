@@ -10,10 +10,14 @@ import { Category } from "@/hooks/useSettings";
 
 interface AddCategoryDialogProps {
   onAdd: (category: Omit<Category, 'id' | 'created_at' | 'updated_at'>) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddCategoryDialog({ onAdd }: AddCategoryDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddCategoryDialog({ onAdd, open: externalOpen, onOpenChange }: AddCategoryDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [formData, setFormData] = useState({
     name: "",
     color: "#f59e0b",
@@ -44,12 +48,14 @@ export function AddCategoryDialog({ onAdd }: AddCategoryDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Agregar categoría
-        </Button>
-      </DialogTrigger>
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar categoría
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Agregar Nueva Categoría</DialogTitle>
