@@ -93,6 +93,8 @@ export default function FiltersSettings() {
         />
 
         <AddFilterDialog
+          open={showAddFilterDialog}
+          onOpenChange={setShowAddFilterDialog}
           onAdd={createFilter}
           accounts={accounts}
           categories={categories}

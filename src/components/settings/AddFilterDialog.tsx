@@ -9,14 +9,18 @@ import { Plus } from "lucide-react";
 import { Filter } from "@/hooks/useSettings";
 
 interface AddFilterDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onAdd: (filter: Omit<Filter, 'id' | 'created_at' | 'updated_at'>) => void;
   accounts: Array<{ id: string; name: string }>;
   categories: Array<{ id: string; name: string }>;
   tags: Array<{ id: string; name: string; color: string }>;
 }
 
-export function AddFilterDialog({ onAdd, accounts, categories, tags }: AddFilterDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddFilterDialog({ open: externalOpen, onOpenChange, onAdd, accounts, categories, tags }: AddFilterDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [formData, setFormData] = useState({
     name: "",
     type: "Todo",
