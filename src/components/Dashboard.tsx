@@ -53,7 +53,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { TransactionItem } from "@/components/shared/TransactionItem"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { AIChat } from "@/components/shared/AIChat"
+
 
 // Dashboard card types with new widgets
 export type DashboardCardType = 
@@ -1248,8 +1248,7 @@ export function Dashboard() {
         onDeleteAccount={handleDeleteAccount}
       />
 
-      {/* AI Chat */}
-      <AIChat />
+
     </div>
   )
 }
