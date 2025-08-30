@@ -18,7 +18,6 @@ import {
   Settings,
   Eye,
   EyeOff,
-  Edit,
   icons
 } from "lucide-react"
 import { AddTransaction } from "./AddTransaction"
@@ -50,7 +49,6 @@ import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useNavigate } from "react-router-dom"
-import { EditAccountDialog } from "./settings/EditAccountDialog"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { TransactionItem } from "@/components/shared/TransactionItem"
@@ -92,8 +90,6 @@ export function Dashboard() {
     balance: number;
     color?: string;
   } | null>(null)
-  const [isEditAccountOpen, setIsEditAccountOpen] = useState(false)
-  const [accountToEdit, setAccountToEdit] = useState<any>(null)
   
   // Date range filter state
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -164,9 +160,9 @@ export function Dashboard() {
   const recentTransactions = filteredTransactions.slice(0, 5)
 
   const handleEditAccount = (account: { id: string; name: string; balance: number; color?: string }) => {
-    setAccountToEdit(account);
-    setIsEditAccountOpen(true);
+    setEditingAccount(account);
     setIsAccountManagerOpen(false);
+    navigate(`/settings?tab=accounts&edit=${account.id}`);
   };
   
   const handleDeleteAccount = async (accountId: string) => {
@@ -252,22 +248,6 @@ export function Dashboard() {
             </span>
           </div>
           <div className="flex items-center space-x-2">
-            {selectedAccountIds.length === 1 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const selectedAccount = accounts.find(acc => acc.id === selectedAccountIds[0])
-                  if (selectedAccount) {
-                    handleEditAccount(selectedAccount)
-                  }
-                }}
-                className="text-xs"
-              >
-                <Edit className="w-3 h-3 mr-1" />
-                Editar
-              </Button>
-            )}
             {selectedAccountIds.length < accounts.length && (
               <Button
                 variant="outline"
@@ -1267,16 +1247,6 @@ export function Dashboard() {
         onEditAccount={handleEditAccount}
         onDeleteAccount={handleDeleteAccount}
       />
-
-      {/* Edit Account Modal */}
-      {accountToEdit && (
-        <EditAccountDialog
-          account={accountToEdit}
-          onUpdate={updateAccount}
-          open={isEditAccountOpen}
-          onOpenChange={setIsEditAccountOpen}
-        />
-      )}
 
       {/* AI Chat */}
       <AIChat />
