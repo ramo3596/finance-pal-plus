@@ -2,6 +2,7 @@ import { Wallet } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Autocomplete } from "@/components/ui/autocomplete";
 import { Account } from "@/hooks/useSettings";
 
 interface ExpenseTabProps {
@@ -18,27 +19,15 @@ export function ExpenseTab({ amount, setAmount, selectedAccount, setSelectedAcco
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="account">Cuenta de débito</Label>
-          <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-            <SelectTrigger>
-              <div className="flex items-center space-x-2">
-                <Wallet className="h-4 w-4" />
-                <SelectValue placeholder="Seleccionar cuenta" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {accounts.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  <div className="flex items-center space-x-2">
-                    <span>{account.icon}</span>
-                    <span>{account.name}</span>
-                    <span className="text-muted-foreground text-xs">
-                      (${account.balance?.toFixed(2) || '0.00'})
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Autocomplete
+            value={selectedAccount}
+            onValueChange={setSelectedAccount}
+            options={accounts.map(account => ({
+              id: account.id,
+              name: `${account.icon} ${account.name} ($${account.balance?.toFixed(2) || '0.00'})`
+            }))}
+            placeholder="Seleccionar cuenta"
+          />
         </div>
 
         <div className="space-y-2">
