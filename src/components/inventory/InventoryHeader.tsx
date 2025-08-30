@@ -66,11 +66,7 @@ export function InventoryHeader({ onAddProduct, onRegisterPurchase, onRegisterSa
         </Card>
       </div>
 
-      <div className="md:hidden space-y-2">
-        <Button onClick={onAddProduct} className="w-full flex items-center space-x-2">
-          <Plus className="h-4 w-4" />
-          <span>Crear producto</span>
-        </Button>
+      <div className="md:hidden">
         <div className="grid grid-cols-2 gap-2">
           <Button onClick={onRegisterPurchase} variant="outline" className="flex items-center space-x-2">
             <ShoppingCart className="h-4 w-4" />
