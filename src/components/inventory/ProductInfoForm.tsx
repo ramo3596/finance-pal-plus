@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Autocomplete } from "@/components/ui/autocomplete";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Upload, Scan, X } from "lucide-react";
@@ -354,28 +355,19 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
 
         <div className="space-y-2">
           <Label>Categoría</Label>
-          <Select
+          <Autocomplete
             value={selectedCategory}
             onValueChange={(value) => {
               setSelectedCategory(value);
               setValue("category_id", value);
               setValue("subcategory_id", ""); // Reset subcategory
             }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar categoría" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.filter(category => category.id && category.id.trim() !== '').map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  <div className="flex items-center space-x-2">
-                    <span>{category.icon}</span>
-                    <span>{category.name}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={categories.filter(category => category.id && category.id.trim() !== '').map((category) => ({
+              id: category.id,
+              name: `${category.icon} ${category.name}`
+            }))}
+            placeholder="Seleccionar categoría"
+          />
         </div>
       </div>
 
