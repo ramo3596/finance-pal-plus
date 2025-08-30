@@ -58,11 +58,11 @@ export function AddFilterDialog({ onAdd, accounts, categories, tags }: AddFilter
           Agregar filtro
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Agregar Nuevo Filtro</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 max-h-[calc(90vh-120px)] overflow-y-auto pr-2">
           <div>
             <Label htmlFor="name">Nombre del filtro</Label>
             <Input

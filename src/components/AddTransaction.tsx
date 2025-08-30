@@ -16,10 +16,12 @@ import { useContacts } from "@/hooks/useContacts";
 interface AddTransactionProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultTab?: "expense" | "income" | "transfer";
 }
 export function AddTransaction({
   open,
-  onOpenChange
+  onOpenChange,
+  defaultTab = "expense"
 }: AddTransactionProps) {
   const { 
     accounts, 
@@ -32,7 +34,7 @@ export function AddTransaction({
   const { createTransaction } = useTransactions();
   const { contacts } = useContacts();
   
-  const [transactionType, setTransactionType] = useState<"expense" | "income" | "transfer">("expense");
+  const [transactionType, setTransactionType] = useState<"expense" | "income" | "transfer">(defaultTab);
   const [amount, setAmount] = useState("0");
   const [selectedAccount, setSelectedAccount] = useState("");
   const [toAccount, setToAccount] = useState(""); // For transfers
@@ -58,6 +60,12 @@ export function AddTransaction({
   const [paymentMethod, setPaymentMethod] = useState("");
   const [location, setLocation] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState("");
+  
+  // Update transaction type when defaultTab changes
+  useEffect(() => {
+    setTransactionType(defaultTab);
+  }, [defaultTab]);
+  
   // Function to apply template data
   const applyTemplate = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);

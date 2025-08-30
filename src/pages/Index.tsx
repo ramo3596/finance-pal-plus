@@ -4,7 +4,7 @@ import { Layout } from "@/components/Layout";
 import { Dashboard } from "@/components/Dashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader } from "lucide-react";
-import FloatingActionMenu from "@/components/shared/FloatingActionMenu";
+import { FloatingActionButton } from "@/components/shared/FloatingActionButton";
 import { AddTransaction } from "@/components/AddTransaction";
 import { AIChat } from "@/components/shared/AIChat";
 
@@ -46,9 +46,8 @@ const Index = () => {
     <Layout>
       <Dashboard />
 
-      <FloatingActionMenu 
-        onNewTransaction={handleNewTransaction}
-        onTransfer={handleTransfer}
+      <FloatingActionButton 
+        onClick={handleNewTransaction}
       />
 
       <AddTransaction
