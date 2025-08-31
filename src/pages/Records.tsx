@@ -101,12 +101,14 @@ const Records = () => {
         />
         
         <div className={isMobile ? "space-y-4" : "flex gap-6"}>
-          <div className={isMobile ? "" : "w-80 flex-shrink-0"}>
-            <RecordsFilters 
-              filters={filters}
-              onFilterChange={handleFilterChange}
-            />
-          </div>
+          {!isMobile && (
+            <div className="w-80 flex-shrink-0">
+              <RecordsFilters 
+                filters={filters}
+                onFilterChange={handleFilterChange}
+              />
+            </div>
+          )}
           
           <div className="flex-1">
             <RecordsMainSection

@@ -21,7 +21,7 @@ export function RecordsHeader({ filters, onFilterChange }: RecordsHeaderProps) {
     <>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="text-3xl font-bold">Registros</h1>
+          <h1 className={isMobile ? "text-xl font-bold" : "text-3xl font-bold"}>Registros</h1>
           
           {/* Botón de búsqueda para móvil */}
           {isMobile && (
