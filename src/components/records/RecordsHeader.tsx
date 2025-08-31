@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { AddTransaction } from "@/components/AddTransaction";
 import { useState } from "react";
 import { RecordsFilters } from "@/pages/Records";
@@ -14,12 +14,27 @@ interface RecordsHeaderProps {
 
 export function RecordsHeader({ filters, onFilterChange }: RecordsHeaderProps) {
   const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [showSearchInput, setShowSearchInput] = useState(false);
   const isMobile = useIsMobile();
 
   return (
     <>
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Registros</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-3xl font-bold">Registros</h1>
+          
+          {/* Botón de búsqueda para móvil */}
+          {isMobile && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-10 w-10 ml-2 hover:bg-accent hover:text-accent-foreground"
+              onClick={() => setShowSearchInput(!showSearchInput)}
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
         
         <div className="flex items-center gap-4">
           {!isMobile && (
@@ -56,6 +71,20 @@ export function RecordsHeader({ filters, onFilterChange }: RecordsHeaderProps) {
           </Select>
         </div>
       </div>
+
+      {/* Input de búsqueda para móvil */}
+      {isMobile && showSearchInput && (
+        <div className="mt-4 mb-2">
+          <input
+            type="text"
+            placeholder="Buscar transacciones..."
+            value={filters.searchTerm}
+            onChange={(e) => onFilterChange({ searchTerm: e.target.value })}
+            className="w-full p-2 rounded-md bg-background border border-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            autoFocus
+          />
+        </div>
+      )}
 
       {showAddTransaction && (
         <AddTransaction 

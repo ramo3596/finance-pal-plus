@@ -9,6 +9,7 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EnhancedDateSelectorProps {
   dateRange: { from: Date | null; to: Date | null };
@@ -24,6 +25,7 @@ export function EnhancedDateSelector({ dateRange, onDateRangeChange }: EnhancedD
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [currentPeriod, setCurrentPeriod] = useState(new Date());
+  const isMobile = useIsMobile();
 
   const presetOptions = [
     { id: "last7", label: "Últimos 7 días" },
@@ -146,14 +148,15 @@ export function EnhancedDateSelector({ dateRange, onDateRangeChange }: EnhancedD
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
+          variant={isMobile ? "outline" : "outline"}
+          size={isMobile ? "icon" : "default"}
           className={cn(
-            "w-[280px] justify-start text-left font-normal",
+            isMobile ? "w-10 h-10 p-0" : "w-[280px] justify-start text-left font-normal",
             !dateRange.from && "text-muted-foreground"
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {dateRange.from ? (
+          <CalendarIcon className={isMobile ? "h-5 w-5" : "mr-2 h-4 w-4"} />
+          {!isMobile && dateRange.from ? (
             dateRange.to ? (
               <>
                 {format(dateRange.from, "dd MMM", { locale: es })} -{" "}
@@ -163,7 +166,7 @@ export function EnhancedDateSelector({ dateRange, onDateRangeChange }: EnhancedD
               format(dateRange.from, "dd MMM yyyy", { locale: es })
             )
           ) : (
-            <span>Seleccionar fechas</span>
+            !isMobile && <span>Seleccionar fechas</span>
           )}
         </Button>
       </PopoverTrigger>

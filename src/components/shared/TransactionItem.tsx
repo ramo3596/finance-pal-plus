@@ -57,7 +57,7 @@ export function TransactionItem({
 
   return (
     <div className={cn(
-      "flex items-center space-x-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors",
+      "flex items-center space-x-6 p-5 rounded-lg border hover:bg-muted/50 transition-colors",
       isMobile ? "w-screen -mx-2" : ""
     )}>
       {showCheckbox && (
@@ -71,7 +71,7 @@ export function TransactionItem({
       <div className="flex items-center space-x-2">
         {(categoryData || subcategoryData) && (
           <div 
-            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+            className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold"
             style={{ backgroundColor: categoryData?.color || '#6b7280' }}
           >
             {displayIcon}
@@ -83,8 +83,8 @@ export function TransactionItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium text-sm">{displayName}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="font-medium text-base">{displayName}</p>
+            <p className="text-sm text-muted-foreground">
               {transaction.type === 'transfer' ? (
                 transaction.amount < 0 ? (
                   // Transferencia saliente: cuenta origen en negrita
@@ -134,14 +134,14 @@ export function TransactionItem({
               }
               
               return tagsArray.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
+                <div className="flex flex-wrap gap-2 mt-2">
                   {tagsArray.map((tagName, index) => {
                     // First try to find by name, then by ID as fallback
                     const tag = tags.find(t => t.name === tagName) || tags.find(t => t.id === tagName);
                     return tag ? (
                       <span
                         key={tag.id || index}
-                        className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded"
+                        className="inline-block px-3 py-1 text-sm font-medium text-white rounded"
                         style={{ backgroundColor: tag.color }}
                       >
                         {tag.name}
@@ -150,7 +150,7 @@ export function TransactionItem({
                       // If tag is not found in the settings, still show it with a default color
                       <span
                         key={index}
-                        className="inline-block px-2 py-0.5 text-xs font-medium text-white rounded bg-gray-500"
+                        className="inline-block px-3 py-1 text-sm font-medium text-white rounded bg-gray-500"
                       >
                         {tagName}
                       </span>
@@ -160,15 +160,15 @@ export function TransactionItem({
               );
             })()}
             {transaction.type === 'transfer' && transaction.beneficiary && (
-              <p className="text-xs text-muted-foreground">{transaction.beneficiary}</p>
+              <p className="text-sm text-muted-foreground">{transaction.beneficiary}</p>
             )}
           </div>
           
           <div className="flex items-center space-x-2">
             {/* Amount and Date */}
-            <div className="flex flex-col items-end min-w-[80px]">
+            <div className="flex flex-col items-end min-w-[100px]">
               <span className={cn(
-                "text-sm font-bold text-right",
+                "text-lg font-bold text-right",
                 (() => {
                   // Lógica específica para categorías de deudas y préstamos
                   if (categoryData?.name === 'Ingresos') {
@@ -205,7 +205,7 @@ export function TransactionItem({
                   }).format(transaction.amount)}`;
                 })()}
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm text-muted-foreground">
                 {new Date(transaction.transaction_date).toLocaleDateString('es-ES', {
                   day: 'numeric',
                   month: 'short'
@@ -217,8 +217,8 @@ export function TransactionItem({
             {(onEdit || onDelete) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <MoreVertical className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="h-10 w-10 p-0">
+                    <MoreVertical className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-background border border-border">
@@ -227,7 +227,7 @@ export function TransactionItem({
                       onClick={() => onEdit(transaction)}
                       className="cursor-pointer"
                     >
-                      <Edit className="h-4 w-4 mr-2" />
+                      <Edit className="h-5 w-5 mr-2" />
                       Editar
                     </DropdownMenuItem>
                   )}
@@ -236,7 +236,7 @@ export function TransactionItem({
                       onClick={() => onDelete(transaction.id)}
                       className="cursor-pointer text-red-600 hover:text-red-700"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="h-5 w-5 mr-2" />
                       Eliminar
                     </DropdownMenuItem>
                   )}
