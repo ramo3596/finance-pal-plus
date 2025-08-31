@@ -211,7 +211,7 @@ export const ExpenseScheduledForm = ({ onClose }: ExpenseScheduledFormProps) => 
                     <Autocomplete
                       options={accounts.map(account => ({
                         id: account.id,
-                        name: account.name
+                        name: `${account.icon} ${account.name} ($${account.balance?.toFixed(2) || '0.00'})`
                       }))}
                       value={field.value}
                       onValueChange={field.onChange}
