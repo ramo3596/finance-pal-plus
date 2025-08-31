@@ -91,8 +91,8 @@ export function TransactionItem({
   return (
     <div 
       className={cn(
-        "flex items-center space-x-6 p-5 rounded-lg border hover:bg-muted/50 transition-colors",
-        isMobile ? "w-screen -mx-2" : "",
+        "flex items-center rounded-lg border hover:bg-muted/50 transition-colors",
+        isMobile ? "space-x-3 p-3 text-sm w-screen -mx-2" : "space-x-6 p-5",
         isSelected ? "bg-muted" : ""
       )}
       onTouchStart={() => {
@@ -127,7 +127,10 @@ export function TransactionItem({
       <div className="flex items-center space-x-2">
         {(categoryData || subcategoryData) && (
           <div 
-            className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold"
+            className={cn(
+              "rounded-full flex items-center justify-center text-white font-bold",
+              isMobile ? "w-8 h-8 text-sm" : "w-12 h-12 text-lg"
+            )}
             style={{ backgroundColor: categoryData?.color || '#6b7280' }}
           >
             {displayIcon}
@@ -139,8 +142,8 @@ export function TransactionItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium text-base">{displayName}</p>
-            <p className="text-sm text-muted-foreground">
+            <p className={cn("font-medium", isMobile ? "text-sm" : "text-base")}>{displayName}</p>
+            <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
               {transaction.type === 'transfer' ? (
                 transaction.amount < 0 ? (
                   // Transferencia saliente: cuenta origen en negrita
@@ -190,14 +193,17 @@ export function TransactionItem({
               }
               
               return tagsArray.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className={cn("flex flex-wrap gap-2", isMobile ? "mt-1" : "mt-2")}>
                   {tagsArray.map((tagName, index) => {
                     // First try to find by name, then by ID as fallback
                     const tag = tags.find(t => t.name === tagName) || tags.find(t => t.id === tagName);
                     return tag ? (
                       <span
                         key={tag.id || index}
-                        className="inline-block px-3 py-1 text-sm font-medium text-white rounded"
+                        className={cn(
+                          "inline-block font-medium text-white rounded",
+                          isMobile ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm"
+                        )}
                         style={{ backgroundColor: tag.color }}
                       >
                         {tag.name}
@@ -222,9 +228,13 @@ export function TransactionItem({
           
           <div className="flex items-center space-x-2">
             {/* Amount and Date */}
-            <div className="flex flex-col items-end min-w-[100px]">
+            <div className={cn(
+              "flex flex-col items-end",
+              isMobile ? "min-w-[80px]" : "min-w-[100px]"
+            )}>
               <span className={cn(
-                "text-lg font-bold text-right",
+                "font-bold text-right",
+                isMobile ? "text-sm" : "text-lg",
                 (() => {
                   // Lógica específica para categorías de deudas y préstamos
                   if (categoryData?.name === 'Ingresos') {
@@ -261,7 +271,10 @@ export function TransactionItem({
                   }).format(transaction.amount)}`;
                 })()}
               </span>
-              <span className="text-sm text-muted-foreground">
+              <span className={cn(
+                "text-muted-foreground",
+                isMobile ? "text-xs" : "text-sm"
+              )}>
                 {new Date(transaction.transaction_date).toLocaleDateString('es-ES', {
                   day: 'numeric',
                   month: 'short'
