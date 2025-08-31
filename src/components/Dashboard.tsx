@@ -247,21 +247,16 @@ export function Dashboard() {
       {selectedAccountIds.length > 0 && (
         <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
           <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearAccountSelection}
+              className="text-xs font-medium"
+            >
               {selectedAccountIds.length} cuenta{selectedAccountIds.length !== 1 ? 's' : ''} seleccionada{selectedAccountIds.length !== 1 ? 's' : ''}
-            </span>
+            </Button>
           </div>
           <div className="flex items-center space-x-2">
-            {selectedAccountIds.length < accounts.length && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSelectAllAccounts}
-                className="text-xs"
-              >
-                Seleccionar todas
-              </Button>
-            )}
             {selectedAccountIds.length === 1 && (
               <Button
                 variant="outline"
@@ -279,14 +274,17 @@ export function Dashboard() {
                 Editar
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleClearAccountSelection}
-              className="text-xs"
-            >
-              Limpiar selección
-            </Button>
+            {selectedAccountIds.length < accounts.length && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSelectAllAccounts}
+                className="text-xs"
+              >
+                Seleccionar todas
+              </Button>
+            )}
+
           </div>
         </div>
       )}
