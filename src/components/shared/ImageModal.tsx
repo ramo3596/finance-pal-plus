@@ -1,6 +1,7 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface ImageModalProps {
   isOpen: boolean;
@@ -13,6 +14,9 @@ export function ImageModal({ isOpen, onClose, imageUrl, altText }: ImageModalPro
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+        <VisuallyHidden>
+          <DialogTitle>Imagen: {altText}</DialogTitle>
+        </VisuallyHidden>
         <div className="relative">
           <Button
             variant="ghost"

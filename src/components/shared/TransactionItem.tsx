@@ -1,3 +1,4 @@
+import React from "react";
 import { Transaction } from "@/hooks/useTransactions";
 import { useSettings } from "@/hooks/useSettings";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -55,12 +56,67 @@ export function TransactionItem({
   const displayIcon = subcategoryData?.icon || categoryData?.icon;
   const displayName = subcategoryData?.name || categoryData?.name || transaction.description;
 
+  // Estado para controlar el temporizador de presión larga
+  const longPressTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const longPressStartedRef = React.useRef<boolean>(false);
+  
+  // Función para manejar el evento de mantener presionado en móvil
+  const handleLongPress = () => {
+    if (isMobile && showCheckbox && onSelectTransaction) {
+      onSelectTransaction(transaction.id, !isSelected);
+    }
+  };
+
+  // Función para limpiar el temporizador
+  const clearLongPressTimer = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressStartedRef.current = false;
+  };
+
+  // Función para iniciar el temporizador
+  const startLongPressTimer = () => {
+    clearLongPressTimer();
+    longPressStartedRef.current = true;
+    longPressTimerRef.current = setTimeout(handleLongPress, 500);
+  };
+
+  // Limpiar el temporizador al desmontar el componente
+  React.useEffect(() => {
+    return () => clearLongPressTimer();
+  }, []);
+
   return (
-    <div className={cn(
-      "flex items-center space-x-6 p-5 rounded-lg border hover:bg-muted/50 transition-colors",
-      isMobile ? "w-screen -mx-2" : ""
-    )}>
-      {showCheckbox && (
+    <div 
+      className={cn(
+        "flex items-center space-x-6 p-5 rounded-lg border hover:bg-muted/50 transition-colors",
+        isMobile ? "w-screen -mx-2" : "",
+        isSelected ? "bg-muted" : ""
+      )}
+      onTouchStart={() => {
+        if (isMobile) {
+          startLongPressTimer();
+        }
+      }}
+      onTouchEnd={() => {
+        if (isMobile) {
+          clearLongPressTimer();
+        }
+      }}
+      onTouchMove={() => {
+        if (isMobile) {
+          clearLongPressTimer();
+        }
+      }}
+      onTouchCancel={() => {
+        if (isMobile) {
+          clearLongPressTimer();
+        }
+      }}
+    >
+      {showCheckbox && !isMobile && (
         <Checkbox 
           checked={isSelected}
           onCheckedChange={(checked) => onSelectTransaction?.(transaction.id, checked as boolean)}
