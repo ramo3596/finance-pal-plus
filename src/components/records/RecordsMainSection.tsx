@@ -40,8 +40,11 @@ export function RecordsMainSection({
       // Search term filter
       if (filters.searchTerm) {
         const searchLower = filters.searchTerm.toLowerCase();
+        const amountStr = transaction.amount.toString();
         if (!transaction.description.toLowerCase().includes(searchLower) &&
-            !transaction.beneficiary?.toLowerCase().includes(searchLower)) {
+            !transaction.beneficiary?.toLowerCase().includes(searchLower) &&
+            !amountStr.includes(searchLower) &&
+            !transaction.note?.toLowerCase().includes(searchLower)) {
           return false;
         }
       }
