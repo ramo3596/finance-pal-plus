@@ -4,6 +4,7 @@ import { useAuth } from "./useAuth"
 import { toast } from "sonner"
 import { useTransactions } from "./useTransactions"
 import { useSettings } from "./useSettings"
+import { useLocalCache } from "./useLocalCache"
 
 export interface Debt {
   id: string
@@ -67,6 +68,26 @@ export function useDebts() {
   const { user } = useAuth()
   const { createTransaction, refetch: refetchTransactions } = useTransactions()
   const { categories, createCategory, createSubcategory, refetch: refetchSettings } = useSettings()
+  const { fetchWithCache } = useLocalCache()
+
+  // Listen to cache updates
+  useEffect(() => {
+    const handleDebtsUpdate = (event: CustomEvent) => {
+      fetchDebts(true);
+    };
+
+    const handleDebtPaymentsUpdate = (event: CustomEvent) => {
+      fetchDebts(true); // Refetch debts to recalculate balances
+    };
+
+    window.addEventListener('cache_updated_debts', handleDebtsUpdate as EventListener);
+    window.addEventListener('cache_updated_debt_payments', handleDebtPaymentsUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('cache_updated_debts', handleDebtsUpdate as EventListener);
+      window.removeEventListener('cache_updated_debt_payments', handleDebtPaymentsUpdate as EventListener);
+    };
+  }, []);
 
   const calculateDebtBalance = async (debtId: string): Promise<number> => {
     try {
@@ -100,41 +121,49 @@ export function useDebts() {
     }
   }
 
-  const fetchDebts = async () => {
+  const fetchDebts = async (forceRefresh = false) => {
     if (!user) return
 
     try {
-      const { data, error } = await supabase
-        .from('debts')
-        .select(`
-          *,
-          contacts:contact_id (
-            id,
-            name,
-            image_url
-          ),
-          accounts:account_id (
-            id,
-            name
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+      const data = await fetchWithCache(
+        'debts',
+        async () => {
+          const { data, error } = await supabase
+            .from('debts')
+            .select(`
+              *,
+              contacts:contact_id (
+                id,
+                name,
+                image_url
+              ),
+              accounts:account_id (
+                id,
+                name
+              )
+            `)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
 
-      if (error) throw error
-      
-      // Calcular el saldo real para cada deuda basado en la suma de registros
-      const debtsWithCalculatedBalance = await Promise.all(
-        (data as Debt[] || []).map(async (debt) => {
-          const calculatedBalance = await calculateDebtBalance(debt.id)
-          return {
-            ...debt,
-            current_balance: calculatedBalance
-          }
-        })
-      )
-      
-      setDebts(debtsWithCalculatedBalance)
+          if (error) throw error
+          
+          // Calcular el saldo real para cada deuda basado en la suma de registros
+          const debtsWithCalculatedBalance = await Promise.all(
+            (data as Debt[] || []).map(async (debt) => {
+              const calculatedBalance = await calculateDebtBalance(debt.id)
+              return {
+                ...debt,
+                current_balance: calculatedBalance
+              }
+            })
+          )
+          
+          return debtsWithCalculatedBalance;
+        },
+        forceRefresh
+      );
+
+      setDebts(data);
     } catch (error) {
       console.error('Error fetching debts:', error)
       toast.error('Error al cargar las deudas')
@@ -914,7 +943,7 @@ export function useDebts() {
     debts,
     debtPayments,
     loading,
-    fetchDebts,
+    fetchDebts: () => fetchDebts(),
     fetchDebtPayments,
     createDebt,
     updateDebt,

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { useLocalCache } from "./useLocalCache";
 
 export interface Contact {
   id: string;
@@ -53,71 +54,94 @@ export function useContacts() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { fetchWithCache } = useLocalCache();
 
-  const fetchContacts = async () => {
+  // Listen to cache updates
+  useEffect(() => {
+    const handleCacheUpdate = (event: CustomEvent) => {
+      // For contacts, we need to recalculate totals when cache updates
+      fetchContacts(true);
+    };
+
+    window.addEventListener('cache_updated_contacts', handleCacheUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('cache_updated_contacts', handleCacheUpdate as EventListener);
+    };
+  }, []);
+
+  const fetchContacts = async (forceRefresh = false) => {
     if (!user) return;
 
     try {
       setLoading(true);
 
-      // Fetch contacts with their tags
-      const { data: contactsData, error: contactsError } = await supabase
-        .from('contacts')
-        .select(`
-          *,
-          contact_tags(
-            tags(id, name, color)
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('name');
-
-      if (contactsError) throw contactsError;
-
-      // Fetch transaction totals for each contact
-      const contactsWithTotals = await Promise.all(
-        (contactsData || []).map(async (contact) => {
-          // Get expenses (where this contact is the beneficiary - contact_id field)
-          const { data: expenseData, error: expenseError } = await supabase
-            .from('transactions')
-            .select('amount')
+      const data = await fetchWithCache(
+        'contacts',
+        async () => {
+          // Fetch contacts with their tags
+          const { data: contactsData, error: contactsError } = await supabase
+            .from('contacts')
+            .select(`
+              *,
+              contact_tags(
+                tags(id, name, color)
+              )
+            `)
             .eq('user_id', user.id)
-            .eq('contact_id', contact.id)
-            .eq('type', 'expense');
+            .order('name');
 
-          if (expenseError) {
-            console.error('Error fetching expense data for contact:', contact.id, expenseError);
-          }
+          if (contactsError) throw contactsError;
 
-          // Get income (where this contact is the payer - payer_contact_id field)
-          const { data: incomeData, error: incomeError } = await supabase
-            .from('transactions')
-            .select('amount')
-            .eq('user_id', user.id)
-            .eq('payer_contact_id', contact.id)
-            .eq('type', 'income');
+          // Fetch transaction totals for each contact
+          const contactsWithTotals = await Promise.all(
+            (contactsData || []).map(async (contact) => {
+              // Get expenses (where this contact is the beneficiary - contact_id field)
+              const { data: expenseData, error: expenseError } = await supabase
+                .from('transactions')
+                .select('amount')
+                .eq('user_id', user.id)
+                .eq('contact_id', contact.id)
+                .eq('type', 'expense');
 
-          if (incomeError) {
-            console.error('Error fetching income data for contact:', contact.id, incomeError);
-          }
+              if (expenseError) {
+                console.error('Error fetching expense data for contact:', contact.id, expenseError);
+              }
 
-          // Calculate totals
-          const totalExpenses = expenseData?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0;
-          const totalIncome = incomeData?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0;
+              // Get income (where this contact is the payer - payer_contact_id field)
+              const { data: incomeData, error: incomeError } = await supabase
+                .from('transactions')
+                .select('amount')
+                .eq('user_id', user.id)
+                .eq('payer_contact_id', contact.id)
+                .eq('type', 'income');
 
-          return {
-            ...contact,
-            contact_type: contact.contact_type as 'persona' | 'empresa',
-            tags: Array.isArray(contact.contact_tags) 
-              ? contact.contact_tags.map((ct: any) => ct.tags).filter(Boolean) 
-              : [],
-            totalExpenses,
-            totalIncome,
-          };
-        })
+              if (incomeError) {
+                console.error('Error fetching income data for contact:', contact.id, incomeError);
+              }
+
+              // Calculate totals
+              const totalExpenses = expenseData?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0;
+              const totalIncome = incomeData?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0;
+
+              return {
+                ...contact,
+                contact_type: contact.contact_type as 'persona' | 'empresa',
+                tags: Array.isArray(contact.contact_tags) 
+                  ? contact.contact_tags.map((ct: any) => ct.tags).filter(Boolean) 
+                  : [],
+                totalExpenses,
+                totalIncome,
+              };
+            })
+          );
+
+          return contactsWithTotals;
+        },
+        forceRefresh
       );
 
-      setContacts(contactsWithTotals);
+      setContacts(data);
     } catch (error) {
       console.error('Error fetching contacts:', error);
     } finally {
@@ -226,6 +250,6 @@ export function useContacts() {
     createContact,
     updateContact,
     deleteContact,
-    refetch: fetchContacts,
+    refetch: () => fetchContacts(true),
   };
 }

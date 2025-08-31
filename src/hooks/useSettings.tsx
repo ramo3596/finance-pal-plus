@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useLocalCache } from './useLocalCache';
 
 export interface Account {
   id: string;
@@ -90,6 +91,7 @@ export interface UserSettings {
 export const useSettings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { fetchWithCache } = useLocalCache();
   
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -99,81 +101,170 @@ export const useSettings = () => {
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Listen to cache updates
+  useEffect(() => {
+    const handleAccountsUpdate = (event: CustomEvent) => {
+      setAccounts(event.detail.data);
+    };
+
+    const handleCategoriesUpdate = (event: CustomEvent) => {
+      fetchData(true); // Refetch all data to properly link subcategories
+    };
+
+    const handleTagsUpdate = (event: CustomEvent) => {
+      setTags(event.detail.data);
+    };
+
+    const handleTemplatesUpdate = (event: CustomEvent) => {
+      fetchData(true); // Refetch to properly link template tags
+    };
+
+    const handleFiltersUpdate = (event: CustomEvent) => {
+      setFilters(event.detail.data);
+    };
+
+    const handleUserSettingsUpdate = (event: CustomEvent) => {
+      setUserSettings(event.detail.data[0] || null);
+    };
+
+    const handleSubcategoriesUpdate = (event: CustomEvent) => {
+      fetchData(true); // Refetch to properly link subcategories to categories
+    };
+
+    window.addEventListener('cache_updated_accounts', handleAccountsUpdate as EventListener);
+    window.addEventListener('cache_updated_categories', handleCategoriesUpdate as EventListener);
+    window.addEventListener('cache_updated_tags', handleTagsUpdate as EventListener);
+    window.addEventListener('cache_updated_templates', handleTemplatesUpdate as EventListener);
+    window.addEventListener('cache_updated_filters', handleFiltersUpdate as EventListener);
+    window.addEventListener('cache_updated_user_settings', handleUserSettingsUpdate as EventListener);
+    window.addEventListener('cache_updated_subcategories', handleSubcategoriesUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('cache_updated_accounts', handleAccountsUpdate as EventListener);
+      window.removeEventListener('cache_updated_categories', handleCategoriesUpdate as EventListener);
+      window.removeEventListener('cache_updated_tags', handleTagsUpdate as EventListener);
+      window.removeEventListener('cache_updated_templates', handleTemplatesUpdate as EventListener);
+      window.removeEventListener('cache_updated_filters', handleFiltersUpdate as EventListener);
+      window.removeEventListener('cache_updated_user_settings', handleUserSettingsUpdate as EventListener);
+      window.removeEventListener('cache_updated_subcategories', handleSubcategoriesUpdate as EventListener);
+    };
+  }, []);
+
   // Fetch all data
-  const fetchData = async () => {
+  const fetchData = async (forceRefresh = false) => {
     if (!user) return;
     
     setLoading(true);
     try {
-    // Fetch accounts ordered by display_order
-    const { data: accountsData } = await supabase
-      .from('accounts')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('display_order', { ascending: true });
+      // Fetch accounts
+      const accountsData = await fetchWithCache(
+        'accounts',
+        async () => {
+          const { data } = await supabase
+            .from('accounts')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('display_order', { ascending: true });
+          return data || [];
+        },
+        forceRefresh
+      );
       
-      // Fetch categories with subcategories ordered by display_order
-      const { data: categoriesData } = await supabase
-        .from('categories')
-        .select(`
-          *,
-          subcategories (*)
-        `)
-        .eq('user_id', user.id)
-        .order('display_order', { ascending: true });
-      
-    // Fetch tags ordered by display_order
-    const { data: tagsData } = await supabase
-      .from('tags')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('display_order', { ascending: true });
+      // Fetch categories with subcategories
+      const categoriesData = await fetchWithCache(
+        'categories',
+        async () => {
+          const { data: categoriesData } = await supabase
+            .from('categories')
+            .select(`
+              *,
+              subcategories (*)
+            `)
+            .eq('user_id', user.id)
+            .order('display_order', { ascending: true });
+
+          // Process categories to ensure subcategories have icons
+          return categoriesData?.map(category => ({
+            ...category,
+            subcategories: category.subcategories?.map((subcategory: any) => ({
+              ...subcategory,
+              icon: subcategory.icon || '📦' // Default icon if not present
+            })) || []
+          })) || [];
+        },
+        forceRefresh
+      );
+    
+      // Fetch tags
+      const tagsData = await fetchWithCache(
+        'tags',
+        async () => {
+          const { data } = await supabase
+            .from('tags')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('display_order', { ascending: true });
+          return data || [];
+        },
+        forceRefresh
+      );
       
       // Fetch templates with tags
-      const { data: templatesData } = await supabase
-        .from('templates')
-        .select(`
-          *,
-          tags:template_tags(
-            tag:tags(*)
-          )
-        `)
-        .eq('user_id', user.id);
+      const templatesData = await fetchWithCache(
+        'templates',
+        async () => {
+          const { data: templatesData } = await supabase
+            .from('templates')
+            .select(`
+              *,
+              tags:template_tags(
+                tag:tags(*)
+              )
+            `)
+            .eq('user_id', user.id);
 
-      // Process templates data to flatten tags
-      const processedTemplates = templatesData?.map(template => ({
-        ...template,
-        tags: template.tags?.map((t: any) => t.tag) || []
-      })) || [];
+          // Process templates data to flatten tags
+          return templatesData?.map(template => ({
+            ...template,
+            tags: template.tags?.map((t: any) => t.tag) || []
+          })) || [];
+        },
+        forceRefresh
+      );
       
       // Fetch filters
-      const { data: filtersData } = await supabase
-        .from('filters')
-        .select('*')
-        .eq('user_id', user.id);
+      const filtersData = await fetchWithCache(
+        'filters',
+        async () => {
+          const { data } = await supabase
+            .from('filters')
+            .select('*')
+            .eq('user_id', user.id);
+          return data || [];
+        },
+        forceRefresh
+      );
       
       // Fetch user settings
-      const { data: settingsData } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const settingsData = await fetchWithCache(
+        'user_settings',
+        async () => {
+          const { data } = await supabase
+            .from('user_settings')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          return data ? [data] : [];
+        },
+        forceRefresh
+      );
 
-      // Process categories to ensure subcategories have icons
-      const processedCategories = categoriesData?.map(category => ({
-        ...category,
-        subcategories: category.subcategories?.map((subcategory: any) => ({
-          ...subcategory,
-          icon: subcategory.icon || '📦' // Default icon if not present
-        })) || []
-      })) || [];
-
-      setAccounts(accountsData || []);
-      setCategories(processedCategories);
-      setTags(tagsData || []);
-      setTemplates(processedTemplates);
-      setFilters(filtersData || []);
-      setUserSettings(settingsData);
+      setAccounts(accountsData);
+      setCategories(categoriesData);
+      setTags(tagsData);
+      setTemplates(templatesData);
+      setFilters(filtersData);
+      setUserSettings(settingsData[0] || null);
     } catch (error) {
       console.error('Error fetching settings data:', error);
       toast({

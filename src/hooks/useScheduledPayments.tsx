@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from '@/hooks/use-toast';
+import { useLocalCache } from './useLocalCache';
 
 export interface ScheduledPayment {
   id: string;
@@ -43,121 +44,144 @@ export const useScheduledPayments = () => {
   const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { fetchWithCache } = useLocalCache();
 
-  const fetchScheduledPayments = async () => {
+  // Listen to cache updates
+  useEffect(() => {
+    const handleCacheUpdate = (event: CustomEvent) => {
+      // For scheduled payments, we need to recalculate next payment dates and related data
+      fetchScheduledPayments(true);
+    };
+
+    window.addEventListener('cache_updated_scheduled_payments', handleCacheUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('cache_updated_scheduled_payments', handleCacheUpdate as EventListener);
+    };
+  }, []);
+
+  const fetchScheduledPayments = async (forceRefresh = false) => {
     if (!user) return;
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('scheduled_payments')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('next_payment_date', { ascending: true });
+      const data = await fetchWithCache(
+        'scheduled_payments',
+        async () => {
+          const { data, error } = await supabase
+            .from('scheduled_payments')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('next_payment_date', { ascending: true });
 
-      if (error) throw error;
+          if (error) throw error;
 
-      // Fetch related data separately
-      const paymentIds = data?.map(p => p.id) || [];
-      const categoryIds = data?.filter(p => p.category_id).map(p => p.category_id) || [];
-      const accountIds = [...new Set([
-        ...(data?.filter(p => p.account_id).map(p => p.account_id) || []),
-        ...(data?.filter(p => p.to_account_id).map(p => p.to_account_id) || [])
-      ])];
-      const contactIds = data?.filter(p => p.contact_id).map(p => p.contact_id) || [];
+          // Fetch related data separately
+          const paymentIds = data?.map(p => p.id) || [];
+          const categoryIds = data?.filter(p => p.category_id).map(p => p.category_id) || [];
+          const accountIds = [...new Set([
+            ...(data?.filter(p => p.account_id).map(p => p.account_id) || []),
+            ...(data?.filter(p => p.to_account_id).map(p => p.to_account_id) || [])
+          ])];
+          const contactIds = data?.filter(p => p.contact_id).map(p => p.contact_id) || [];
 
-      // Fetch categories
-      const { data: categories } = categoryIds.length > 0 ? await supabase
-        .from('categories')
-        .select('id, name, icon, color')
-        .in('id', categoryIds) : { data: [] };
+          // Fetch categories
+          const { data: categories } = categoryIds.length > 0 ? await supabase
+            .from('categories')
+            .select('id, name, icon, color')
+            .in('id', categoryIds) : { data: [] };
 
-      // Fetch accounts
-      const { data: accounts } = accountIds.length > 0 ? await supabase
-        .from('accounts')
-        .select('id, name')
-        .in('id', accountIds) : { data: [] };
+          // Fetch accounts
+          const { data: accounts } = accountIds.length > 0 ? await supabase
+            .from('accounts')
+            .select('id, name')
+            .in('id', accountIds) : { data: [] };
 
-      // Fetch contacts
-      const { data: contacts } = contactIds.length > 0 ? await supabase
-        .from('contacts')
-        .select('id, name')
-        .in('id', contactIds) : { data: [] };
+          // Fetch contacts
+          const { data: contacts } = contactIds.length > 0 ? await supabase
+            .from('contacts')
+            .select('id, name')
+            .in('id', contactIds) : { data: [] };
 
-      // Helper function to calculate the next payment date
-      const calculateNextPaymentDate = (payment: any): string => {
-        if (payment.frequency_type === 'once') {
-          return payment.start_date;
-        }
+          // Helper function to calculate the next payment date
+          const calculateNextPaymentDate = (payment: any): string => {
+            if (payment.frequency_type === 'once') {
+              return payment.start_date;
+            }
 
-        const startDate = new Date(payment.start_date);
-        const today = new Date();
-        let currentDate = new Date(startDate);
-        const interval = payment.recurrence_interval || 1;
-        const pattern = payment.recurrence_pattern || 'monthly';
-        const endDate = payment.end_type === 'date' && payment.end_date ? new Date(payment.end_date) : null;
-        const maxCount = payment.end_type === 'count' ? payment.end_count : null;
-        let count = 0;
+            const startDate = new Date(payment.start_date);
+            const today = new Date();
+            let currentDate = new Date(startDate);
+            const interval = payment.recurrence_interval || 1;
+            const pattern = payment.recurrence_pattern || 'monthly';
+            const endDate = payment.end_type === 'date' && payment.end_date ? new Date(payment.end_date) : null;
+            const maxCount = payment.end_type === 'count' ? payment.end_count : null;
+            let count = 0;
 
-        // If start date is in the future, that's the next payment
-        if (startDate > today) {
-          return payment.start_date;
-        }
+            // If start date is in the future, that's the next payment
+            if (startDate > today) {
+              return payment.start_date;
+            }
 
-        // Calculate future occurrences until we find the next one
-        while (currentDate <= today) {
-          count++;
-          
-          // Check if we've reached the end conditions
-          if (maxCount && count >= maxCount) {
+            // Calculate future occurrences until we find the next one
+            while (currentDate <= today) {
+              count++;
+              
+              // Check if we've reached the end conditions
+              if (maxCount && count >= maxCount) {
+                return currentDate.toISOString();
+              }
+              if (endDate && currentDate >= endDate) {
+                return currentDate.toISOString();
+              }
+
+              // Move to next occurrence
+              switch (pattern) {
+                case 'daily':
+                  currentDate = new Date(currentDate.getTime() + (interval * 24 * 60 * 60 * 1000));
+                  break;
+                case 'weekly':
+                  currentDate = new Date(currentDate.getTime() + (interval * 7 * 24 * 60 * 60 * 1000));
+                  break;
+                case 'monthly':
+                  currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + interval, currentDate.getDate());
+                  break;
+                case 'yearly':
+                  currentDate = new Date(currentDate.getFullYear() + interval, currentDate.getMonth(), currentDate.getDate());
+                  break;
+                default:
+                  currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + interval, currentDate.getDate());
+              }
+            }
+
             return currentDate.toISOString();
-          }
-          if (endDate && currentDate >= endDate) {
-            return currentDate.toISOString();
-          }
+          };
 
-          // Move to next occurrence
-          switch (pattern) {
-            case 'daily':
-              currentDate = new Date(currentDate.getTime() + (interval * 24 * 60 * 60 * 1000));
-              break;
-            case 'weekly':
-              currentDate = new Date(currentDate.getTime() + (interval * 7 * 24 * 60 * 60 * 1000));
-              break;
-            case 'monthly':
-              currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + interval, currentDate.getDate());
-              break;
-            case 'yearly':
-              currentDate = new Date(currentDate.getFullYear() + interval, currentDate.getMonth(), currentDate.getDate());
-              break;
-            default:
-              currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + interval, currentDate.getDate());
-          }
-        }
+          const formattedPayments = (data || []).map(payment => {
+            const category = categories?.find(c => c.id === payment.category_id);
+            const account = accounts?.find(a => a.id === payment.account_id);
+            const toAccount = accounts?.find(a => a.id === payment.to_account_id);
+            const contact = contacts?.find(c => c.id === payment.contact_id);
 
-        return currentDate.toISOString();
-      };
+            return {
+              ...payment,
+              type: payment.type as 'income' | 'expense' | 'transfer',
+              category_name: category?.name,
+              category_icon: category?.icon,
+              category_color: category?.color,
+              account_name: account?.name,
+              to_account_name: toAccount?.name,
+              contact_name: contact?.name,
+              next_payment_date: calculateNextPaymentDate(payment),
+            } as ScheduledPayment;
+          });
 
-      const formattedPayments = (data || []).map(payment => {
-        const category = categories?.find(c => c.id === payment.category_id);
-        const account = accounts?.find(a => a.id === payment.account_id);
-        const toAccount = accounts?.find(a => a.id === payment.to_account_id);
-        const contact = contacts?.find(c => c.id === payment.contact_id);
+          return formattedPayments;
+        },
+        forceRefresh
+      );
 
-        return {
-          ...payment,
-          type: payment.type as 'income' | 'expense' | 'transfer',
-          category_name: category?.name,
-          category_icon: category?.icon,
-          category_color: category?.color,
-          account_name: account?.name,
-          to_account_name: toAccount?.name,
-          contact_name: contact?.name,
-          next_payment_date: calculateNextPaymentDate(payment),
-        } as ScheduledPayment;
-      });
-
-      setScheduledPayments(formattedPayments);
+      setScheduledPayments(data);
     } catch (error) {
       console.error('Error fetching scheduled payments:', error);
       toast({
@@ -262,7 +286,7 @@ export const useScheduledPayments = () => {
   return {
     scheduledPayments,
     loading,
-    fetchScheduledPayments,
+    fetchScheduledPayments: () => fetchScheduledPayments(),
     createScheduledPayment,
     updateScheduledPayment,
     deleteScheduledPayment,

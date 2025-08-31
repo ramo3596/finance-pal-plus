@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "@/hooks/use-toast";
+import { useLocalCache } from "./useLocalCache";
 
 export interface Product {
   id: string;
@@ -62,25 +63,44 @@ export function useInventory() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { fetchWithCache } = useLocalCache();
 
-  const fetchProducts = async () => {
+  // Listen to cache updates
+  useEffect(() => {
+    const handleCacheUpdate = (event: CustomEvent) => {
+      setProducts(event.detail.data);
+    };
+
+    window.addEventListener('cache_updated_products', handleCacheUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('cache_updated_products', handleCacheUpdate as EventListener);
+    };
+  }, []);
+
+  const fetchProducts = async (forceRefresh = false) => {
     if (!user) return;
     
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const data = await fetchWithCache(
+        'products',
+        async () => {
+          const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
 
-      if (error) throw error;
+          if (error) throw error;
+          return (data || []).map((product: any) => ({
+            ...product,
+          }));
+        },
+        forceRefresh
+      );
 
-      const formattedProducts: Product[] = (data || []).map((product: any) => ({
-        ...product,
-      }));
-
-      setProducts(formattedProducts);
+      setProducts(data);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -185,7 +205,7 @@ export function useInventory() {
   return {
     products,
     loading,
-    fetchProducts,
+    fetchProducts: () => fetchProducts(),
     createProduct,
     updateProduct,
     deleteProduct,
