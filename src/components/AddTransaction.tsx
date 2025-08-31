@@ -318,19 +318,54 @@ export function AddTransaction({
             <div className="space-y-2">
               <Label htmlFor="category">Categoría</Label>
               <Autocomplete
-                options={categories.map(category => ({
-                  id: category.id,
-                  name: `${category.icon} ${category.name}`
-                }))}
+                options={[
+                  // Incluir todas las categorías
+                  ...categories.map(category => ({
+                    id: category.id,
+                    name: `${category.icon} ${category.name}`,
+                    isCategory: true
+                  })),
+                  // Incluir todas las subcategorías
+                  ...categories.flatMap(category => 
+                    category.subcategories?.map(subcategory => ({
+                      id: subcategory.id,
+                      name: `${subcategory.icon} ${subcategory.name} (${category.name})`,
+                      categoryId: category.id,
+                      isSubcategory: true
+                    })) || []
+                  )
+                ]}
                 value={selectedCategory}
                 onValueChange={(value) => {
-                  setSelectedCategory(value);
-                  setSelectedSubcategory(""); // Reset subcategory when category changes
+                  // Verificar si la selección es una subcategoría
+                  const selectedOption = [
+                    ...categories.map(category => ({
+                      id: category.id,
+                      isCategory: true
+                    })),
+                    ...categories.flatMap(category => 
+                      category.subcategories?.map(subcategory => ({
+                        id: subcategory.id,
+                        categoryId: category.id,
+                        isSubcategory: true
+                      })) || []
+                    )
+                  ].find(option => option.id === value);
+                  
+                  if (selectedOption && 'isSubcategory' in selectedOption && selectedOption.isSubcategory) {
+                    // Si es subcategoría, establecer tanto la categoría como la subcategoría
+                    setSelectedCategory(('categoryId' in selectedOption) ? selectedOption.categoryId : '');
+                    setSelectedSubcategory(value);
+                  } else {
+                    // Si es categoría, establecer solo la categoría y resetear subcategoría
+                    setSelectedCategory(value);
+                    setSelectedSubcategory("");
+                  }
                 }}
-                placeholder="Buscar categoría..."
+                placeholder="Buscar categoría o subcategoría..."
               />
               
-              {/* Subcategory selector - only show if category is selected and has subcategories */}
+              {/* Subcategory selector - solo mostrar si hay categoría seleccionada y tiene subcategorías */}
               {selectedCategory && (() => {
                 const selectedCat = categories.find(c => c.id === selectedCategory);
                 return selectedCat?.subcategories && selectedCat.subcategories.length > 0 ? (

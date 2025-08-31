@@ -64,6 +64,16 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
   });
 
   const incomeCategories = categories; // Mostrar todas las categorías disponibles para ingresos
+  
+  // Obtener todas las subcategorías
+  const allSubcategories = categories
+    .flatMap(category => 
+      (category.subcategories || []).map(subcategory => ({
+        ...subcategory,
+        parentCategory: category
+      }))
+    );
+    
   const paymentMethods = [
     { value: "cash", label: "Dinero en efectivo" },
     { value: "debit", label: "Tarjeta de débito" },
@@ -146,14 +156,43 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
                   <FormLabel>Categoría</FormLabel>
                   <FormControl>
                     <Autocomplete
-                       options={categories.map(category => ({
-                         id: category.id,
-                         name: category.name
-                       }))}
-                       value={field.value}
-                       onValueChange={field.onChange}
-                       placeholder="Seleccionar categoría"
-                     />
+                      options={[
+                        // Incluir todas las categorías
+                        ...categories.map(category => ({
+                          id: category.id,
+                          name: `${category.icon} ${category.name}`,
+                          icon: category.icon,
+                          isCategory: true
+                        })),
+                        // Incluir todas las subcategorías
+                        ...allSubcategories.map(subcategory => ({
+                          id: subcategory.id,
+                          name: `${subcategory.icon || subcategory.parentCategory.icon} ${subcategory.name} (${subcategory.parentCategory.name})`,
+                          icon: subcategory.icon || subcategory.parentCategory.icon,
+                          isSubcategory: true,
+                          categoryId: subcategory.parentCategory.id
+                        }))
+                      ]}
+                      value={field.value}
+                      onValueChange={(value) => {
+                        // Buscar si la opción seleccionada es una subcategoría
+                        const selectedOption = [
+                          ...categories.map(c => ({ id: c.id, isCategory: true })),
+                          ...allSubcategories.map(s => ({ id: s.id, isSubcategory: true, categoryId: s.parentCategory.id }))
+                        ].find(option => option.id === value);
+                        
+                        // Si es una subcategoría, también establecemos la categoría padre
+                        if (selectedOption && 'isSubcategory' in selectedOption && selectedOption.isSubcategory) {
+                          // Aquí podrías establecer la subcategoría en otro campo si es necesario
+                          // form.setValue('subcategory_id', value);
+                          // form.setValue('category_id', selectedOption.categoryId);
+                          field.onChange(value);
+                        } else {
+                          field.onChange(value);
+                        }
+                      }}
+                      placeholder="Seleccionar categoría"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

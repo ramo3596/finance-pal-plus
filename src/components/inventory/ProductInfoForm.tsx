@@ -358,24 +358,58 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
           <Autocomplete
             value={selectedCategory}
             onValueChange={(value) => {
-              setSelectedCategory(value);
-              setValue("category_id", value);
-              setValue("subcategory_id", ""); // Reset subcategory
+              // Verificar si la selección es una subcategoría
+              const selectedOption = [
+                ...categories.map(category => ({
+                  id: category.id,
+                  isCategory: true
+                })),
+                ...categories.flatMap(category => 
+                  category.subcategories?.map(subcategory => ({
+                    id: subcategory.id,
+                    categoryId: category.id,
+                    isSubcategory: true
+                  })) || []
+                )
+              ].find(option => option.id === value);
+              
+              if (selectedOption && 'isSubcategory' in selectedOption && selectedOption.isSubcategory) {
+                // Si es subcategoría, establecer tanto la categoría como la subcategoría
+                setSelectedCategory(('categoryId' in selectedOption) ? selectedOption.categoryId : '');
+                setValue("category_id", ('categoryId' in selectedOption) ? selectedOption.categoryId : '');
+                setValue("subcategory_id", value);
+              } else {
+                // Si es categoría, establecer solo la categoría y resetear subcategoría
+                setSelectedCategory(value);
+                setValue("category_id", value);
+                setValue("subcategory_id", "");
+              }
             }}
-            options={categories.filter(category => category.id && category.id.trim() !== '').map((category) => ({
-              id: category.id,
-              name: `${category.icon} ${category.name}`
-            }))}
-            placeholder="Seleccionar categoría"
+            options={[
+              ...categories.filter(category => category.id && category.id.trim() !== '').map((category) => ({
+                id: category.id,
+                name: `${category.icon} ${category.name}`
+              })),
+              ...categories.flatMap(category => 
+                category.subcategories?.map(subcategory => ({
+                  id: subcategory.id,
+                  name: `🔹 ${subcategory.icon} ${subcategory.name} (${category.name})`
+                })) || []
+              )
+            ]}
+            placeholder="Buscar categoría o subcategoría..."
           />
         </div>
       </div>
 
-      {/* Subcategory (conditional) */}
-      {subcategories.length > 0 && (
+      {/* Subcategory (conditional) - solo mostrar si hay categoría seleccionada y tiene subcategorías */}
+      {selectedCategory && subcategories.length > 0 && (
         <div className="space-y-2">
           <Label>Subcategoría</Label>
-          <Select onValueChange={(value) => setValue("subcategory_id", value)}>
+          <Select 
+            value={watch("subcategory_id")} 
+            onValueChange={(value) => setValue("subcategory_id", value)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Seleccionar subcategoría" />
             </SelectTrigger>
