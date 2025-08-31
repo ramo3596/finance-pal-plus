@@ -272,23 +272,37 @@ export default function ProfileSettings() {
     input?.click();
   };
 
-  // Custom floating action button for mobile
+  // Custom floating action buttons for mobile
   const FloatingActionButton = () => {
     if (!isMobile) return null;
 
     return (
-      <Button
-        onClick={handleSaveProfile}
-        disabled={isLoadingProfile}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
-        size="icon"
-      >
-        {isLoadingProfile ? (
-          <Loader2 className="h-6 w-6 animate-spin" />
-        ) : (
-          <Save className="h-6 w-6" />
-        )}
-      </Button>
+      <>
+        <Button
+          onClick={handleSaveProfile}
+          disabled={isLoadingProfile}
+          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+          size="icon"
+        >
+          {isLoadingProfile ? (
+            <Loader2 className="h-6 w-6 animate-spin" />
+          ) : (
+            <Save className="h-6 w-6" />
+          )}
+        </Button>
+        <Button
+          onClick={handleSyncConfiguration}
+          disabled={isLoadingProfile}
+          className="fixed bottom-6 right-24 z-50 h-14 w-14 rounded-full bg-secondary hover:bg-secondary/90 text-secondary-foreground shadow-lg"
+          size="icon"
+        >
+          {isLoadingProfile ? (
+            <Loader2 className="h-6 w-6 animate-spin" />
+          ) : (
+            <RotateCcw className="h-6 w-6" />
+          )}
+        </Button>
+      </>
     );
   };
 
@@ -307,19 +321,21 @@ export default function ProfileSettings() {
                 <User className="h-5 w-5" />
                 Perfil de Usuario
               </span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleSyncConfiguration}
-                disabled={isLoadingProfile}
-              >
-                {isLoadingProfile ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                )}
-                Sincronizar configuración
-              </Button>
+              {!isMobile && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleSyncConfiguration}
+                  disabled={isLoadingProfile}
+                >
+                  {isLoadingProfile ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                  )}
+                  Sincronizar configuración
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
