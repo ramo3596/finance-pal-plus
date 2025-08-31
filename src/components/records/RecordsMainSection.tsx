@@ -257,6 +257,7 @@ export function RecordsMainSection({
                       transaction={transaction}
                       showCheckbox={true}
                       isSelected={selectedTransactions.includes(transaction.id)}
+                      anySelected={selectedTransactions.length > 0}
                       onSelectTransaction={onSelectTransaction}
                       onEdit={setEditingTransaction}
                       onDelete={handleDelete}

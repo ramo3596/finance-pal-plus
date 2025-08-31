@@ -17,6 +17,7 @@ interface TransactionItemProps {
   transaction: Transaction;
   showCheckbox?: boolean;
   isSelected?: boolean;
+  anySelected?: boolean; // Indica si hay alguna transacción seleccionada
   onSelectTransaction?: (transactionId: string, checked: boolean) => void;
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (transactionId: string) => void;
@@ -26,6 +27,7 @@ export function TransactionItem({
   transaction,
   showCheckbox = false,
   isSelected = false,
+  anySelected = false,
   onSelectTransaction,
   onEdit,
   onDelete
@@ -88,6 +90,13 @@ export function TransactionItem({
     return () => clearLongPressTimer();
   }, []);
 
+  // Función para manejar el toque normal (sin mantener presionado)
+  const handleTap = () => {
+    if (isMobile && showCheckbox && onSelectTransaction && anySelected) {
+      onSelectTransaction(transaction.id, !isSelected);
+    }
+  };
+
   return (
     <div 
       className={cn(
@@ -95,8 +104,9 @@ export function TransactionItem({
         isMobile ? "space-x-3 p-3 text-sm w-screen -mx-2" : "space-x-6 p-5",
         isSelected ? "bg-muted" : ""
       )}
+      onClick={handleTap}
       onTouchStart={() => {
-        if (isMobile) {
+        if (isMobile && !anySelected) {
           startLongPressTimer();
         }
       }}
