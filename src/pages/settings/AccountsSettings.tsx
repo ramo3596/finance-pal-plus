@@ -41,24 +41,17 @@ export default function AccountsSettings() {
   return (
     <Layout>
       <div className="container mx-auto p-6 pb-24">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                {isMobile && (
-                  <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2">
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                )}
+        {isMobile ? (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
                 <CreditCard className="h-5 w-5" />
-                Gestión de Cuentas
-              </span>
-              <div className="hidden md:block">
-                <AddAccountDialog onAdd={createAccount} />
+                <span>Gestión de Cuentas</span>
               </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+            </div>
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -75,8 +68,40 @@ export default function AccountsSettings() {
                 onReorder={handleReorderAccounts}
               />
             )}
-          </CardContent>
-        </Card>
+          </div>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Gestión de Cuentas
+                </span>
+                <div>
+                  <AddAccountDialog onAdd={createAccount} />
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : accounts.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  No hay cuentas configuradas. Agrega tu primera cuenta.
+                </p>
+              ) : (
+                <DraggableAccountList
+                  accounts={accounts}
+                  onUpdate={updateAccount}
+                  onDelete={handleDeleteAccount}
+                  onReorder={handleReorderAccounts}
+                />
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <FloatingActionButton
           onClick={() => setShowAddAccountDialog(true)}
