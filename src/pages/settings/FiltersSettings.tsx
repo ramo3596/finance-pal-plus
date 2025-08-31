@@ -36,34 +36,23 @@ export default function FiltersSettings() {
   return (
     <Layout>
       <div className="container mx-auto p-6 pb-24">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                {isMobile && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(-1)}
-                    className="p-1 h-8 w-8"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                )}
+        {isMobile ? (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate(-1)}
+                  className="p-1 h-8 w-8"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
                 <Filter className="h-5 w-5" />
-                Administrar Filtros
-              </span>
-              <div className="hidden md:block">
-                <AddFilterDialog 
-                  onAdd={createFilter}
-                  accounts={accounts}
-                  categories={categories}
-                  tags={tags}
-                />
+                <h2 className="text-lg font-semibold">Administrar Filtros</h2>
               </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+            </div>
+            
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -99,8 +88,64 @@ export default function FiltersSettings() {
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Filter className="h-5 w-5" />
+                  Administrar Filtros
+                </span>
+                <div className="hidden md:block">
+                  <AddFilterDialog 
+                    onAdd={createFilter}
+                    accounts={accounts}
+                    categories={categories}
+                    tags={tags}
+                  />
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filters.map((filter) => (
+                    <div key={filter.id} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="font-medium">{filter.name}</h3>
+                          <Badge variant="secondary">{filter.type}</Badge>
+                        </div>
+                        <div className="flex gap-2">
+                          <EditFilterDialog 
+                            filter={filter} 
+                            onUpdate={updateFilter}
+                            accounts={accounts}
+                            categories={categories}
+                            tags={tags}
+                          />
+                          <Button variant="destructive" size="sm" onClick={() => handleDeleteFilter(filter.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {filters.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      No hay filtros configurados. Agrega tu primer filtro.
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <FloatingActionButton
           onClick={() => setShowAddFilterDialog(true)}

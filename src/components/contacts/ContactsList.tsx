@@ -8,11 +8,19 @@ export function ContactsList() {
   const [searchTerm, setSearchTerm] = useState("");
   const { contacts, loading } = useContacts();
 
-  const filteredContacts = contacts.filter(contact =>
-    contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.mobile?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredContacts = contacts.filter(contact => {
+    const search = searchTerm.toLowerCase();
+    return (
+      contact.name.toLowerCase().includes(search) ||
+      contact.email?.toLowerCase().includes(search) ||
+      contact.mobile?.toLowerCase().includes(search) ||
+      contact.phone?.toLowerCase().includes(search) ||
+      contact.identification_number?.toLowerCase().includes(search) ||
+      contact.address?.toLowerCase().includes(search) ||
+      contact.website?.toLowerCase().includes(search) ||
+      contact.internal_notes?.toLowerCase().includes(search)
+    );
+  });
 
   if (loading) {
     return <div className="text-center py-8">Cargando contactos...</div>;
@@ -23,7 +31,7 @@ export function ContactsList() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
         <Input
-          placeholder="Buscar contactos..."
+          placeholder="Buscar por nombre, celular, identificación, correo..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
