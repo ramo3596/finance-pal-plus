@@ -3,24 +3,21 @@ import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "./useAuth"
 import { toast } from "sonner"
 import { useTransactions } from "./useTransactions"
-import { useSettings } from "./useSettings"
-import { useLocalCache } from "./useLocalCache"
 
 export interface Debt {
-  id: string
+  id: string // contact_id para agrupación
   user_id: string
-  contact_id: string
-  account_id: string
   type: 'debt' | 'loan'
-  description: string
+  contact_id: string
+  account_id: string // cuenta principal asociada
+  description: string // descripción combinada
   initial_amount: number
   current_balance: number
+  status: 'active' | 'closed'
   debt_date: string
   due_date?: string
-  status: 'active' | 'closed'
   created_at: string
   updated_at: string
-  tags?: string[]
   contacts?: {
     id: string
     name: string
@@ -36,713 +33,314 @@ export interface DebtPayment {
   id: string
   debt_id: string
   transaction_id?: string
-  account_id?: string
   amount: number
+  account_id?: string
   payment_date: string
   description?: string
   created_at: string
-  tags?: string[]
   transactions?: {
-    category_id: string
-    subcategory_id?: string
-    account_id: string
-    categories: {
+    id: string
+    categories?: {
+      id: string
       name: string
-      icon: string
       color: string
+      icon: string
     }
     subcategories?: {
+      id: string
       name: string
       icon: string
     }
-    accounts: {
+    accounts?: {
+      id: string
       name: string
     }
   }
 }
 
+// Subcategorías identificadoras para deudas/préstamos
+const DEBT_SUBCATEGORIES = {
+  LOANS_INCOME: 'e9fb73a7-86d4-44f0-bb40-dee112a5560d', // Préstamos, alquileres (para cobros de préstamo - tipo income)
+  COMMISSION: '6450a480-9d0c-4ae1-a08a-26e5d4b158a2', // Comisión (para pagos de deuda - tipo expense)
+  LOANS_EXPENSE: 'e3b4a085-a4da-4b24-b356-fd9a2b3113e5', // Préstamos (para nuevas deudas - tipo expense)
+}
+
+const DEBT_CATEGORIES = {
+  INCOME: 'ad030b76-5813-434c-aa06-322dbbedc20e', // Ingresos
+  FINANCIAL_EXPENSES: '41d920fb-59d3-48a2-b9be-52c1a7eec929', // Gastos financieros
+}
+
 export function useDebts() {
   const [debts, setDebts] = useState<Debt[]>([])
-  const [debtPayments, setDebtPayments] = useState<DebtPayment[]>([])
   const [loading, setLoading] = useState(true)
+  const [contactsMap, setContactsMap] = useState<Record<string, any>>({})
+  const [accountsMap, setAccountsMap] = useState<Record<string, any>>({})
   const { user } = useAuth()
-  const { createTransaction, refetch: refetchTransactions } = useTransactions()
-  const { categories, createCategory, createSubcategory, refetch: refetchSettings } = useSettings()
-  const { fetchWithCache } = useLocalCache()
+  const { transactions, createTransaction, updateTransaction, deleteTransaction, refetch: refetchTransactions } = useTransactions()
 
-  // Listen to cache updates
+  // Cargar información de contactos y cuentas
   useEffect(() => {
-    const handleDebtsUpdate = (event: CustomEvent) => {
-      fetchDebts(true);
-    };
+    const loadReferencesData = async () => {
+      if (!user) return
 
-    const handleDebtPaymentsUpdate = (event: CustomEvent) => {
-      fetchDebts(true); // Refetch debts to recalculate balances
-    };
+      try {
+        // Cargar contactos
+        const { data: contactsData } = await supabase
+          .from('contacts')
+          .select('id, name, image_url')
+          .eq('user_id', user.id)
 
-    window.addEventListener('cache_updated_debts', handleDebtsUpdate as EventListener);
-    window.addEventListener('cache_updated_debt_payments', handleDebtPaymentsUpdate as EventListener);
-    
-    return () => {
-      window.removeEventListener('cache_updated_debts', handleDebtsUpdate as EventListener);
-      window.removeEventListener('cache_updated_debt_payments', handleDebtPaymentsUpdate as EventListener);
-    };
-  }, []);
+        const contactsById = (contactsData || []).reduce((acc, contact) => {
+          acc[contact.id] = contact
+          return acc
+        }, {} as Record<string, any>)
 
-  const calculateDebtBalance = async (debtId: string): Promise<number> => {
-    try {
-      // Obtener información de la deuda para conocer su tipo
-      const { data: debt, error: debtError } = await supabase
-        .from('debts')
-        .select('type')
-        .eq('id', debtId)
-        .single()
+        // Cargar cuentas
+        const { data: accountsData } = await supabase
+          .from('accounts')
+          .select('id, name')
+          .eq('user_id', user.id)
 
-      if (debtError) throw debtError
+        const accountsById = (accountsData || []).reduce((acc, account) => {
+          acc[account.id] = account
+          return acc
+        }, {} as Record<string, any>)
 
-      const { data: payments, error } = await supabase
-        .from('debt_payments')
-        .select('amount')
-        .eq('debt_id', debtId)
-        .order('payment_date', { ascending: true })
-
-      if (error) throw error
-      
-      // Calcular el saldo sumando todos los registros
-      // Los valores ya están almacenados con los signos correctos:
-      // - Deudas ("Me prestaron"): valores negativos
-      // - Préstamos ("Prestó"): valores positivos
-      const totalBalance = (payments || []).reduce((sum, payment) => sum + payment.amount, 0)
-      // Multiplicar el resultado por -1 según la nueva lógica
-      return totalBalance * -1
-    } catch (error) {
-      console.error('Error calculating debt balance:', error)
-      return 0
+        setContactsMap(contactsById)
+        setAccountsMap(accountsById)
+      } catch (error) {
+        console.error('Error loading reference data:', error)
+      }
     }
-  }
 
-  const fetchDebts = async (forceRefresh = false) => {
-    if (!user) return
+    loadReferencesData()
+  }, [user])
 
-    try {
-      const data = await fetchWithCache(
-        'debts',
-        async () => {
-          const { data, error } = await supabase
-            .from('debts')
-            .select(`
-              *,
-              contacts:contact_id (
-                id,
-                name,
-                image_url
-              ),
-              accounts:account_id (
-                id,
-                name
-              )
-            `)
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-
-          if (error) throw error
-          
-          // Calcular el saldo real para cada deuda basado en la suma de registros
-          const debtsWithCalculatedBalance = await Promise.all(
-            (data as Debt[] || []).map(async (debt) => {
-              const calculatedBalance = await calculateDebtBalance(debt.id)
-              return {
-                ...debt,
-                current_balance: calculatedBalance
-              }
-            })
-          )
-          
-          return debtsWithCalculatedBalance;
-        },
-        forceRefresh
-      );
-
-      setDebts(data);
-    } catch (error) {
-      console.error('Error fetching debts:', error)
-      toast.error('Error al cargar las deudas')
+  // Procesar transacciones para generar la vista de deudas
+  const processDebtsFromTransactions = () => {
+    if (!transactions?.length) {
+      setDebts([])
+      setLoading(false)
+      return
     }
-  }
 
-  const fetchDebtPayments = async (debtId: string) => {
-    try {
-      // Get the debt details first to determine category
-      const { data: debt, error: debtError } = await supabase
-        .from('debts')
-        .select(`
-          *,
-          accounts (
-            name
-          )
-        `)
-        .eq('id', debtId)
-        .single()
+    // Filtrar transacciones de deudas/préstamos por subcategorías
+    const debtTransactions = transactions.filter(transaction => 
+      [DEBT_SUBCATEGORIES.LOANS_INCOME, DEBT_SUBCATEGORIES.COMMISSION, DEBT_SUBCATEGORIES.LOANS_EXPENSE].includes(transaction.subcategory_id || '')
+    )
 
-      if (debtError) throw debtError
+    // Agrupar por contact_id
+    const debtsByContact = debtTransactions.reduce((acc, transaction) => {
+      const contactId = transaction.contact_id
+      if (!contactId) return acc
 
-      // Get categories and subcategories for debt and loan using the new category structure
-      const { incomeCategory, incomeSubcategory, expenseCategory, expenseSubcategory } = await ensureDebtCategories()
+      if (!acc[contactId]) {
+        acc[contactId] = []
+      }
+      acc[contactId].push(transaction)
+      return acc
+    }, {} as Record<string, typeof transactions>)
+
+    // Crear objetos Debt basados en los grupos
+    const debtsArray: Debt[] = Object.entries(debtsByContact).map(([contactId, contactTransactions]) => {
+      // Ordenar por fecha para obtener la primera transacción
+      const sortedTransactions = contactTransactions.sort((a, b) => 
+        new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime()
+      )
       
-      const { data: categories, error: categoriesError } = await supabase
-        .from('categories')
-        .select(`
-          *,
-          subcategories (*)
-        `)
-        .in('id', [incomeCategory, expenseCategory].filter(Boolean))
+      const firstTransaction = sortedTransactions[0]
+      const lastTransaction = sortedTransactions[sortedTransactions.length - 1]
 
-      if (categoriesError) throw categoriesError
+      // Calcular saldo actual sumando todas las transacciones
+      let currentBalance = 0
+      let isDebt = false // Por defecto es préstamo
 
-      const incomeCateg = categories?.find(c => c.id === incomeCategory)
-      const expenseCateg = categories?.find(c => c.id === expenseCategory)
-      const prestamosSubcategory = incomeCateg?.subcategories?.find(s => s.id === incomeSubcategory)
-      const comisionSubcategory = expenseCateg?.subcategories?.find(s => s.id === expenseSubcategory)
+      // Determinar tipo basado en el patrón de transacciones
+      const incomeTransactions = contactTransactions.filter(t => t.type === 'income')
+      const expenseTransactions = contactTransactions.filter(t => t.type === 'expense')
 
-      // Get payments
-      const { data, error } = await supabase
-        .from('debt_payments')
-        .select('*')
-        .eq('debt_id', debtId)
-        .order('payment_date', { ascending: false })
-
-      if (error) throw error
-
-      // Add category and subcategory info to each payment
-      const enrichedPayments = (data || []).map(payment => {
-        // Determine category and subcategory based on amount sign (same logic as addDebtPayment)
-        const isPositiveAmount = payment.amount > 0
-        let selectedCategory, selectedSubcategory
+      if (incomeTransactions.length > 0 && expenseTransactions.length === 0) {
+        // Solo ingresos = Es un préstamo que hice (Me deben)
+        isDebt = false
+        currentBalance = incomeTransactions.reduce((sum, t) => sum + t.amount, 0)
+      } else if (expenseTransactions.length > 0 && incomeTransactions.length === 0) {
+        // Solo gastos = Es una deuda que tengo (Debo)
+        isDebt = true
+        currentBalance = expenseTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0)
+      } else {
+        // Mezcla: calcular balance neto
+        const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0)
+        const totalExpense = expenseTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0)
         
-        if (isPositiveAmount) {
-          // Positive amounts use "Ingresos" -> "Préstamos, alquileres"
-          selectedCategory = incomeCateg
-          selectedSubcategory = prestamosSubcategory
+        if (totalIncome > totalExpense) {
+          // Me deben más de lo que debo
+          isDebt = false
+          currentBalance = totalIncome - totalExpense
         } else {
-          // Negative amounts use "Gastos financieros" -> "Comisión"
-          selectedCategory = expenseCateg
-          selectedSubcategory = comisionSubcategory
+          // Debo más de lo que me deben
+          isDebt = true
+          currentBalance = totalExpense - totalIncome
         }
+      }
 
-        return {
-          ...payment,
-          transactions: {
-            category_id: selectedCategory?.id,
-            subcategory_id: selectedSubcategory?.id,
-            account_id: debt?.account_id,
-            categories: selectedCategory,
-            subcategories: selectedSubcategory,
-            accounts: debt?.accounts
-          }
-        }
-      })
+      // Determinar estado basado en el saldo
+      const status = currentBalance === 0 ? 'closed' : 'active'
 
-      return enrichedPayments
-    } catch (error) {
-      console.error('Error fetching debt payments:', error)
-      return []
-    }
+      // Obtener información del contacto y cuenta
+      const contactInfo = contactsMap[contactId] || { id: contactId, name: firstTransaction.beneficiary || 'Contacto sin nombre' }
+      const accountInfo = accountsMap[firstTransaction.account_id] || { id: firstTransaction.account_id, name: 'Cuenta' }
+
+      return {
+        id: contactId,
+        user_id: user?.id || '',
+        type: isDebt ? 'debt' : 'loan',
+        contact_id: contactId,
+        account_id: firstTransaction.account_id,
+        description: firstTransaction.description,
+        initial_amount: Math.abs(firstTransaction.amount),
+        current_balance: currentBalance,
+        status,
+        debt_date: firstTransaction.transaction_date,
+        created_at: firstTransaction.created_at,
+        updated_at: lastTransaction.updated_at,
+        contacts: contactInfo,
+        accounts: accountInfo
+      }
+    })
+
+    setDebts(debtsArray)
+    setLoading(false)
   }
 
-  const ensureDebtCategories = async () => {
-    if (!user) return { debtCategoryId: null, loanCategoryId: null, debtSubcategoryId: null, loanSubcategoryId: null }
-
-    // Get fresh categories from database to avoid stale state
-    const { data: freshCategories } = await supabase
-      .from('categories')
-      .select(`
-        *,
-        subcategories (*)
-      `)
-      .eq('user_id', user.id)
-
-    const currentCategories = freshCategories || []
-
-    // Find or create 'Gastos financieros' category (for negative amounts/expenses)
-    let expenseCategory = currentCategories.find(c => c.name === 'Gastos financieros')
-    if (!expenseCategory) {
-      try {
-        const newExpenseCategory = await createCategory({
-          name: 'Gastos financieros',
-          color: '#ef4444', // Red color for expenses
-          icon: '💰',
-          nature: 'Deber' // Using correct nature value
-        })
-        if (newExpenseCategory) {
-          expenseCategory = newExpenseCategory as any
-          console.log('Created expense category:', expenseCategory)
-          // Refresh settings to update local state
-          await refetchSettings()
-        }
-      } catch (error) {
-        console.error('Error creating expense category:', error)
-      }
+  // Procesar deudas cuando cambien las transacciones o los mapas de referencia
+  useEffect(() => {
+    if (user && Object.keys(contactsMap).length > 0 && Object.keys(accountsMap).length > 0) {
+      processDebtsFromTransactions()
     }
+  }, [transactions, user, contactsMap, accountsMap])
 
-    // Find or create 'Ingresos' category (for positive amounts/income)
-    let incomeCategory = currentCategories.find(c => c.name === 'Ingresos')
-    if (!incomeCategory) {
-      try {
-        const newIncomeCategory = await createCategory({
-          name: 'Ingresos',
-          color: '#22c55e', // Green color for income
-          icon: '💵',
-          nature: 'Necesitar' // Using correct nature value
-        })
-        if (newIncomeCategory) {
-          incomeCategory = newIncomeCategory as any
-          console.log('Created income category:', incomeCategory)
-          // Refresh settings to update local state
-          await refetchSettings()
-        }
-      } catch (error) {
-        console.error('Error creating income category:', error)
-      }
-    }
-
-    // Get updated categories after potential creation
-    const { data: updatedCategories } = await supabase
-      .from('categories')
-      .select(`
-        *,
-        subcategories (*)
-      `)
-      .eq('user_id', user.id)
-
-    const finalCategories = updatedCategories || []
-    const finalExpenseCategory = finalCategories.find(c => c.name === 'Gastos financieros')
-    const finalIncomeCategory = finalCategories.find(c => c.name === 'Ingresos')
-
-    // Find or create 'Comisión' subcategory under 'Gastos financieros' (for negative amounts)
-    let comisionSubcategory = finalExpenseCategory?.subcategories?.find(s => s.name === 'Comisión')
-    if (!comisionSubcategory && finalExpenseCategory) {
-      try {
-        const newComisionSubcategory = await createSubcategory({
-          name: 'Comisión',
-          category_id: finalExpenseCategory.id,
-          icon: '💳'
-        })
-        if (newComisionSubcategory) {
-          comisionSubcategory = newComisionSubcategory as any
-          console.log('Created comision subcategory:', comisionSubcategory)
-          // Refresh settings to update local state
-          await refetchSettings()
-        }
-      } catch (error) {
-        console.error('Error creating comision subcategory:', error)
-      }
-    }
-
-    // Find or create 'Préstamos, alquileres' subcategory under 'Ingresos' (for positive amounts)
-    let prestamosSubcategory = finalIncomeCategory?.subcategories?.find(s => s.name === 'Préstamos, alquileres')
-    if (!prestamosSubcategory && finalIncomeCategory) {
-      try {
-        const newPrestamosSubcategory = await createSubcategory({
-          name: 'Préstamos, alquileres',
-          category_id: finalIncomeCategory.id,
-          icon: '🏠'
-        })
-        if (newPrestamosSubcategory) {
-          prestamosSubcategory = newPrestamosSubcategory as any
-          console.log('Created prestamos subcategory:', prestamosSubcategory)
-          // Refresh settings to update local state
-          await refetchSettings()
-        }
-      } catch (error) {
-        console.error('Error creating prestamos subcategory:', error)
-      }
-    }
-
-    return {
-      // For positive amounts (income): use "Ingresos" -> "Préstamos, alquileres"
-      incomeCategory: finalIncomeCategory?.id || null,
-      incomeSubcategory: prestamosSubcategory?.id || null,
-      // For negative amounts (expense): use "Gastos financieros" -> "Comisión"
-      expenseCategory: finalExpenseCategory?.id || null,
-      expenseSubcategory: comisionSubcategory?.id || null,
-      // Keep old naming for backward compatibility
-      debtCategoryId: finalIncomeCategory?.id || null,
-      loanCategoryId: finalExpenseCategory?.id || null,
-      debtSubcategoryId: prestamosSubcategory?.id || null,
-      loanSubcategoryId: comisionSubcategory?.id || null
-    }
-  }
-
-  const createDebt = async (debtData: Omit<Debt, 'id' | 'user_id' | 'created_at' | 'updated_at'>, selectedTags: string[] = [], options?: { skipTransaction?: boolean }) => {
+  // Crear nueva deuda/préstamo (como transacción)
+  const createDebt = async (debtData: Omit<Debt, 'id' | 'user_id' | 'created_at' | 'updated_at'>, selectedTags: string[] = []) => {
     if (!user) return null
 
     try {
-      // Ensure debt/loan categories exist
-      const { debtCategoryId, loanCategoryId, debtSubcategoryId, loanSubcategoryId } = await ensureDebtCategories()
+      // Determinar categoría y subcategoría basada en el tipo
+      let categoryId: string
+      let subcategoryId: string
+      let transactionType: 'income' | 'expense'
 
-      // Get contact information for the transaction
+      if (debtData.type === 'debt') {
+        // Deuda: Alguien me prestó (ingreso para mí)
+        categoryId = DEBT_CATEGORIES.INCOME
+        subcategoryId = DEBT_SUBCATEGORIES.LOANS_INCOME // Préstamos, alquileres
+        transactionType = 'income'
+      } else {
+        // Préstamo: Yo presté (gasto para mí)
+        categoryId = DEBT_CATEGORIES.FINANCIAL_EXPENSES
+        subcategoryId = DEBT_SUBCATEGORIES.LOANS_EXPENSE // Préstamos
+        transactionType = 'expense'
+      }
+
+      // Obtener información del contacto
       const { data: contactData } = await supabase
         .from('contacts')
         .select('name')
         .eq('id', debtData.contact_id)
         .single()
 
-      const { data, error } = await supabase
-        .from('debts')
-        .insert({
-          ...debtData,
-          user_id: user.id,
-          current_balance: debtData.initial_amount
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      // Create initial transaction for manual debts/loans (not for inventory-based ones)
-      if (!options?.skipTransaction) {
-        const transactionType = debtData.type === 'debt' ? 'income' : 'expense'
-        const categoryId = debtData.type === 'debt' ? debtCategoryId : loanCategoryId
-        const description = debtData.type === 'debt' 
-          ? `Deuda - ${contactData?.name || 'contacto'}` 
-          : `Préstamo - ${contactData?.name || 'contacto'}`
-
-        await createTransaction({
-          type: transactionType,
-          amount: debtData.initial_amount,
-          account_id: debtData.account_id,
-          category_id: categoryId,
-          subcategory_id: debtData.type === 'debt' ? debtSubcategoryId : loanSubcategoryId,
-          description,
-          beneficiary: contactData?.name,
-          note: debtData.description,
-          transaction_date: debtData.debt_date,
-          tags: selectedTags
-        })
+      const contactName = contactData?.name || 'Contacto'
+      
+      const transactionData = {
+        type: transactionType,
+        amount: debtData.initial_amount,
+        account_id: debtData.account_id,
+        category_id: categoryId,
+        subcategory_id: subcategoryId,
+        description: debtData.type === 'debt' 
+          ? `Préstamo recibido de ${contactName}` 
+          : `Préstamo otorgado a ${contactName}`,
+        beneficiary: contactName,
+        note: debtData.description,
+        transaction_date: debtData.debt_date,
+        contact_id: debtData.contact_id,
+        tags: selectedTags
       }
 
-      // Create initial payment record in debt_payments for history tracking
-      // Para que las deudas muestren valores negativos y los préstamos positivos:
-      // - Para deudas ("Me prestaron"): monto positivo (se invierte con el *-1 en calculateDebtBalance)
-      // - Para préstamos ("Prestó"): monto negativo (se invierte con el *-1 en calculateDebtBalance)
-      const initialPaymentAmount = debtData.type === 'debt' ? debtData.initial_amount : -debtData.initial_amount
+      const result = await createTransaction(transactionData)
       
-      await supabase
-        .from('debt_payments')
-        .insert({
-          debt_id: data.id,
-          amount: initialPaymentAmount,
-          payment_date: debtData.debt_date,
-          description: `Registro inicial - ${debtData.type === 'loan' ? 'Préstamo' : 'Deuda'}`
-        })
+      if (result) {
+        toast.success(`${debtData.type === 'debt' ? 'Deuda' : 'Préstamo'} creado exitosamente`)
+      }
       
-      await fetchDebts()
-      refetchTransactions() // Refresh transactions to show in Records page
-      toast.success('Deuda creada exitosamente')
-      return data
+      return result
     } catch (error) {
       console.error('Error creating debt:', error)
-      toast.error('Error al crear la deuda')
+      toast.error(`Error al crear ${debtData.type === 'debt' ? 'la deuda' : 'el préstamo'}`)
       return null
     }
   }
 
-  const updateDebt = async (id: string, updates: Partial<Debt>) => {
+  // Agregar pago de deuda/cobro de préstamo
+  const addDebtPayment = async (
+    debtId: string, // es el contact_id
+    paymentData: {
+      amount: number
+      account_id: string
+      payment_date: string
+      description?: string
+    },
+    selectedTags: string[] = []
+  ) => {
+    if (!user) return null
+
     try {
-      // Get current debt data before updating
-      const { data: currentDebt } = await supabase
-        .from('debts')
-        .select('*, contacts(name)')
-        .eq('id', id)
-        .single()
-
-      if (!currentDebt) throw new Error('Debt not found')
-
-      // Update the debt
-      const { error } = await supabase
-        .from('debts')
-        .update(updates)
-        .eq('id', id)
-
-      if (error) throw error
-
-      // Handle synchronization with linked transactions
-      // 1. Update initial transaction if debt details changed
-      if (updates.initial_amount !== undefined || 
-          updates.debt_date !== undefined || 
-          updates.contact_id !== undefined) {
-        
-        // Get contact name for transaction description
-        let contactName = currentDebt.contacts?.name || ''
-        if (updates.contact_id && updates.contact_id !== currentDebt.contact_id) {
-          const { data: newContact } = await supabase
-            .from('contacts')
-            .select('name')
-            .eq('id', updates.contact_id)
-            .single()
-          contactName = newContact?.name || ''
-        }
-
-        // Find and update the initial transaction
-        const initialDescription = `${currentDebt.type === 'loan' ? 'Préstamo' : 'Deuda'} - ${contactName}`
-        
-        const transactionUpdates: any = {}
-        if (updates.initial_amount !== undefined) {
-          transactionUpdates.amount = updates.initial_amount
-        }
-        if (updates.debt_date !== undefined) {
-          transactionUpdates.transaction_date = updates.debt_date
-        }
-        if (contactName && (updates.contact_id !== undefined)) {
-          transactionUpdates.description = initialDescription
-          transactionUpdates.beneficiary = contactName
-        }
-
-        // Update the initial transaction if there are changes
-        if (Object.keys(transactionUpdates).length > 0) {
-          await supabase
-            .from('transactions')
-            .update(transactionUpdates)
-            .eq('description', `${currentDebt.type === 'loan' ? 'Préstamo' : 'Deuda'} - ${currentDebt.contacts?.name || ''}`)
-            .eq('transaction_date', currentDebt.debt_date)
-        }
-      }
-
-      // 2. Update debt payments and their linked transactions if account changed
-      if (updates.account_id !== undefined && updates.account_id !== currentDebt.account_id) {
-        // Get all debt payments with transaction IDs
-        const { data: debtPayments } = await supabase
-          .from('debt_payments')
-          .select('transaction_id')
-          .eq('debt_id', id)
-          .not('transaction_id', 'is', null)
-
-        // Update all linked transactions to use the new account
-        if (debtPayments && debtPayments.length > 0) {
-          const transactionIds = debtPayments
-            .filter(p => p.transaction_id)
-            .map(p => p.transaction_id)
-          
-          if (transactionIds.length > 0) {
-            await supabase
-              .from('transactions')
-              .update({ account_id: updates.account_id })
-              .in('id', transactionIds)
-          }
-        }
-      }
-      
-      await fetchDebts()
-      refetchTransactions() // Refresh transactions to show changes in Records page
-      toast.success('Deuda actualizada exitosamente')
-    } catch (error) {
-      console.error('Error updating debt:', error)
-      toast.error('Error al actualizar la deuda')
-    }
-  }
-
-  const deleteDebt = async (id: string) => {
-    try {
-      // Get the debt information to find the initial transaction
-      const { data: debt } = await supabase
-        .from('debts')
-        .select('contact_id, type, debt_date')
-        .eq('id', id)
-        .single()
-
-      // Get contact name for transaction description matching
-      let contactName = ''
-      if (debt?.contact_id) {
-        const { data: contact } = await supabase
-          .from('contacts')
-          .select('name')
-          .eq('id', debt.contact_id)
-          .single()
-        contactName = contact?.name || ''
-      }
-
-      // Find and delete the initial transaction based on description pattern
-      if (debt && contactName) {
-        const initialDescription = `${debt.type === 'loan' ? 'Préstamo a' : 'Deuda con'} ${contactName}`
-        
-        await supabase
-          .from('transactions')
-          .delete()
-          .eq('description', initialDescription)
-          .eq('transaction_date', debt.debt_date)
-      }
-
-      // Get all debt payments to delete associated transactions
-      const { data: payments } = await supabase
-        .from('debt_payments')
-        .select('transaction_id')
-        .eq('debt_id', id)
-
-      // Delete associated transactions from payments
-      if (payments && payments.length > 0) {
-        const transactionIds = payments
-          .filter(p => p.transaction_id)
-          .map(p => p.transaction_id)
-        
-        if (transactionIds.length > 0) {
-          await supabase
-            .from('transactions')
-            .delete()
-            .in('id', transactionIds)
-        }
-      }
-
-      // Delete debt payments first
-      await supabase
-        .from('debt_payments')
-        .delete()
-        .eq('debt_id', id)
-
-      // Delete the debt
-      const { error } = await supabase
-        .from('debts')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      
-      await fetchDebts()
-      refetchTransactions() // Refresh transactions to show changes in Records page
-      toast.success('Deuda eliminada exitosamente')
-    } catch (error) {
-      console.error('Error deleting debt:', error)
-      toast.error('Error al eliminar la deuda')
-    }
-  }
-
-  const addDebtPayment = async (debtId: string, paymentData: Omit<DebtPayment, 'id' | 'debt_id' | 'created_at'>, selectedTags: string[] = []) => {
-    try {
-      // Get debt information first
+      // Encontrar la deuda para determinar el tipo
       const debt = debts.find(d => d.id === debtId)
-      if (!debt) throw new Error('Debt not found')
+      if (!debt) {
+        toast.error('Deuda no encontrada')
+        return null
+      }
 
-      // Ensure debt/loan categories exist
-      const { incomeCategory, incomeSubcategory, expenseCategory, expenseSubcategory } = await ensureDebtCategories()
-
-      // Get contact information for the transaction
-      const { data: contactData } = await supabase
-        .from('contacts')
-        .select('name')
-        .eq('id', debt.contact_id)
-        .single()
-
-      // Create payment record with account_id
-      const { data: payment, error: paymentError } = await supabase
-        .from('debt_payments')
-        .insert({
-          ...paymentData,
-          debt_id: debtId
-        })
-        .select()
-        .single()
-
-      if (paymentError) throw paymentError
-
-      // NEW LOGIC: Simple categorization based on amount sign
-      // Positive amount → "Ingresos" with "Préstamos, alquileres" subcategory
-      // Negative amount → "Gastos financieros" with "Comisión" subcategory
-      const isPositiveAmount = paymentData.amount > 0
+      // Determinar el tipo de transacción basado en el tipo de deuda y acción
+      let categoryId: string
+      let subcategoryId: string
       let transactionType: 'income' | 'expense'
-      let categoryId: string | null
-      let subcategoryId: string | null
       let description: string
 
-      if (isPositiveAmount) {
-        // Positive amounts always use income category with loans subcategory
-        transactionType = 'income'
-        categoryId = incomeCategory
-        subcategoryId = incomeSubcategory
-        description = `Ingreso por deuda/préstamo - ${contactData?.name || 'contacto'}`
-      } else {
-        // Negative amounts always use expense category with commission subcategory
+      if (debt.type === 'debt') {
+        // Es una deuda (me prestaron), agregar pago = gasto (reduce la deuda)
+        categoryId = DEBT_CATEGORIES.FINANCIAL_EXPENSES
+        subcategoryId = DEBT_SUBCATEGORIES.COMMISSION // Comisión
         transactionType = 'expense'
-        categoryId = expenseCategory
-        subcategoryId = expenseSubcategory
-        description = `Gasto por deuda/préstamo - ${contactData?.name || 'contacto'}`
-      }
-
-      // Create the transaction if category exists
-      let transactionId = null
-      if (categoryId) {
-        const transactionData = {
-          type: transactionType,
-          amount: paymentData.amount,
-          account_id: paymentData.account_id || debt?.account_id || "",
-          category_id: categoryId,
-          subcategory_id: subcategoryId,
-          description,
-          beneficiary: contactData?.name,
-          note: paymentData.description,
-          transaction_date: paymentData.payment_date,
-          tags: selectedTags
-        }
-
-        try {
-          const createdTransaction = await createTransaction(transactionData)
-          console.log('Created transaction for debt payment:', createdTransaction)
-          if (createdTransaction && typeof createdTransaction === 'object') {
-            if (Array.isArray(createdTransaction) && createdTransaction.length > 0) {
-              transactionId = (createdTransaction[0] as any)?.id
-            } else if ('id' in createdTransaction) {
-              transactionId = (createdTransaction as any).id
-            }
-          }
-          console.log('Extracted transaction ID:', transactionId)
-        } catch (err) {
-          console.error('Error creating transaction for debt payment:', err)
-        }
-      }
-
-      // Update the payment record with the transaction ID
-      if (transactionId) {
-        await supabase
-          .from('debt_payments')
-          .update({ transaction_id: transactionId })
-          .eq('id', payment.id)
-      }
-
-      // Recalcular el saldo basado en la suma de todos los registros
-      const newBalance = await calculateDebtBalance(debtId)
-      
-      // Check if balance reaches exactly zero to close debt/loan
-      if (Math.abs(newBalance) < 0.01) {
-        // Exact payment - close the debt/loan only when balance is exactly zero
-        await updateDebt(debtId, { 
-          current_balance: 0,
-          status: 'closed'
-        })
-        toast.success('Pago registrado. Deuda/Préstamo cerrado.')
+        description = `Pago de deuda a ${debt.contacts?.name}`
       } else {
-        // Check if the sign changed (debt became loan or vice versa)
-        const originalType = debt?.type
-        const shouldChangeType = (originalType === 'debt' && newBalance > 0) || (originalType === 'loan' && newBalance < 0)
-        
-        if (shouldChangeType) {
-          // Change debt type but keep it active with the same records
-          const newType = originalType === 'debt' ? 'loan' : 'debt'
-          await updateDebt(debtId, { 
-            current_balance: newBalance,
-            type: newType,
-            status: 'active'
-          })
-          toast.success(`Pago registrado. ${originalType === 'debt' ? 'Deuda convertida a Préstamo' : 'Préstamo convertido a Deuda'}.`)
-        } else {
-          // Normal payment - update balance and keep active
-          await updateDebt(debtId, { 
-            current_balance: newBalance,
-            status: 'active'
-          })
-          toast.success('Pago registrado exitosamente')
-        }
+        // Es un préstamo (presté), agregar cobro = ingreso (reduce lo que me deben)
+        categoryId = DEBT_CATEGORIES.INCOME
+        subcategoryId = DEBT_SUBCATEGORIES.LOANS_INCOME // Préstamos, alquileres
+        transactionType = 'income'
+        description = `Cobro de préstamo de ${debt.contacts?.name}`
       }
 
-      refetchTransactions() // Refresh transactions to show in Records page
-      return payment
+      const transactionData = {
+        type: transactionType,
+        amount: Math.abs(paymentData.amount),
+        account_id: paymentData.account_id,
+        category_id: categoryId,
+        subcategory_id: subcategoryId,
+        description: paymentData.description || description,
+        beneficiary: debt.contacts?.name,
+        transaction_date: paymentData.payment_date,
+        contact_id: debt.contact_id,
+        tags: selectedTags
+      }
+
+      const result = await createTransaction(transactionData)
+      
+      if (result) {
+        toast.success('Pago registrado exitosamente')
+      }
+      
+      return result
     } catch (error) {
       console.error('Error adding debt payment:', error)
       toast.error('Error al registrar el pago')
@@ -750,208 +348,104 @@ export function useDebts() {
     }
   }
 
+  // Obtener historial de pagos de una deuda específica
+  const fetchDebtPayments = async (debtId: string) => {
+    try {
+      // Filtrar transacciones del contacto específico
+      const contactTransactions = transactions.filter(t => 
+        t.contact_id === debtId &&
+        [DEBT_SUBCATEGORIES.LOANS_INCOME, DEBT_SUBCATEGORIES.COMMISSION, DEBT_SUBCATEGORIES.LOANS_EXPENSE].includes(t.subcategory_id || '')
+      )
+
+      // Convertir a formato DebtPayment
+      const payments: DebtPayment[] = contactTransactions.map(transaction => ({
+        id: transaction.id,
+        debt_id: debtId,
+        transaction_id: transaction.id,
+        amount: transaction.type === 'income' ? transaction.amount : -transaction.amount,
+        account_id: transaction.account_id,
+        payment_date: transaction.transaction_date,
+        description: transaction.note || transaction.description,
+        created_at: transaction.created_at,
+        transactions: {
+          id: transaction.id,
+          categories: {
+            id: transaction.category_id || '',
+            name: transaction.type === 'income' ? 'Ingresos' : 'Gastos financieros',
+            color: transaction.type === 'income' ? '#22c55e' : '#ef4444',
+            icon: transaction.type === 'income' ? '💵' : '💰'
+          },
+          subcategories: {
+            id: transaction.subcategory_id || '',
+            name: transaction.subcategory_id === DEBT_SUBCATEGORIES.LOANS_INCOME ? 'Préstamos, alquileres' : 
+                  transaction.subcategory_id === DEBT_SUBCATEGORIES.COMMISSION ? 'Comisión' : 'Préstamos',
+            icon: transaction.subcategory_id === DEBT_SUBCATEGORIES.LOANS_INCOME ? '🏠' : 
+                  transaction.subcategory_id === DEBT_SUBCATEGORIES.COMMISSION ? '💳' : '💰'
+          },
+          accounts: accountsMap[transaction.account_id] || {
+            id: transaction.account_id,
+            name: 'Cuenta'
+          }
+        }
+      }))
+
+      return payments.sort((a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime())
+    } catch (error) {
+      console.error('Error fetching debt payments:', error)
+      return []
+    }
+  }
+
+  // Eliminar deuda (eliminar todas las transacciones relacionadas)
+  const deleteDebt = async (debtId: string) => {
+    try {
+      const contactTransactions = transactions.filter(t => 
+        t.contact_id === debtId &&
+        [DEBT_SUBCATEGORIES.LOANS_INCOME, DEBT_SUBCATEGORIES.COMMISSION, DEBT_SUBCATEGORIES.LOANS_EXPENSE].includes(t.subcategory_id || '')
+      )
+
+      // Eliminar todas las transacciones del contacto
+      for (const transaction of contactTransactions) {
+        await deleteTransaction(transaction.id)
+      }
+
+      toast.success('Deuda eliminada exitosamente')
+    } catch (error) {
+      console.error('Error deleting debt:', error)
+      toast.error('Error al eliminar la deuda')
+    }
+  }
+
+  // Eliminar pago específico
   const deleteDebtPayment = async (paymentId: string, debtId: string) => {
     try {
-      // Get payment details before deleting, including transaction_id
-      const { data: payment } = await supabase
-        .from('debt_payments')
-        .select('amount, transaction_id')
-        .eq('id', paymentId)
-        .single()
-
-      if (!payment) throw new Error('Payment not found')
-
-      // Delete associated transaction if it exists
-      if (payment.transaction_id) {
-        try {
-          const { error: transactionError } = await supabase
-            .from('transactions')
-            .delete()
-            .eq('id', payment.transaction_id)
-          
-          if (transactionError) {
-            console.error('Error deleting associated transaction:', transactionError)
-          }
-        } catch (transactionErr) {
-          console.error('Error deleting transaction:', transactionErr)
-        }
-      }
-
-      // Delete payment
-      const { error } = await supabase
-        .from('debt_payments')
-        .delete()
-        .eq('id', paymentId)
-
-      if (error) throw error
-
-      // Recalcular el saldo basado en la suma de todos los registros restantes
-      const newBalance = await calculateDebtBalance(debtId)
-      await updateDebt(debtId, { 
-        current_balance: newBalance,
-        status: Math.abs(newBalance) < 0.01 ? 'closed' : 'active'
-      })
-
-      await fetchDebts()
-      refetchTransactions() // Refresh transactions to show in Records page
-      toast.success('Registro eliminado exitosamente')
+      await deleteTransaction(paymentId)
+      toast.success('Pago eliminado exitosamente')
     } catch (error) {
       console.error('Error deleting debt payment:', error)
-      toast.error('Error al eliminar el registro')
+      toast.error('Error al eliminar el pago')
     }
   }
 
-  const updateDebtPayment = async (paymentId: string, debtId: string, updatedData: Partial<DebtPayment>) => {
-    try {
-      // Get current payment details, including transaction_id
-      const { data: currentPayment } = await supabase
-        .from('debt_payments')
-        .select('amount, transaction_id, payment_date, description')
-        .eq('id', paymentId)
-        .single()
-
-      if (!currentPayment) throw new Error('Payment not found')
-
-      // Get debt details
-      const debt = debts.find(d => d.id === debtId)
-      if (!debt) throw new Error('Debt not found')
-
-      // Update payment
-      const { error } = await supabase
-        .from('debt_payments')
-        .update(updatedData)
-        .eq('id', paymentId)
-
-      if (error) throw error
-
-      // Update associated transaction if it exists and relevant fields changed
-      if (currentPayment.transaction_id && 
-          (updatedData.amount !== undefined || 
-           updatedData.payment_date !== undefined || 
-           updatedData.description !== undefined)) {
-        
-        const transactionUpdates: any = {}
-        
-        if (updatedData.amount !== undefined) {
-          // Mantener el signo original del monto para preservar la naturaleza de la transacción
-          transactionUpdates.amount = updatedData.amount
-        }
-        if (updatedData.payment_date !== undefined) {
-          transactionUpdates.transaction_date = updatedData.payment_date
-        }
-        if (updatedData.description !== undefined) {
-          transactionUpdates.note = updatedData.description
-        }
-
-        try {
-          const { error: transactionError } = await supabase
-            .from('transactions')
-            .update(transactionUpdates)
-            .eq('id', currentPayment.transaction_id)
-          
-          if (transactionError) {
-            console.error('Error updating associated transaction:', transactionError)
-          }
-        } catch (transactionErr) {
-          console.error('Error updating transaction:', transactionErr)
-        }
-      }
-
-      // If amount changed, update debt balance
-      if (updatedData.amount !== undefined) {
-        const isInitialRecord = currentPayment.description?.includes('Registro inicial')
-        
-        if (isInitialRecord) {
-          // For initial records, update the debt's initial_amount
-          const newInitialAmount = Math.abs(updatedData.amount)
-          await supabase
-            .from('debts')
-            .update({ initial_amount: newInitialAmount })
-            .eq('id', debtId)
-        }
-        
-        // Recalcular el saldo basado en la suma de todos los registros
-        const newBalance = await calculateDebtBalance(debtId)
-        
-        // Check if balance reaches exactly zero to close debt/loan
-        if (Math.abs(newBalance) < 0.01) {
-          await updateDebt(debtId, { 
-            current_balance: 0,
-            status: 'closed'
-          })
-        } else {
-          // Check if the sign changed (debt became loan or vice versa)
-          const originalType = debt?.type
-          const shouldChangeType = (originalType === 'debt' && newBalance > 0) || (originalType === 'loan' && newBalance < 0)
-          
-          if (shouldChangeType) {
-            // Change debt type but keep it active with the same records
-            const newType = originalType === 'debt' ? 'loan' : 'debt'
-            await updateDebt(debtId, { 
-              current_balance: newBalance,
-              type: newType,
-              status: 'active'
-            })
-          } else {
-            // Normal update - update balance and keep active
-            await updateDebt(debtId, { 
-              current_balance: newBalance,
-              status: 'active'
-            })
-          }
-        }
-      }
-
-      await fetchDebts()
-      refetchTransactions() // Refresh transactions to show in Records page
-      toast.success('Registro actualizado exitosamente')
-      
-      // Force re-fetch of debt payments to reflect updated categories
-      setTimeout(() => {
-        fetchDebts()
-      }, 100)
-    } catch (error) {
-      console.error('Error updating debt payment:', error)
-      toast.error('Error al actualizar el registro')
-    }
+  // Reactivar deuda (placeholder - en esta implementación no es necesario)
+  const reactivateDebt = async (debtId: string) => {
+    toast.info('Las deudas se reactivan automáticamente al agregar nuevos movimientos')
   }
 
-  useEffect(() => {
-    if (user) {
-      fetchDebts().finally(() => setLoading(false))
-    }
-  }, [user])
-
-  const reactivateDebt = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('debts')
-        .update({ status: 'active' })
-        .eq('id', id)
-
-      if (error) throw error
-      
-      await fetchDebts()
-      toast.success('Deuda reactivada exitosamente')
-    } catch (error) {
-      console.error('Error reactivating debt:', error)
-      toast.error('Error al reactivar la deuda')
-    }
+  // Refetch (usar refetch de transacciones)
+  const refetch = () => {
+    refetchTransactions()
   }
 
   return {
     debts,
-    debtPayments,
     loading,
-    fetchDebts: () => fetchDebts(),
-    fetchDebtPayments,
     createDebt,
-    updateDebt,
-    deleteDebt,
     addDebtPayment,
+    fetchDebtPayments,
+    deleteDebt,
     deleteDebtPayment,
-    updateDebtPayment,
     reactivateDebt,
-    calculateDebtBalance
+    refetch
   }
 }

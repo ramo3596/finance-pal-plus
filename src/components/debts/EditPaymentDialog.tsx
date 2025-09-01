@@ -12,7 +12,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { cn } from "@/lib/utils"
 import { type DebtPayment } from "@/hooks/useDebts"
-import { useDebts } from "@/hooks/useDebts"
+import { useTransactions } from "@/hooks/useTransactions"
+import { useToast } from "@/hooks/use-toast"
 
 const editPaymentSchema = z.object({
   amount: z.number().min(0.01, "El monto debe ser mayor a 0"),
@@ -30,7 +31,8 @@ interface EditPaymentDialogProps {
 }
 
 export function EditPaymentDialog({ open, onOpenChange, payment, debtId }: EditPaymentDialogProps) {
-  const { updateDebtPayment } = useDebts()
+  const { updateTransaction } = useTransactions()
+  const { toast } = useToast()
 
   const form = useForm<EditPaymentFormData>({
     resolver: zodResolver(editPaymentSchema),
@@ -42,12 +44,29 @@ export function EditPaymentDialog({ open, onOpenChange, payment, debtId }: EditP
   })
 
   const onSubmit = async (data: EditPaymentFormData) => {
-    await updateDebtPayment(payment.id, debtId, {
-      amount: payment.amount < 0 ? -data.amount : data.amount,
-      payment_date: data.payment_date.toISOString(),
-      description: data.description
-    })
-    onOpenChange(false)
+    try {
+      // Actualizar la transacción subyacente
+      const result = await updateTransaction(payment.transaction_id || payment.id, {
+        amount: data.amount,
+        transaction_date: data.payment_date.toISOString(),
+        note: data.description
+      })
+
+      if (result) {
+        toast({
+          title: "Éxito",
+          description: "Pago actualizado exitosamente"
+        })
+        onOpenChange(false)
+      }
+    } catch (error) {
+      console.error('Error updating payment:', error)
+      toast({
+        title: "Error",
+        description: "Error al actualizar el pago",
+        variant: "destructive"
+      })
+    }
   }
 
   const formatCurrency = (amount: number) => {

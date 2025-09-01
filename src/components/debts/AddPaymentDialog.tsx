@@ -78,28 +78,10 @@ export function AddPaymentDialog({ open, onOpenChange, debt, accounts }: AddPaym
   const contactName = debt.contacts?.name || 'Contacto'
 
   const onSubmit = async (data: PaymentFormData) => {
-    let amount = data.amount
-    
-    if (isDebt) {
-      // Para deudas:
-      // - "Aumento de deuda" = valor positivo (aumenta lo que debemos)
-      // - "Reembolsar deuda" = valor negativo (reduce lo que debemos)
-      if (data.action === 'payment') {
-        amount = -amount // Reembolsar deuda = valor negativo
-      }
-      // Si es 'increase', mantener valor positivo (Aumento de deuda = valor positivo)
-    } else {
-      // Para préstamos:
-      // - "Aumento de préstamo" = valor negativo (lo que yo presto)
-      // - "Cobrar préstamo" = valor positivo (lo que me están pagando)
-      if (data.action === 'increase') {
-        amount = -amount // Aumento de préstamo = valor negativo
-      }
-      // Si es 'payment' (cobrar préstamo), mantener valor positivo
-    }
-
+    // En la nueva implementación, simplemente enviamos el monto positivo
+    // La lógica de determinar el tipo correcto de transacción está en addDebtPayment
     const result = await addDebtPayment(debt.id, {
-      amount,
+      amount: data.amount, // Siempre positivo
       account_id: data.account_id,
       payment_date: data.payment_date.toISOString(),
       description: data.description,

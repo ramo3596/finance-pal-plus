@@ -246,16 +246,8 @@ export const useTransactions = () => {
         if (updates.amount !== undefined) {
           debtPaymentUpdates.amount = updates.amount;
           
-          // Recalcular el saldo basado en la suma de todos los registros
-          // Importar useDebts y usar calculateDebtBalance
-          const { useDebts } = await import('./useDebts');
-          const { calculateDebtBalance } = useDebts();
-          const newBalance = await calculateDebtBalance(linkedDebtPayment.debt_id);
-          
-          await supabase
-            .from('debts')
-            .update({ current_balance: newBalance })
-            .eq('id', linkedDebtPayment.debt_id);
+          // En la nueva implementación de deudas, no necesitamos recalcular balances
+          // porque los saldos se calculan dinámicamente desde las transacciones
         }
         
         if (updates.transaction_date !== undefined) {
@@ -460,15 +452,11 @@ export const useTransactions = () => {
             .delete()
             .eq('id', linkedDebtPayment.id);
           
-          // Recalcular el saldo basado en la suma de todos los registros restantes
-          const { useDebts } = await import('./useDebts');
-          const { calculateDebtBalance } = useDebts();
-          const newBalance = await calculateDebtBalance(linkedDebtPayment.debt_id);
+          // En la nueva implementación de deudas, no necesitamos recalcular balances
+          // porque los saldos se calculan dinámicamente desde las transacciones
           
-          await supabase
-            .from('debts')
-            .update({ current_balance: newBalance })
-            .eq('id', linkedDebtPayment.debt_id);
+          // En la nueva implementación de deudas, no necesitamos recalcular balances
+          // porque los saldos se calculan dinámicamente desde las transacciones
         } else if (isInitialDebtTransaction) {
           // This is an initial debt/loan transaction - find and delete the corresponding debt
           const { data: correspondingDebt } = await supabase

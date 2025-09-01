@@ -283,7 +283,7 @@ export function RegisterSaleDialog({ open, onOpenChange }: RegisterSaleDialogPro
           account_id: accounts[0]?.id || "", // Optional for debts
           status: "active",
           debt_date: new Date(`${data.date}T${new Date().toTimeString().slice(0, 5)}`).toISOString(),
-        }, [], { skipTransaction: true });
+        }, []);
 
         // 3. Reduce inventory quantities (products are delivered)
         for (const item of selectedProducts) {
