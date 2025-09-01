@@ -160,12 +160,12 @@ export function useDebts() {
       const expenseTransactions = contactTransactions.filter(t => t.type === 'expense')
 
       if (incomeTransactions.length > 0 && expenseTransactions.length === 0) {
-        // Solo ingresos = Es un préstamo que hice (Me deben)
-        isDebt = false
+        // Solo ingresos = Alguien me prestó dinero (Me deben a mí)
+        isDebt = true
         currentBalance = incomeTransactions.reduce((sum, t) => sum + t.amount, 0)
       } else if (expenseTransactions.length > 0 && incomeTransactions.length === 0) {
-        // Solo gastos = Es una deuda que tengo (Debo)
-        isDebt = true
+        // Solo gastos = Yo presté dinero (Debo)
+        isDebt = false
         currentBalance = expenseTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0)
       } else {
         // Mezcla: calcular balance neto
@@ -173,12 +173,12 @@ export function useDebts() {
         const totalExpense = expenseTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0)
         
         if (totalIncome > totalExpense) {
-          // Me deben más de lo que debo
-          isDebt = false
+          // Me prestaron más de lo que presté
+          isDebt = true
           currentBalance = totalIncome - totalExpense
         } else {
-          // Debo más de lo que me deben
-          isDebt = true
+          // Presté más de lo que me prestaron
+          isDebt = false
           currentBalance = totalExpense - totalIncome
         }
       }
