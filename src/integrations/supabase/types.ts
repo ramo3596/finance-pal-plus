@@ -731,6 +731,7 @@ export type Database = {
           category_id: string | null
           contact_id: string | null
           created_at: string
+          debt_id: string | null
           description: string
           id: string
           location: string | null
@@ -752,6 +753,7 @@ export type Database = {
           category_id?: string | null
           contact_id?: string | null
           created_at?: string
+          debt_id?: string | null
           description: string
           id?: string
           location?: string | null
@@ -773,6 +775,7 @@ export type Database = {
           category_id?: string | null
           contact_id?: string | null
           created_at?: string
+          debt_id?: string | null
           description?: string
           id?: string
           location?: string | null

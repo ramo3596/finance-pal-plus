@@ -219,12 +219,45 @@ export function useDebts() {
     }
   }, [transactions, user, contactsMap, accountsMap])
 
-  // Crear nueva deuda/préstamo (como transacción)
+  // Crear nueva deuda/préstamo (primero crear registro en tabla debts, luego transacción vinculada)
   const createDebt = async (debtData: Omit<Debt, 'id' | 'user_id' | 'created_at' | 'updated_at'>, selectedTags: string[] = []) => {
     if (!user) return null
 
     try {
-      // Determinar categoría y subcategoría basada en el tipo
+      // Obtener información del contacto
+      const { data: contactData } = await supabase
+        .from('contacts')
+        .select('name')
+        .eq('id', debtData.contact_id)
+        .single()
+
+      const contactName = contactData?.name || 'Contacto'
+      
+      // 1. Crear registro en tabla debts
+      const { data: debtRecord, error: debtError } = await supabase
+        .from('debts')
+        .insert({
+          user_id: user.id,
+          contact_id: debtData.contact_id,
+          account_id: debtData.account_id,
+          type: debtData.type,
+          description: debtData.description,
+          initial_amount: debtData.initial_amount,
+          current_balance: debtData.initial_amount,
+          debt_date: debtData.debt_date,
+          due_date: debtData.due_date,
+          status: 'active'
+        })
+        .select()
+        .single()
+
+      if (debtError) {
+        console.error('Error creating debt record:', debtError)
+        toast.error('Error al crear el registro de deuda')
+        return null
+      }
+
+      // 2. Determinar categoría y subcategoría basada en el tipo
       let categoryId: string
       let subcategoryId: string
       let transactionType: 'income' | 'expense'
@@ -240,16 +273,8 @@ export function useDebts() {
         subcategoryId = DEBT_SUBCATEGORIES.LOANS_EXPENSE // Préstamos
         transactionType = 'expense'
       }
-
-      // Obtener información del contacto
-      const { data: contactData } = await supabase
-        .from('contacts')
-        .select('name')
-        .eq('id', debtData.contact_id)
-        .single()
-
-      const contactName = contactData?.name || 'Contacto'
       
+      // 3. Crear transacción vinculada a la deuda
       const transactionData = {
         type: transactionType,
         amount: debtData.initial_amount,
@@ -263,6 +288,7 @@ export function useDebts() {
         note: debtData.description,
         transaction_date: debtData.debt_date,
         contact_id: debtData.contact_id,
+        debt_id: debtRecord.id, // Vincular transacción a la deuda
         tags: selectedTags
       }
 
@@ -270,9 +296,13 @@ export function useDebts() {
       
       if (result) {
         toast.success(`${debtData.type === 'debt' ? 'Deuda' : 'Préstamo'} creado exitosamente`)
+        return { ...debtRecord, transaction: result }
+      } else {
+        // Si falla la transacción, eliminar el registro de deuda
+        await supabase.from('debts').delete().eq('id', debtRecord.id)
+        return null
       }
       
-      return result
     } catch (error) {
       console.error('Error creating debt:', error)
       toast.error(`Error al crear ${debtData.type === 'debt' ? 'la deuda' : 'el préstamo'}`)
@@ -298,6 +328,21 @@ export function useDebts() {
       const debt = debts.find(d => d.id === debtId)
       if (!debt) {
         toast.error('Deuda no encontrada')
+        return null
+      }
+
+      // Buscar el registro de deuda en Supabase para obtener el debt_id real
+      const { data: debtRecord, error: debtError } = await supabase
+        .from('debts')
+        .select('id')
+        .eq('contact_id', debt.contact_id)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single()
+
+      if (debtError || !debtRecord) {
+        console.error('Error finding debt record:', debtError)
+        toast.error('No se encontró el registro de deuda')
         return null
       }
 
@@ -331,6 +376,7 @@ export function useDebts() {
         beneficiary: debt.contacts?.name,
         transaction_date: paymentData.payment_date,
         contact_id: debt.contact_id,
+        debt_id: debtRecord.id, // Vincular pago a la deuda específica
         tags: selectedTags
       }
 
@@ -351,16 +397,29 @@ export function useDebts() {
   // Obtener historial de pagos de una deuda específica
   const fetchDebtPayments = async (debtId: string) => {
     try {
-      // Filtrar transacciones del contacto específico
+      // Buscar el registro de deuda para obtener el debt_id real
+      const { data: debtRecord, error: debtError } = await supabase
+        .from('debts')
+        .select('id')
+        .eq('contact_id', debtId)
+        .eq('user_id', user?.id)
+        .single()
+
+      if (debtError || !debtRecord) {
+        console.error('Error finding debt record:', debtError)
+        return []
+      }
+
+      // Filtrar transacciones por debt_id específico
       const contactTransactions = transactions.filter(t => 
-        t.contact_id === debtId &&
+        t.debt_id === debtRecord.id &&
         [DEBT_SUBCATEGORIES.LOANS_INCOME, DEBT_SUBCATEGORIES.COMMISSION, DEBT_SUBCATEGORIES.LOANS_EXPENSE].includes(t.subcategory_id || '')
       )
 
       // Convertir a formato DebtPayment
       const payments: DebtPayment[] = contactTransactions.map(transaction => ({
         id: transaction.id,
-        debt_id: debtId,
+        debt_id: debtRecord.id,
         transaction_id: transaction.id,
         amount: transaction.type === 'income' ? transaction.amount : -transaction.amount,
         account_id: transaction.account_id,
@@ -396,40 +455,190 @@ export function useDebts() {
     }
   }
 
-  // Eliminar deuda (eliminar todas las transacciones relacionadas)
-  const deleteDebt = async (debtId: string) => {
+  // Eliminar deuda y todas sus transacciones
+  const deleteDebt = async (contactId: string) => {
+    if (!user) return false
+
     try {
-      const contactTransactions = transactions.filter(t => 
-        t.contact_id === debtId &&
-        [DEBT_SUBCATEGORIES.LOANS_INCOME, DEBT_SUBCATEGORIES.COMMISSION, DEBT_SUBCATEGORIES.LOANS_EXPENSE].includes(t.subcategory_id || '')
+      // Buscar el registro de deuda
+      const { data: debtRecord, error: debtError } = await supabase
+        .from('debts')
+        .select('id')
+        .eq('contact_id', contactId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (debtError || !debtRecord) {
+        console.error('Error finding debt record:', debtError)
+        toast.error('No se encontró el registro de deuda')
+        return false
+      }
+
+      // Obtener todas las transacciones vinculadas a esta deuda
+      const debtTransactions = transactions.filter(t => 
+        t.debt_id === debtRecord.id
       )
 
-      // Eliminar todas las transacciones del contacto
-      for (const transaction of contactTransactions) {
-        await deleteTransaction(transaction.id)
+      if (debtTransactions.length === 0) {
+        toast.error('No se encontraron transacciones de deuda para eliminar')
+        return false
+      }
+
+      // Eliminar todas las transacciones
+      const transactionIds = debtTransactions.map(t => t.id)
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .delete()
+        .in('id', transactionIds)
+
+      if (transactionError) {
+        console.error('Error deleting debt transactions:', transactionError)
+        toast.error('Error al eliminar las transacciones de deuda')
+        return false
+      }
+
+      // Eliminar el registro de deuda
+      const { error: debtDeleteError } = await supabase
+        .from('debts')
+        .delete()
+        .eq('id', debtRecord.id)
+
+      if (debtDeleteError) {
+        console.error('Error deleting debt record:', debtDeleteError)
+        toast.error('Error al eliminar el registro de deuda')
+        return false
       }
 
       toast.success('Deuda eliminada exitosamente')
+      return true
     } catch (error) {
       console.error('Error deleting debt:', error)
       toast.error('Error al eliminar la deuda')
+      return false
     }
   }
 
   // Eliminar pago específico
   const deleteDebtPayment = async (paymentId: string, debtId: string) => {
     try {
-      await deleteTransaction(paymentId)
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', paymentId)
+
+      if (error) {
+        console.error('Error deleting debt payment:', error)
+        toast.error('Error al eliminar el pago')
+        return false
+      }
+
       toast.success('Pago eliminado exitosamente')
+      return true
     } catch (error) {
       console.error('Error deleting debt payment:', error)
       toast.error('Error al eliminar el pago')
+      return false
     }
   }
 
-  // Reactivar deuda (placeholder - en esta implementación no es necesario)
-  const reactivateDebt = async (debtId: string) => {
-    toast.info('Las deudas se reactivan automáticamente al agregar nuevos movimientos')
+  // Reactivar deuda cerrada
+  const reactivateDebt = async (contactId: string) => {
+    if (!user) return false
+
+    try {
+      // Buscar el registro de deuda cerrada
+      const { data: debtRecord, error: debtError } = await supabase
+        .from('debts')
+        .select('*')
+        .eq('contact_id', contactId)
+        .eq('user_id', user.id)
+        .eq('status', 'closed')
+        .single()
+
+      if (debtError || !debtRecord) {
+        console.error('Error finding closed debt record:', debtError)
+        toast.error('No se encontró una deuda cerrada para este contacto')
+        return false
+      }
+
+      // Verificar si hay balance pendiente
+      const remainingBalance = Math.abs(debtRecord.current_balance)
+      
+      if (remainingBalance === 0) {
+        toast.error('No hay balance pendiente para reactivar')
+        return false
+      }
+
+      // Obtener información del contacto
+      const { data: contactData } = await supabase
+        .from('contacts')
+        .select('name')
+        .eq('id', contactId)
+        .single()
+
+      const contactName = contactData?.name || 'Contacto'
+
+      // Determinar tipo de transacción para reactivar
+      let categoryId: string
+      let subcategoryId: string
+      let transactionType: 'income' | 'expense'
+      let description: string
+
+      if (debtRecord.type === 'debt') {
+        // Reactivar deuda: Crear ingreso
+        categoryId = DEBT_CATEGORIES.INCOME
+        subcategoryId = DEBT_SUBCATEGORIES.LOANS_INCOME
+        transactionType = 'income'
+        description = `Reactivación de deuda con ${contactName}`
+      } else {
+        // Reactivar préstamo: Crear gasto
+        categoryId = DEBT_CATEGORIES.FINANCIAL_EXPENSES
+        subcategoryId = DEBT_SUBCATEGORIES.LOANS_EXPENSE
+        transactionType = 'expense'
+        description = `Reactivación de préstamo a ${contactName}`
+      }
+
+      // Crear transacción de reactivación
+      const transactionData = {
+        type: transactionType,
+        amount: remainingBalance,
+        account_id: debtRecord.account_id,
+        category_id: categoryId,
+        subcategory_id: subcategoryId,
+        description,
+        beneficiary: contactName,
+        note: 'Deuda reactivada',
+        transaction_date: new Date().toISOString().split('T')[0],
+        contact_id: contactId,
+        debt_id: debtRecord.id, // Vincular a la deuda específica
+        tags: []
+      }
+
+      const result = await createTransaction(transactionData)
+      
+      if (result) {
+        // Actualizar el estado de la deuda a 'active'
+        const { error: updateError } = await supabase
+          .from('debts')
+          .update({ status: 'active' })
+          .eq('id', debtRecord.id)
+
+        if (updateError) {
+          console.error('Error updating debt status:', updateError)
+          toast.error('Error al actualizar el estado de la deuda')
+          return false
+        }
+
+        toast.success('Deuda reactivada exitosamente')
+        return true
+      }
+      
+      return false
+    } catch (error) {
+      console.error('Error reactivating debt:', error)
+      toast.error('Error al reactivar la deuda')
+      return false
+    }
   }
 
   // Refetch (usar refetch de transacciones)
