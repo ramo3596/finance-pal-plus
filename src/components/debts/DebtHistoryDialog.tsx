@@ -8,7 +8,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { TrendingUp, TrendingDown, Edit, Trash2, X, ArrowLeft } from "lucide-react"
 import { type Debt, type DebtPayment } from "@/hooks/useDebts"
 import { useDebts } from "@/hooks/useDebts"
-import { EditPaymentDialog } from "./EditPaymentDialog"
+import { EditTransaction } from "@/components/EditTransaction"
+import { useTransactions } from "@/hooks/useTransactions"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 
@@ -20,9 +21,10 @@ interface DebtHistoryDialogProps {
 
 export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialogProps) {
   const [payments, setPayments] = useState<DebtPayment[]>([])
-  const [editingPayment, setEditingPayment] = useState<DebtPayment | null>(null)
+  const [editingTransaction, setEditingTransaction] = useState<any | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const { fetchDebtPayments, deleteDebtPayment, deleteDebt, reactivateDebt } = useDebts()
+  const { transactions } = useTransactions()
   const isMobile = useIsMobile()
 
   const refreshPayments = async () => {
@@ -65,8 +67,13 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
   }
 
   const handleEditPayment = (payment: DebtPayment) => {
-    setEditingPayment(payment)
-    setIsEditDialogOpen(true)
+    if (payment.transaction_id) {
+      const transaction = transactions.find(t => t.id === payment.transaction_id)
+      if (transaction) {
+        setEditingTransaction(transaction)
+        setIsEditDialogOpen(true)
+      }
+    }
   }
 
   const handleDeletePayment = async (paymentId: string) => {
@@ -384,18 +391,17 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
           </div>
         </div>
         
-        {editingPayment && (
-          <EditPaymentDialog
+        {editingTransaction && (
+          <EditTransaction
             open={isEditDialogOpen}
             onOpenChange={(open) => {
               setIsEditDialogOpen(open)
               if (!open) {
-                setEditingPayment(null)
+                setEditingTransaction(null)
                 refreshPayments()
               }
             }}
-            payment={editingPayment}
-            debtId={debt.id}
+            transaction={editingTransaction}
           />
         )}
       </DialogContent>
