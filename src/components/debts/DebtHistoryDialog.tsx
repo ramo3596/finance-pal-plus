@@ -1,17 +1,22 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { format } from "date-fns"
+import { es } from "date-fns/locale"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { TrendingUp, TrendingDown, Edit, Trash2, X, ArrowLeft } from "lucide-react"
-import { type Debt, type DebtPayment } from "@/hooks/useDebts"
+import { Trash2, X, ArrowLeft } from "lucide-react"
+import { type Debt } from "@/hooks/useDebts"
 import { useDebts } from "@/hooks/useDebts"
 import { EditTransaction } from "@/components/EditTransaction"
-import { useTransactions } from "@/hooks/useTransactions"
+import { useTransactions, Transaction } from "@/hooks/useTransactions"
+import { TransactionItem } from "@/components/shared/TransactionItem"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface DebtHistoryDialogProps {
   open: boolean
@@ -20,25 +25,25 @@ interface DebtHistoryDialogProps {
 }
 
 export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialogProps) {
-  const [payments, setPayments] = useState<DebtPayment[]>([])
-  const [editingTransaction, setEditingTransaction] = useState<any | null>(null)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const { fetchDebtPayments, deleteDebtPayment, deleteDebt, reactivateDebt } = useDebts()
-  const { transactions } = useTransactions()
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const { deleteDebt, reactivateDebt } = useDebts()
+  const { transactions, deleteTransaction } = useTransactions()
   const isMobile = useIsMobile()
 
-  const refreshPayments = async () => {
-    if (debt.id) {
-      const updatedPayments = await fetchDebtPayments(debt.id)
-      setPayments(updatedPayments)
-    }
-  }
-
-  useEffect(() => {
-    if (open) {
-      refreshPayments()
-    }
-  }, [open, debt.id])
+  // Filtrar transacciones relacionadas con esta deuda/préstamo por contacto
+  const debtTransactions = useMemo(() => {
+    if (!transactions || !debt.contact_id) return []
+    
+    // Filtrar transacciones que pertenecen a este contacto
+    const contactTransactions = transactions.filter(transaction => 
+      transaction.contact_id === debt.contact_id || transaction.payer_contact_id === debt.contact_id
+    )
+    
+    // Ordenar por fecha (más reciente primero)
+    return contactTransactions.sort((a, b) => 
+      new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
+    )
+  }, [transactions, debt.contact_id])
 
   const isDebt = debt.type === 'debt'
   const contactName = debt.contacts?.name || 'Contacto'
@@ -50,44 +55,11 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
     }).format(amount)
   }
 
-  const getPaymentType = (amount: number) => {
-    if (amount > 0) {
-      return isDebt ? 'Pago' : 'Cobro'
-    } else {
-      return 'Aumento'
-    }
-  }
 
-  const getPaymentColor = (amount: number) => {
-    if (amount > 0) {
-      return isDebt ? 'text-success' : 'text-success'
-    } else {
-      return 'text-expense-red'
-    }
-  }
-
-  const handleEditPayment = (payment: DebtPayment) => {
-    if (payment.transaction_id) {
-      const transaction = transactions.find(t => t.id === payment.transaction_id)
-      if (transaction) {
-        setEditingTransaction(transaction)
-        setIsEditDialogOpen(true)
-      }
-    }
-  }
-
-  const handleDeletePayment = async (paymentId: string) => {
-    await deleteDebtPayment(paymentId, debt.id)
-    refreshPayments()
-  }
 
   const handleDeleteDebt = async () => {
     await deleteDebt(debt.id)
     onOpenChange(false)
-  }
-
-  const isInitialRecord = (payment: DebtPayment) => {
-    return payment.description?.includes('Registro inicial')
   }
 
   return (
@@ -208,182 +180,37 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
             </div>
           )}
 
-          {/* Historial de pagos */}
+          {/* Registros de Transacciones */}
           <div>
-            {!isMobile && <h3 className="font-semibold mb-3 text-lg">Historial de Movimientos</h3>}
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-lg">Registros de Transacciones</h3>
+              <span className="text-sm text-muted-foreground">
+                {debtTransactions.length} registros
+              </span>
+            </div>
             <ScrollArea className={cn("border rounded-lg p-4", isMobile ? "h-[calc(100vh-300px)] border-0 p-2" : "h-[300px]")}>
-              {payments.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  No hay historial de pagos disponible
-                </p>
+              {debtTransactions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No hay transacciones registradas</p>
+                  <p className="text-sm mt-1">Las transacciones con este contacto aparecerán aquí</p>
+                </div>
               ) : (
                 <div className="space-y-3">
-                  {payments.map((payment) => (
-                    <div key={payment.id} className={cn(
-                      "rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors",
-                      isMobile ? "p-3" : "p-3 flex items-center justify-between"
-                    )}>
-                      {isMobile ? (
-                        /* Layout móvil - Vertical */
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3 flex-1">
-                              <div 
-                                className="w-8 h-8 rounded-lg flex items-center justify-center text-white flex-shrink-0"
-                                style={{ 
-                                  backgroundColor: payment.transactions?.categories?.color || 'hsl(var(--primary))' 
-                                }}
-                              >
-                                {(payment.transactions?.subcategories?.icon || payment.transactions?.categories?.icon) && (
-                                  <span className="text-xs">
-                                    {payment.transactions?.subcategories?.icon || payment.transactions?.categories?.icon}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-foreground text-sm truncate">
-                                  {payment.transactions?.subcategories?.name || payment.transactions?.categories?.name || getPaymentType(payment.amount)}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {format(new Date(payment.payment_date), 'dd/MM/yyyy')}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <p className={`font-bold text-sm ${getPaymentColor(payment.amount)}`}>
-                                {payment.amount > 0 ? '+' : ''}{formatCurrency(payment.amount)}
-                              </p>
-                              <div className="flex items-center space-x-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEditPayment(payment)}
-                                  className="h-6 w-6 p-0"
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                                {!isInitialRecord(payment) && (
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>¿Eliminar registro?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Esta acción eliminará permanentemente este registro de pago. Esta acción no se puede deshacer.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction 
-                                          onClick={() => handleDeletePayment(payment.id)}
-                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                        >
-                                          Eliminar
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          {payment.description && (
-                            <p className="text-xs text-muted-foreground pl-11">
-                              {payment.description}
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        /* Layout escritorio - Horizontal */
-                        <>
-                          <div className="flex items-center space-x-3 flex-1">
-                            <div 
-                              className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
-                              style={{ 
-                                backgroundColor: payment.transactions?.categories?.color || 'hsl(var(--primary))' 
-                              }}
-                            >
-                              {(payment.transactions?.subcategories?.icon || payment.transactions?.categories?.icon) && (
-                                <span className="text-sm">
-                                  {payment.transactions?.subcategories?.icon || payment.transactions?.categories?.icon}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-medium text-foreground">
-                                {payment.transactions?.subcategories?.name || payment.transactions?.categories?.name || getPaymentType(payment.amount)}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {payment.transactions?.accounts?.name}
-                              </p>
-                              {payment.description && (
-                                <p className="text-sm text-muted-foreground">
-                                  {payment.description}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-3">
-                            <div className="text-right">
-                              <p className={`font-bold ${getPaymentColor(payment.amount)}`}>
-                                {payment.amount > 0 ? '+' : ''}{formatCurrency(payment.amount)}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {format(new Date(payment.payment_date), 'dd/MM/yyyy')}
-                              </p>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditPayment(payment)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              {!isInitialRecord(payment) && (
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>¿Eliminar registro?</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Esta acción eliminará permanentemente este registro de pago. Esta acción no se puede deshacer.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                      <AlertDialogAction 
-                                        onClick={() => handleDeletePayment(payment.id)}
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                      >
-                                        Eliminar
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              )}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
+                  {debtTransactions.map((transaction) => (
+                    <TransactionItem
+                      key={transaction.id}
+                      transaction={transaction}
+                      onEdit={setEditingTransaction}
+                      onDelete={async (transactionId) => {
+                        try {
+                          await deleteTransaction(transactionId)
+                          toast.success('Transacción eliminada')
+                        } catch (error) {
+                          console.error('Error deleting transaction:', error)
+                          toast.error('Error al eliminar la transacción')
+                        }
+                      }}
+                    />
                   ))}
                 </div>
               )}
@@ -393,12 +220,10 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
         
         {editingTransaction && (
           <EditTransaction
-            open={isEditDialogOpen}
+            open={!!editingTransaction}
             onOpenChange={(open) => {
-              setIsEditDialogOpen(open)
               if (!open) {
                 setEditingTransaction(null)
-                refreshPayments()
               }
             }}
             transaction={editingTransaction}
