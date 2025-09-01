@@ -25,6 +25,7 @@ export interface Transaction {
   updated_at: string;
   contact_id?: string;
   payer_contact_id?: string;
+  debt_id?: string;
 }
 
 export interface DashboardCard {
