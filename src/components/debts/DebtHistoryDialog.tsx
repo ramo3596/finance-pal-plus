@@ -30,22 +30,28 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
   const { transactions, deleteTransaction } = useTransactions()
   const isMobile = useIsMobile()
 
-  // Filtrar transacciones relacionadas con esta deuda/préstamo por debt_id específico
+  // Filtrar transacciones relacionadas con esta deuda/préstamo por contact_id
   const debtTransactions = useMemo(() => {
     if (!transactions || !debt.contact_id) return []
     
-    // Filtrar transacciones que pertenecen a esta deuda específica
+    // Subcategorías que identifican transacciones de deudas/préstamos
+    const DEBT_SUBCATEGORIES = [
+      'e9fb73a7-86d4-44f0-bb40-dee112a5560d', // Préstamos, alquileres (para cobros de préstamo - tipo income)
+      '6450a480-9d0c-4ae1-a08a-26e5d4b158a2', // Comisión (para pagos de deuda - tipo expense)
+      'e3b4a085-a4da-4b24-b356-fd9a2b3113e5', // Préstamos (para nuevas deudas - tipo expense)
+    ]
+    
+    // Filtrar transacciones que pertenecen a este contacto y son de tipo deuda/préstamo
     const contactTransactions = transactions.filter(transaction => 
-      transaction.debt_id && // Solo transacciones que tienen debt_id
-      (transaction.contact_id === debt.contact_id || transaction.payer_contact_id === debt.contact_id) &&
-      transaction.debt_id === debt.id // Filtrar por el ID específico de la deuda
+      transaction.contact_id === debt.contact_id &&
+      DEBT_SUBCATEGORIES.includes(transaction.subcategory_id || '')
     )
     
     // Ordenar por fecha (más reciente primero)
     return contactTransactions.sort((a, b) => 
       new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
     )
-  }, [transactions, debt.contact_id, debt.id])
+  }, [transactions, debt.contact_id])
 
   const isDebt = debt.type === 'debt'
   const contactName = debt.contacts?.name || 'Contacto'
