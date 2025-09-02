@@ -1,10 +1,11 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { FinancialSidebar } from "@/components/FinancialSidebar"
 import { Button } from "@/components/ui/button"
-import { LogOut } from "lucide-react"
+import { LogOut, RefreshCw } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { NotificationDropdown } from "@/components/NotificationDropdown"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useSync } from "@/hooks/useSync"
 
 interface LayoutProps {
   children: React.ReactNode
@@ -13,9 +14,14 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const { signOut } = useAuth();
   const isMobile = useIsMobile();
+  const { syncAll, isSyncing } = useSync();
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleSync = async () => {
+    await syncAll();
   };
 
   return (
@@ -26,6 +32,15 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex justify-between items-center p-4 border-b">
             <SidebarTrigger />
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSync}
+                disabled={isSyncing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
+              </Button>
               <NotificationDropdown />
               {!isMobile && (
                 <Button
