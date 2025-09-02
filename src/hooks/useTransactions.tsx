@@ -586,6 +586,6 @@ export const useTransactions = () => {
     updateCardPosition,
     toggleCardVisibility,
     saveCardPreferences,
-    refetch: () => fetchTransactions(),
+    refetch: () => fetchTransactions(true),
   };
 };

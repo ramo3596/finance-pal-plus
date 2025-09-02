@@ -205,7 +205,7 @@ export function useInventory() {
   return {
     products,
     loading,
-    fetchProducts: () => fetchProducts(),
+    fetchProducts,
     createProduct,
     updateProduct,
     deleteProduct,

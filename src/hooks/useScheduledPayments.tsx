@@ -286,7 +286,7 @@ export const useScheduledPayments = () => {
   return {
     scheduledPayments,
     loading,
-    fetchScheduledPayments: () => fetchScheduledPayments(),
+    fetchScheduledPayments,
     createScheduledPayment,
     updateScheduledPayment,
     deleteScheduledPayment,

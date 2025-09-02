@@ -1022,6 +1022,6 @@ export const useSettings = () => {
     updateUserSettings,
     
     // Utility
-    refetch: fetchData,
+    refetch: (forceRefresh = false) => fetchData(forceRefresh),
   };
 };
