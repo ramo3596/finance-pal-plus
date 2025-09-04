@@ -13,10 +13,11 @@ import { cn } from "@/lib/utils"
 interface DebtCardProps {
   debt: Debt
   onAddPayment: () => void
+  onSelectTransaction: () => void
   onViewHistory: () => void
 }
 
-export function DebtCard({ debt, onAddPayment, onViewHistory }: DebtCardProps) {
+export function DebtCard({ debt, onAddPayment, onSelectTransaction, onViewHistory }: DebtCardProps) {
   const isMobile = useIsMobile()
   const { deleteDebt } = useDebts()
   const isDebt = debt.type === 'debt'
@@ -94,7 +95,20 @@ export function DebtCard({ debt, onAddPayment, onViewHistory }: DebtCardProps) {
               className="text-xs"
             >
               <Plus className="h-3 w-3 mr-1" />
-              Añadir Registro
+              Nuevo Registro
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation()
+                onSelectTransaction()
+              }}
+              className="text-xs"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Seleccionar Registro
             </Button>
             
             <Button

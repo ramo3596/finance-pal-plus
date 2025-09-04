@@ -13,6 +13,7 @@ import { DebtCard } from "@/components/debts/DebtCard"
 import { AddDebtDialog } from "@/components/debts/AddDebtDialog"
 import { AddPaymentDialog } from "@/components/debts/AddPaymentDialog"
 import { DebtHistoryDialog } from "@/components/debts/DebtHistoryDialog"
+import { SelectTransactionDialog } from "@/components/debts/SelectTransactionDialog"
 import { FloatingActionButton } from "@/components/shared/FloatingActionButton"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -22,6 +23,7 @@ export default function Debts() {
   const [statusFilter, setStatusFilter] = useState<"active" | "closed">("active")
   const [isAddDebtOpen, setIsAddDebtOpen] = useState(false)
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false)
+  const [isSelectTransactionOpen, setIsSelectTransactionOpen] = useState(false)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null)
 
@@ -53,6 +55,11 @@ export default function Debts() {
   const handleAddPayment = (debt: Debt) => {
     setSelectedDebt(debt)
     setIsAddPaymentOpen(true)
+  }
+
+  const handleSelectTransaction = (debt: Debt) => {
+    setSelectedDebt(debt)
+    setIsSelectTransactionOpen(true)
   }
 
   const handleViewHistory = (debt: Debt) => {
@@ -124,6 +131,7 @@ export default function Debts() {
                         key={debt.id}
                         debt={debt}
                         onAddPayment={() => handleAddPayment(debt)}
+                        onSelectTransaction={() => handleSelectTransaction(debt)}
                         onViewHistory={() => handleViewHistory(debt)}
                       />
                     ))}
@@ -145,6 +153,7 @@ export default function Debts() {
                         key={debt.id}
                         debt={debt}
                         onAddPayment={() => handleAddPayment(debt)}
+                        onSelectTransaction={() => handleSelectTransaction(debt)}
                         onViewHistory={() => handleViewHistory(debt)}
                       />
                     ))}
@@ -170,6 +179,12 @@ export default function Debts() {
               onOpenChange={setIsAddPaymentOpen}
               debt={selectedDebt}
               accounts={accounts}
+            />
+
+            <SelectTransactionDialog
+              open={isSelectTransactionOpen}
+              onOpenChange={setIsSelectTransactionOpen}
+              debt={selectedDebt}
             />
 
             <DebtHistoryDialog
