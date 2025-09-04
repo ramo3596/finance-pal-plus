@@ -1,10 +1,12 @@
 import { format } from "date-fns"
+import { useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { Plus, Eye, Trash2 } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Plus, Eye, Trash2, MoreVertical } from "lucide-react"
 import { type Debt } from "@/hooks/useDebts"
 import { useDebts } from "@/hooks/useDebts"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -22,6 +24,7 @@ export function DebtCard({ debt, onAddPayment, onSelectTransaction, onViewHistor
   const { deleteDebt } = useDebts()
   const isDebt = debt.type === 'debt'
   const contactName = debt.contacts?.name || 'Contacto'
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -37,7 +40,7 @@ export function DebtCard({ debt, onAddPayment, onSelectTransaction, onViewHistor
   return (
     <Card 
       className={cn("cursor-pointer hover:shadow-md transition-shadow h-full", isMobile ? "w-full" : "")}
-      onClick={onViewHistory}
+      onClick={isMobile ? undefined : onViewHistory}
     >
       <CardContent className="p-4 h-full flex flex-col">
         {/* Desktop Layout */}
@@ -182,7 +185,72 @@ export function DebtCard({ debt, onAddPayment, onSelectTransaction, onViewHistor
               </span>
             </div>
           </div>
+          
+          {/* Floating Action Menu for Mobile */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0 flex-shrink-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation()
+                onAddPayment()
+              }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Registro
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation()
+                onSelectTransaction()
+              }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Seleccionar Registro
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation()
+                onViewHistory()
+              }}>
+                <Eye className="h-4 w-4 mr-2" />
+                Ver Historial
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowDeleteDialog(true)
+                }}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Eliminar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+        
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar {isDebt ? 'deuda' : 'préstamo'}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción eliminará permanentemente {isDebt ? 'la deuda' : 'el préstamo'} y todo su historial de movimientos. Esta acción no se puede deshacer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteDebt} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   )
