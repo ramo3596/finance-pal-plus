@@ -68,8 +68,8 @@ export function DebtCard({ debt, onAddPayment, onSelectTransaction, onViewHistor
               <div className="flex items-center justify-between text-sm">
                 <div>
                   <span className="text-muted-foreground">Saldo: </span>
-                  <span className={`font-semibold ${debt.current_balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    {formatCurrency(debt.current_balance)}
+                  <span className={`font-semibold ${debt.type === 'loan' ? 'text-red-600' : (debt.current_balance < 0 ? 'text-red-600' : 'text-green-600')}`}>
+                    {debt.type === 'loan' ? formatCurrency(-Math.abs(debt.current_balance)) : formatCurrency(debt.current_balance)}
                   </span>
                 </div>
                 
