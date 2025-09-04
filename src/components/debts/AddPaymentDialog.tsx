@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Autocomplete } from "@/components/ui/autocomplete"
 import {
   Popover,
   PopoverContent,
@@ -56,7 +57,7 @@ interface AddPaymentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   debt: Debt
-  accounts: Array<{ id: string; name: string }>
+  accounts: Array<{ id: string; name: string; icon?: string; balance?: number }>
 }
 
 export function AddPaymentDialog({ open, onOpenChange, debt, accounts }: AddPaymentDialogProps) {
@@ -161,20 +162,17 @@ export function AddPaymentDialog({ open, onOpenChange, debt, accounts }: AddPaym
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Cuenta</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una cuenta" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {accounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <Autocomplete
+                      options={accounts.map(account => ({
+                        id: account.id,
+                        name: `${account.icon || '💳'} ${account.name} ($${account.balance?.toFixed(2) || '0.00'})`
+                      }))}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="Buscar cuenta..."
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

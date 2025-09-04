@@ -40,7 +40,7 @@ export function DebtCard({ debt, onAddPayment, onSelectTransaction, onViewHistor
   return (
     <Card 
       className={cn("cursor-pointer hover:shadow-md transition-shadow h-full", isMobile ? "w-full" : "")}
-      onClick={isMobile ? undefined : onViewHistory}
+      onClick={undefined}
     >
       <CardContent className="p-4 h-full flex flex-col">
         {/* Desktop Layout */}
@@ -87,73 +87,53 @@ export function DebtCard({ debt, onAddPayment, onSelectTransaction, onViewHistor
             </div>
           </div>
           
-          <div className="flex flex-col space-y-2 ml-4">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation()
-                onAddPayment()
-              }}
-              className="text-xs"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Nuevo Registro
-            </Button>
-            
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation()
-                onSelectTransaction()
-              }}
-              className="text-xs"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Seleccionar Registro
-            </Button>
-            
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation()
-                onViewHistory()
-              }}
-              className="text-xs"
-            >
-              <Eye className="h-3 w-3 mr-1" />
-              Ver Historial
-            </Button>
-
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
+          {/* Floating Action Menu for Desktop */}
+          <div className="ml-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="outline"
+                  className="h-10 w-10 p-0"
                   onClick={(e) => e.stopPropagation()}
-                  className="text-xs text-destructive hover:text-destructive"
                 >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Eliminar
+                  <MoreVertical className="h-4 w-4" />
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Eliminar {isDebt ? 'deuda' : 'préstamo'}?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta acción eliminará permanentemente {isDebt ? 'la deuda' : 'el préstamo'} y todo su historial de movimientos. Esta acción no se puede deshacer.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteDebt} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Eliminar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={(e) => {
+                  e.stopPropagation()
+                  onAddPayment()
+                }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Registro
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => {
+                  e.stopPropagation()
+                  onSelectTransaction()
+                }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Seleccionar Registro
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => {
+                  e.stopPropagation()
+                  onViewHistory()
+                }}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  Ver Historial
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowDeleteDialog(true)
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

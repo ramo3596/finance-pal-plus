@@ -60,7 +60,7 @@ interface AddDebtDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   contacts: Array<{ id: string; name: string }>
-  accounts: Array<{ id: string; name: string }>
+  accounts: Array<{ id: string; name: string; icon?: string; balance?: number }>
 }
 
 export function AddDebtDialog({ open, onOpenChange, contacts, accounts }: AddDebtDialogProps) {
@@ -181,10 +181,13 @@ export function AddDebtDialog({ open, onOpenChange, contacts, accounts }: AddDeb
                     <FormLabel>Cuenta</FormLabel>
                     <FormControl>
                       <Autocomplete
-                        options={accounts}
+                        options={accounts.map(account => ({
+                          id: account.id,
+                          name: `${account.icon || '💳'} ${account.name} ($${account.balance?.toFixed(2) || '0.00'})`
+                        }))}
                         value={field.value}
                         onValueChange={field.onChange}
-                        placeholder="Selecciona una cuenta"
+                        placeholder="Buscar cuenta..."
                       />
                     </FormControl>
                     <FormMessage />
