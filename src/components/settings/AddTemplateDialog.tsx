@@ -29,6 +29,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
     name: "",
     amount: 0,
     account_id: "",
+    to_account_id: "",
     category_id: "",
     payment_method: "Dinero en efectivo",
     type: "Gastos",
@@ -42,6 +43,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
     onAdd({
       ...formData,
       account_id: formData.account_id || undefined,
+      to_account_id: formData.to_account_id || undefined,
       category_id: formData.category_id || undefined,
       beneficiary: formData.beneficiary || undefined,
       note: formData.note || undefined,
@@ -51,6 +53,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
       name: "", 
       amount: 0, 
       account_id: "", 
+      to_account_id: "",
       category_id: "", 
       payment_method: "Dinero en efectivo", 
       type: "Gastos",
@@ -110,7 +113,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
             </Select>
           </div>
           <div>
-            <Label htmlFor="account_id">Cuenta</Label>
+            <Label htmlFor="account_id">{formData.type === "Transferencias" ? "Cuenta origen" : "Cuenta"}</Label>
             <Autocomplete
               options={accounts.map(account => ({
                 id: account.id,
@@ -122,6 +125,21 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
               className="mt-2"
             />
           </div>
+          {formData.type === "Transferencias" && (
+            <div>
+              <Label htmlFor="to_account_id">Cuenta destino</Label>
+              <Autocomplete
+                options={accounts.filter(account => account.id !== formData.account_id).map(account => ({
+                  id: account.id,
+                  name: account.name
+                }))}
+                value={formData.to_account_id}
+                onValueChange={(value) => setFormData({ ...formData, to_account_id: value })}
+                placeholder="Buscar cuenta destino..."
+                className="mt-2"
+              />
+            </div>
+          )}
           <div>
             <Label htmlFor="category_id">Categoría</Label>
             <Autocomplete
