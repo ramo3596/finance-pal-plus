@@ -54,9 +54,9 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      quantity: 0,
-      price: 0,
-      cost: 0,
+      quantity: undefined,
+      price: undefined,
+      cost: undefined,
     },
   });
 
@@ -317,7 +317,7 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
           <Input
             id="quantity"
             type="number"
-            placeholder="0"
+            placeholder=""
             {...register("quantity", { valueAsNumber: true })}
           />
           {errors.quantity && (
@@ -331,7 +331,7 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
             id="price"
             type="number"
             step="0.01"
-            placeholder="0.00"
+            placeholder=""
             {...register("price", { valueAsNumber: true })}
           />
           {errors.price && (
@@ -345,7 +345,7 @@ export function ProductInfoForm({ onSuccess }: ProductInfoFormProps) {
             id="cost"
             type="number"
             step="0.01"
-            placeholder="0.00"
+            placeholder=""
             {...register("cost", { valueAsNumber: true })}
           />
           {errors.cost && (

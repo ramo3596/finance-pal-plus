@@ -34,7 +34,7 @@ export function AddTransaction({
   const { contacts } = useContacts();
   
   const [transactionType, setTransactionType] = useState<"expense" | "income" | "transfer">("expense");
-  const [amount, setAmount] = useState("0");
+  const [amount, setAmount] = useState("");
   const [selectedAccount, setSelectedAccount] = useState("");
   const [toAccount, setToAccount] = useState(""); // For transfers
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -224,7 +224,7 @@ export function AddTransaction({
         onOpenChange(false);
       } else {
         // Reset form for new transaction
-        setAmount("0");
+        setAmount("");
         setSelectedAccount("");
         setToAccount("");
         setSelectedCategory("");
