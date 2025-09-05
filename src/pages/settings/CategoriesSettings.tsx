@@ -66,7 +66,7 @@ export default function CategoriesSettings() {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
           {/* Panel Izquierdo - Categorías Principales */}
           <Card>
             <CardHeader>
@@ -91,7 +91,20 @@ export default function CategoriesSettings() {
                           ? 'bg-primary/10 border-primary'
                           : 'hover:bg-muted/50'
                       }`}
-                      onClick={() => setSelectedCategoryId(category.id)}
+                      onClick={() => {
+                        if (isMobile) {
+                          navigate('/settings/categories/subcategories', {
+                            state: {
+                              categoryId: category.id,
+                              categoryName: category.name,
+                              categoryColor: category.color,
+                              categoryIcon: category.icon
+                            }
+                          });
+                        } else {
+                          setSelectedCategoryId(category.id);
+                        }
+                      }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -130,82 +143,84 @@ export default function CategoriesSettings() {
             </CardContent>
           </Card>
 
-          {/* Panel Derecho - Subcategorías */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center justify-between">
-                <span>
-                  {selectedCategory ? `Subcategorías de "${selectedCategory.name}"` : 'Subcategorías'}
-                </span>
-                 {selectedCategory && (
-                    <AddSubcategoryDialog
-                      categoryId={selectedCategory.id}
-                      categoryName={selectedCategory.name}
-                      onAdd={async (subcategory) => {
-                        await createSubcategory(subcategory);
-                      }}
-                    />
-                  )}
-               </CardTitle>
-             </CardHeader>
-             <CardContent>
-               {!selectedCategory ? (
-                 <div className="text-center text-muted-foreground py-12">
-                   <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                   <p>Selecciona una categoría del panel izquierdo para ver sus subcategorías</p>
-                 </div>
-               ) : subcategories.length === 0 ? (
-                 <div className="text-center text-muted-foreground py-12">
-                   <p className="mb-4">Esta categoría no tiene subcategorías.</p>
-                   <AddSubcategoryDialog
-                      categoryId={selectedCategory.id}
-                      categoryName={selectedCategory.name}
-                      onAdd={async (subcategory) => {
-                        await createSubcategory(subcategory);
-                      }}
-                    />
-                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {subcategories.map((subcategory) => (
-                    <div
-                      key={subcategory.id}
-                      className="p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                            style={{ backgroundColor: selectedCategory.color }}
-                          >
-                            {subcategory.icon || '📦'}
+          {/* Panel Derecho - Subcategorías - Solo visible en desktop */}
+          {!isMobile && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center justify-between">
+                  <span>
+                    {selectedCategory ? `Subcategorías de "${selectedCategory.name}"` : 'Subcategorías'}
+                  </span>
+                   {selectedCategory && (
+                      <AddSubcategoryDialog
+                        categoryId={selectedCategory.id}
+                        categoryName={selectedCategory.name}
+                        onAdd={async (subcategory) => {
+                          await createSubcategory(subcategory);
+                        }}
+                      />
+                    )}
+                 </CardTitle>
+               </CardHeader>
+               <CardContent>
+                 {!selectedCategory ? (
+                   <div className="text-center text-muted-foreground py-12">
+                     <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                     <p>Selecciona una categoría del panel izquierdo para ver sus subcategorías</p>
+                   </div>
+                 ) : subcategories.length === 0 ? (
+                   <div className="text-center text-muted-foreground py-12">
+                     <p className="mb-4">Esta categoría no tiene subcategorías.</p>
+                     <AddSubcategoryDialog
+                        categoryId={selectedCategory.id}
+                        categoryName={selectedCategory.name}
+                        onAdd={async (subcategory) => {
+                          await createSubcategory(subcategory);
+                        }}
+                      />
+                   </div>
+                ) : (
+                  <div className="space-y-2">
+                    {subcategories.map((subcategory) => (
+                      <div
+                        key={subcategory.id}
+                        className="p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                              style={{ backgroundColor: selectedCategory.color }}
+                            >
+                              {subcategory.icon || '📦'}
+                            </div>
+                            <span className="font-medium">{subcategory.name}</span>
                           </div>
-                          <span className="font-medium">{subcategory.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <EditSubcategoryDialog
-                            subcategory={subcategory}
-                            onUpdate={updateSubcategory}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                              if (confirm("¿Estás seguro de que quieres eliminar esta subcategoría?")) {
-                                await deleteSubcategory(subcategory.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <EditSubcategoryDialog
+                              subcategory={subcategory}
+                              onUpdate={updateSubcategory}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                if (confirm("¿Estás seguro de que quieres eliminar esta subcategoría?")) {
+                                  await deleteSubcategory(subcategory.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <FloatingActionButton

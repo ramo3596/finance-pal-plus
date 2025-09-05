@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Settings from "./pages/Settings";
 import AccountsSettings from "./pages/settings/AccountsSettings";
 import CategoriesSettings from "./pages/settings/CategoriesSettings";
+import SubcategoriesSettings from "./pages/settings/SubcategoriesSettings";
 import TagsSettings from "./pages/settings/TagsSettings";
 import TemplatesSettings from "./pages/settings/TemplatesSettings";
 import FiltersSettings from "./pages/settings/FiltersSettings";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/accounts" element={<AccountsSettings />} />
             <Route path="/settings/categories" element={<CategoriesSettings />} />
+            <Route path="/settings/categories/subcategories" element={<SubcategoriesSettings />} />
             <Route path="/settings/tags" element={<TagsSettings />} />
             <Route path="/settings/templates" element={<TemplatesSettings />} />
             <Route path="/settings/filters" element={<FiltersSettings />} />
