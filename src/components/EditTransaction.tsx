@@ -59,7 +59,44 @@ export function EditTransaction({
       setSelectedAccount(transaction.account_id || "");
       setToAccount(transaction.to_account_id || "");
       setSelectedCategory(transaction.category_id || "");
-      setSelectedTags(Array.isArray(transaction.tags) ? transaction.tags : []);
+      // Convert tag IDs to tag names for proper display and saving
+      if (transaction.tags) {
+        let tagsArray: string[] = [];
+        if (Array.isArray(transaction.tags)) {
+          tagsArray = transaction.tags;
+        } else if (typeof transaction.tags === 'string') {
+          const tagString = transaction.tags as string;
+          if (tagString.startsWith('[') && tagString.endsWith(']')) {
+            try {
+              const parsed = JSON.parse(tagString);
+              if (Array.isArray(parsed)) {
+                tagsArray = parsed;
+              }
+            } catch {
+              tagsArray = [tagString.trim()];
+            }
+          } else {
+            tagsArray = tagString.includes(',') 
+              ? tagString.split(',').map(tag => tag.trim())
+              : [tagString.trim()];
+          }
+        }
+        
+        // Convert tag IDs to tag names if needed
+        const tagNames = tagsArray.map(tagItem => {
+          // First try to find by name (if it's already a name)
+          const tagByName = tags.find(t => t.name === tagItem);
+          if (tagByName) return tagItem;
+          
+          // If not found by name, try to find by ID and return the name
+          const tagById = tags.find(t => t.id === tagItem);
+          return tagById ? tagById.name : tagItem;
+        });
+        
+        setSelectedTags(tagNames);
+      } else {
+        setSelectedTags([]);
+      }
       
       const transactionDate = new Date(transaction.transaction_date);
       // Use getFullYear, getMonth, getDate to avoid timezone issues
@@ -78,6 +115,10 @@ export function EditTransaction({
       setNote(transaction.note || "");
       setPaymentMethod(transaction.payment_method || "");
       setLocation(transaction.location || "");
+      
+      // Set selected contact based on transaction type and existing contact relationships
+      const contactId = transaction.type === 'income' ? transaction.payer_contact_id : transaction.contact_id;
+      setSelectedContact(contactId || "");
     }
   }, [transaction, open]);
 
@@ -87,6 +128,15 @@ export function EditTransaction({
     try {
       // For transfers, we need special handling since they're stored as paired transactions
       if (transactionType === 'transfer') {
+        // Set contact data for transfers
+        const contactData: any = {};
+        if (selectedContact) {
+          contactData.contact_id = selectedContact; // Can be beneficiary for transfers
+        }
+
+        const selectedContactObj = contacts.find(c => c.id === selectedContact);
+        const contactName = selectedContactObj?.name || beneficiary;
+
         // Update both records of the transfer
         await updateTransferPair(transaction.id, {
           type: transactionType,
@@ -94,13 +144,14 @@ export function EditTransaction({
           account_id: selectedAccount,
           to_account_id: toAccount || undefined,
           category_id: selectedCategory || undefined,
-          description: description || 'Transferencia',
-          beneficiary,
+          description: description || contactName || 'Transferencia',
+          beneficiary: contactName,
           note,
           payment_method: paymentMethod,
           location,
           tags: selectedTags,
           transaction_date: new Date(`${date}T${time}`).toISOString(),
+          ...contactData,
         });
       } else {
         // For regular transactions
@@ -108,18 +159,32 @@ export function EditTransaction({
           ? -Math.abs(parseFloat(amount)) 
           : Math.abs(parseFloat(amount));
 
+        // Set contact relationship based on transaction type
+        const contactData: any = {};
+        if (selectedContact) {
+          if (transactionType === 'expense') {
+            contactData.contact_id = selectedContact; // Beneficiary for expenses
+          } else if (transactionType === 'income') {
+            contactData.payer_contact_id = selectedContact; // Payer for income
+          }
+        }
+
+        const selectedContactObj = contacts.find(c => c.id === selectedContact);
+        const contactName = selectedContactObj?.name || beneficiary;
+
         await updateTransaction(transaction.id, {
           type: transactionType,
           amount: adjustedAmount,
           account_id: selectedAccount,
           category_id: selectedCategory || undefined,
-          description: description || beneficiary || `${transactionType} transaction`,
-          beneficiary,
+          description: description || contactName || `${transactionType} transaction`,
+          beneficiary: contactName,
           note,
           payment_method: paymentMethod,
           location,
           tags: selectedTags,
           transaction_date: new Date(`${date}T${time}`).toISOString(),
+          ...contactData,
         });
       }
 
@@ -274,29 +339,45 @@ export function EditTransaction({
 
             <div className="space-y-2">
               <Label htmlFor="tags">Etiquetas</Label>
-              <Select value={Array.isArray(selectedTags) ? selectedTags.join(',') : ''} onValueChange={(value) => {
-                if (value) {
-                  const newTags = value.split(',');
-                  setSelectedTags(newTags);
-                }
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar etiquetas" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tags.map((tag) => (
-                    <SelectItem key={tag.id} value={tag.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: tag.color }}
-                        />
-                        <span>{tag.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Autocomplete
+                options={tags.filter(tag => tag.id && tag.id.trim() !== '').map(tag => ({
+                  id: tag.id,
+                  name: tag.name
+                }))}
+                value={""}
+                onValueChange={(value) => {
+                  if (value) {
+                    const selectedTag = tags.find(tag => tag.id === value);
+                    if (selectedTag && !selectedTags.includes(selectedTag.name)) {
+                      setSelectedTags([...selectedTags, selectedTag.name]);
+                    }
+                  }
+                }}
+                placeholder="Buscar etiquetas..."
+              />
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedTags.map((tagName, index) => {
+                    const tag = tags.find(t => t.name === tagName);
+                    return tag ? (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded"
+                        style={{ backgroundColor: tag.color, color: 'white' }}
+                      >
+                        {tag.name}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTags(selectedTags.filter((_, i) => i !== index))}
+                          className="ml-1 hover:bg-black/20 rounded-full w-4 h-4 flex items-center justify-center"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
