@@ -104,7 +104,7 @@ export function Dashboard() {
   // Account selection filter state
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
   
-  const { transactions, cards, updateCardPosition, toggleCardVisibility, saveCardPreferences } = useTransactions()
+  const { transactions, cards, updateCardPosition, toggleCardVisibility, saveCardPreferences, deleteTransaction } = useTransactions()
   const { accounts, categories, tags, createAccount, updateAccount, deleteAccount, reorderAccounts } = useSettings()
   const { scheduledPayments } = useScheduledPayments()
   
@@ -430,6 +430,15 @@ export function Dashboard() {
               onEdit={(transaction) => {
                 setSelectedTransaction(transaction);
                 setIsEditTransactionOpen(true);
+              }}
+              onDelete={async (transactionId) => {
+                if (window.confirm('¿Estás seguro de que quieres eliminar esta transacción?')) {
+                  try {
+                    await deleteTransaction(transactionId);
+                  } catch (error) {
+                    console.error('Error deleting transaction:', error);
+                  }
+                }
               }}
             />
           ))
