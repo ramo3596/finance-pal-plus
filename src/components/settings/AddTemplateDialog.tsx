@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
-import { Template } from "@/hooks/useSettings";
+import { Template, Category } from "@/hooks/useSettings";
 import { PaymentMethodSelect } from "@/components/shared/PaymentMethodSelect";
 import { useContacts } from "@/hooks/useContacts";
 import { Autocomplete } from "@/components/ui/autocomplete";
@@ -14,7 +14,7 @@ import { Autocomplete } from "@/components/ui/autocomplete";
 interface AddTemplateDialogProps {
   onAdd: (template: Omit<Template, 'id' | 'created_at' | 'updated_at'>) => void;
   accounts: Array<{ id: string; name: string }>;
-  categories: Array<{ id: string; name: string }>;
+  categories: Category[];
   tags: Array<{ id: string; name: string; color: string }>;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -31,6 +31,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
     account_id: "",
     to_account_id: "",
     category_id: "",
+    subcategory_id: "",
     payment_method: "Dinero en efectivo",
     type: "Gastos",
     beneficiary: "",
@@ -45,6 +46,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
       account_id: formData.account_id || undefined,
       to_account_id: formData.to_account_id || undefined,
       category_id: formData.category_id || undefined,
+      subcategory_id: formData.subcategory_id || undefined,
       beneficiary: formData.beneficiary || undefined,
       note: formData.note || undefined,
       tag_ids: formData.tag_ids ? [formData.tag_ids] : undefined
@@ -55,6 +57,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
       account_id: "", 
       to_account_id: "",
       category_id: "", 
+      subcategory_id: "",
       payment_method: "Dinero en efectivo", 
       type: "Gastos",
       beneficiary: "",
@@ -143,13 +146,57 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
           <div>
             <Label htmlFor="category_id">Categoría</Label>
             <Autocomplete
-              options={categories.map(category => ({
-                id: category.id,
-                name: category.name
-              }))}
-              value={formData.category_id}
-              onValueChange={(value) => setFormData({ ...formData, category_id: value })}
-              placeholder="Buscar categoría..."
+              options={[
+                // Incluir todas las categorías
+                ...categories.map(category => ({
+                  id: category.id,
+                  name: `${category.icon} ${category.name}`,
+                  isCategory: true
+                })),
+                // Incluir todas las subcategorías
+                ...categories.flatMap(category => 
+                  category.subcategories?.map(subcategory => ({
+                    id: subcategory.id,
+                    name: `${subcategory.icon} ${subcategory.name} (${category.name})`,
+                    categoryId: category.id,
+                    isSubcategory: true
+                  })) || []
+                )
+              ]}
+              value={formData.subcategory_id || formData.category_id}
+              onValueChange={(value) => {
+                // Verificar si la selección es una subcategoría
+                const selectedOption = [
+                  ...categories.map(category => ({
+                    id: category.id,
+                    isCategory: true
+                  })),
+                  ...categories.flatMap(category => 
+                    category.subcategories?.map(subcategory => ({
+                      id: subcategory.id,
+                      categoryId: category.id,
+                      isSubcategory: true
+                    })) || []
+                  )
+                ].find(option => option.id === value);
+                
+                if (selectedOption && 'isSubcategory' in selectedOption && selectedOption.isSubcategory) {
+                  // Si es subcategoría, establecer tanto la categoría como la subcategoría
+                  setFormData({ 
+                    ...formData, 
+                    category_id: ('categoryId' in selectedOption) ? selectedOption.categoryId : '',
+                    subcategory_id: value
+                  });
+                } else {
+                  // Si es categoría, establecer solo la categoría y resetear subcategoría
+                  setFormData({ 
+                    ...formData, 
+                    category_id: value,
+                    subcategory_id: ''
+                  });
+                }
+              }}
+              placeholder="Buscar categoría o subcategoría..."
               className="mt-2"
             />
           </div>
