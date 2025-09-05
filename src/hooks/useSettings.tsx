@@ -48,6 +48,7 @@ export interface Template {
   name: string;
   amount: number;
   account_id?: string;
+  to_account_id?: string;
   category_id?: string;
   subcategory_id?: string;
   payment_method?: string;

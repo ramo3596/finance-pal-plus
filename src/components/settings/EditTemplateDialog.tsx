@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Autocomplete } from "@/components/ui/autocomplete";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MultiSelectAutocomplete } from "@/components/ui/multi-select-autocomplete";
 import { Edit } from "lucide-react";
 import { Template, Category } from "@/hooks/useSettings";
 import { PaymentMethodSelect } from "@/components/shared/PaymentMethodSelect";
@@ -27,13 +26,14 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories, t
     name: template.name,
     amount: template.amount,
     account_id: template.account_id || "",
+    to_account_id: template.to_account_id || "",
     category_id: template.category_id || "",
     subcategory_id: template.subcategory_id || "",
     payment_method: template.payment_method || "Dinero en efectivo",
     type: template.type,
     beneficiary: template.beneficiary || "",
     note: template.note || "",
-    tag_ids: template.tags?.map(tag => tag.id) || []
+    tag_ids: template.tags?.length ? template.tags[0].id : ""
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -41,11 +41,12 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories, t
     onUpdate(template.id, {
       ...formData,
       account_id: formData.account_id || undefined,
+      to_account_id: formData.to_account_id || undefined,
       category_id: formData.category_id || undefined,
       subcategory_id: formData.subcategory_id || undefined,
       beneficiary: formData.beneficiary || undefined,
       note: formData.note || undefined,
-      tag_ids: formData.tag_ids.length > 0 ? formData.tag_ids : undefined
+      tag_ids: formData.tag_ids ? [formData.tag_ids] : undefined
     } as any);
     setOpen(false);
   };
@@ -96,18 +97,33 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories, t
             </Select>
           </div>
           <div>
-            <Label htmlFor="account_id">Cuenta</Label>
-            <Select value={formData.account_id} onValueChange={(value) => setFormData({ ...formData, account_id: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar cuenta" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="account_id">{formData.type === "Transferencias" ? "Cuenta origen" : "Cuenta"}</Label>
+            <Autocomplete
+              options={accounts.map(account => ({
+                id: account.id,
+                name: account.name
+              }))}
+              value={formData.account_id}
+              onValueChange={(value) => setFormData({ ...formData, account_id: value })}
+              placeholder="Buscar cuenta..."
+              className="mt-2"
+            />
           </div>
+          {formData.type === "Transferencias" && (
+            <div>
+              <Label htmlFor="to_account_id">Cuenta destino</Label>
+              <Autocomplete
+                options={accounts.filter(account => account.id !== formData.account_id).map(account => ({
+                  id: account.id,
+                  name: account.name
+                }))}
+                value={formData.to_account_id}
+                onValueChange={(value) => setFormData({ ...formData, to_account_id: value })}
+                placeholder="Buscar cuenta destino..."
+                className="mt-2"
+              />
+            </div>
+          )}
           <div>
             <Label htmlFor="category_id">Categoría</Label>
             <Autocomplete
@@ -174,33 +190,14 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories, t
           </div>
           <div>
             <Label htmlFor="beneficiary">Beneficiario</Label>
-            <Select 
-              value={contacts.find(c => c.name === formData.beneficiary)?.id || ""} 
-              onValueChange={(value) => {
-                const contact = contacts.find(c => c.id === value);
-                if (contact) {
-                  setFormData({ ...formData, beneficiary: contact.name });
-                }
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar contacto o escribir manual" />
-              </SelectTrigger>
-              <SelectContent>
-                {contacts.map((contact) => (
-                  <SelectItem key={contact.id} value={contact.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{contact.name}</span>
-                      <span className="text-xs text-muted-foreground">({contact.contact_type})</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              placeholder="O escribir nombre manual"
+            <Autocomplete
+              options={contacts.map(contact => ({
+                id: contact.name,
+                name: `${contact.name} (${contact.contact_type})`
+              }))}
               value={formData.beneficiary}
-              onChange={(e) => setFormData({ ...formData, beneficiary: e.target.value })}
+              onValueChange={(value) => setFormData({ ...formData, beneficiary: value })}
+              placeholder="Buscar o escribir beneficiario..."
               className="mt-2"
             />
           </div>
@@ -214,16 +211,15 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories, t
             />
           </div>
           <div>
-            <Label htmlFor="tags">Etiquetas (opcional)</Label>
-            <MultiSelectAutocomplete
+            <Label htmlFor="tags">Etiqueta (opcional)</Label>
+            <Autocomplete
               options={tags.map(tag => ({
                 id: tag.id,
-                name: tag.name,
-                color: tag.color
+                name: tag.name
               }))}
               value={formData.tag_ids}
               onValueChange={(value) => setFormData({ ...formData, tag_ids: value })}
-              placeholder="Buscar etiquetas..."
+              placeholder="Buscar etiqueta..."
               className="mt-2"
             />
             {tags.length === 0 && (
