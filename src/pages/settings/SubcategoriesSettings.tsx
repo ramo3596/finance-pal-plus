@@ -54,7 +54,7 @@ export default function SubcategoriesSettings() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/settings/categories')}
+            onClick={() => navigate(-1)}
             className="p-1 h-8 w-8"
           >
             <ArrowLeft className="h-4 w-4" />
