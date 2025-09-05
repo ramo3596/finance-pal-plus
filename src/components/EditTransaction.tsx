@@ -12,6 +12,8 @@ import { IncomeTab } from "./IncomeTab";
 import { TransferTab } from "./TransferTab";
 import { useSettings } from "@/hooks/useSettings";
 import { useTransactions, Transaction } from "@/hooks/useTransactions";
+import { useContacts } from "@/hooks/useContacts";
+import { Autocomplete } from "@/components/ui/autocomplete";
 
 interface EditTransactionProps {
   open: boolean;
@@ -31,6 +33,7 @@ export function EditTransaction({
     loading 
   } = useSettings();
   
+  const { contacts } = useContacts();
   const { updateTransaction, updateTransferPair, deleteTransaction } = useTransactions();
   
   const [transactionType, setTransactionType] = useState<"expense" | "income" | "transfer">("expense");
@@ -41,6 +44,7 @@ export function EditTransaction({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  const [selectedContact, setSelectedContact] = useState("");
   const [beneficiary, setBeneficiary] = useState("");
   const [description, setDescription] = useState("");
   const [note, setNote] = useState("");
@@ -308,16 +312,33 @@ export function EditTransaction({
 
           {/* Additional Information */}
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="beneficiary">
-                {transactionType === "expense" ? "Beneficiario" : transactionType === "income" ? "Pagador" : "Beneficiario"}
-              </Label>
-              <Input 
-                id="beneficiary" 
-                placeholder={transactionType === "expense" ? "Nombre del beneficiario" : transactionType === "income" ? "Nombre del pagador" : "Nombre del beneficiario"} 
-                value={beneficiary} 
-                onChange={e => setBeneficiary(e.target.value)} 
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contact">
+                  {transactionType === "expense" ? "Beneficiario (Contacto)" : transactionType === "income" ? "Pagador (Contacto)" : "Contacto"}
+                </Label>
+                <Autocomplete
+                  options={contacts.map(contact => ({
+                    id: contact.id,
+                    name: `${contact.name} (${contact.contact_type})`
+                  }))}
+                  value={selectedContact}
+                  onValueChange={setSelectedContact}
+                  placeholder="Buscar contacto..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="beneficiary">
+                  {transactionType === "expense" ? "Beneficiario (Manual)" : transactionType === "income" ? "Pagador (Manual)" : "Nombre Manual"}
+                </Label>
+                <Input 
+                  id="beneficiary" 
+                  placeholder={transactionType === "expense" ? "O escribir nombre del beneficiario" : transactionType === "income" ? "O escribir nombre del pagador" : "O escribir nombre manual"} 
+                  value={beneficiary} 
+                  onChange={e => setBeneficiary(e.target.value)} 
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
