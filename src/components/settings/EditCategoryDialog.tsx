@@ -11,10 +11,14 @@ import { Category } from "@/hooks/useSettings";
 interface EditCategoryDialogProps {
   category: Category;
   onUpdate: (id: string, updates: Partial<Category>) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function EditCategoryDialog({ category, onUpdate }: EditCategoryDialogProps) {
-  const [open, setOpen] = useState(false);
+export function EditCategoryDialog({ category, onUpdate, open: externalOpen, onOpenChange }: EditCategoryDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [formData, setFormData] = useState({
     name: category.name,
     color: category.color,
@@ -39,11 +43,13 @@ export function EditCategoryDialog({ category, onUpdate }: EditCategoryDialogPro
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Edit className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Edit className="h-4 w-4" />
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar Categoría</DialogTitle>

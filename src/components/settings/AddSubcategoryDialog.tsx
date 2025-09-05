@@ -17,10 +17,14 @@ interface AddSubcategoryDialogProps {
   categoryId: string;
   categoryName: string;
   onAdd: (subcategory: Omit<Subcategory, 'id' | 'created_at'>) => Promise<void>;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddSubcategoryDialog({ categoryId, categoryName, onAdd }: AddSubcategoryDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddSubcategoryDialog({ categoryId, categoryName, onAdd, open: externalOpen, onOpenChange }: AddSubcategoryDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [formData, setFormData] = useState({
     name: "",
     icon: ""
@@ -47,12 +51,14 @@ export function AddSubcategoryDialog({ categoryId, categoryName, onAdd }: AddSub
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-          <Plus className="h-4 w-4 mr-1" />
-          Añadir subcategoría
-        </Button>
-      </DialogTrigger>
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+            <Plus className="h-4 w-4 mr-1" />
+            Añadir subcategoría
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Añadir Subcategoría</DialogTitle>

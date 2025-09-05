@@ -77,18 +77,6 @@ export default function SubcategoriesSettings() {
 
         {/* Content */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Lista de Subcategorías</span>
-              <AddSubcategoryDialog
-                categoryId={state.categoryId}
-                categoryName={state.categoryName}
-                onAdd={async (subcategory) => {
-                  await createSubcategory(subcategory);
-                }}
-              />
-            </CardTitle>
-          </CardHeader>
           <CardContent>
             {loading ? (
               <div className="flex items-center justify-center py-8">
@@ -96,14 +84,8 @@ export default function SubcategoriesSettings() {
               </div>
             ) : subcategories.length === 0 ? (
               <div className="text-center text-muted-foreground py-12">
-                <p className="mb-4">Esta categoría no tiene subcategorías.</p>
-                <AddSubcategoryDialog
-                  categoryId={state.categoryId}
-                  categoryName={state.categoryName}
-                  onAdd={async (subcategory) => {
-                    await createSubcategory(subcategory);
-                  }}
-                />
+                <p>Esta categoría no tiene subcategorías.</p>
+                <p className="text-sm mt-2">Usa el botón flotante para añadir una nueva subcategoría.</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -150,7 +132,17 @@ export default function SubcategoriesSettings() {
           onClick={() => setShowAddDialog(true)}
         />
 
-        {/* La dialog se maneja internamente en AddSubcategoryDialog */}
+        {/* Dialog para el botón flotante */}
+        <AddSubcategoryDialog
+          open={showAddDialog}
+          onOpenChange={setShowAddDialog}
+          categoryId={state.categoryId}
+          categoryName={state.categoryName}
+          onAdd={async (subcategory) => {
+            await createSubcategory(subcategory);
+            setShowAddDialog(false);
+          }}
+        />
       </div>
     </Layout>
   );

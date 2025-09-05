@@ -3,7 +3,7 @@ import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FolderOpen, Trash2, ArrowLeft } from "lucide-react";
+import { FolderOpen, Trash2, ArrowLeft, MoreVertical, Edit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSettings } from "@/hooks/useSettings";
@@ -12,10 +12,17 @@ import { AddSubcategoryDialog } from "@/components/settings/AddSubcategoryDialog
 import { EditCategoryDialog } from "@/components/settings/EditCategoryDialog";
 import { EditSubcategoryDialog } from "@/components/settings/EditSubcategoryDialog";
 import { FloatingActionButton } from "@/components/shared/FloatingActionButton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function CategoriesSettings() {
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
@@ -116,24 +123,62 @@ export default function CategoriesSettings() {
                           </div>
                           <span className="font-medium">{category.name}</span>
                           <Badge variant="secondary" className="text-xs">
-                            {category.subcategories?.length || 0} subcategorías
+                            {category.subcategories?.length || 0}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2">
-                          <EditCategoryDialog
-                            category={category}
-                            onUpdate={updateCategory}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCategory(category.id);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {isMobile ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingCategory(category);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteCategory(category.id);
+                                  }}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <>
+                              <EditCategoryDialog
+                                category={category}
+                                onUpdate={updateCategory}
+                              />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteCategory(category.id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -226,8 +271,16 @@ export default function CategoriesSettings() {
         <FloatingActionButton
           onClick={() => setShowAddCategoryDialog(true)}
         />
-
-        <AddCategoryDialog onAdd={createCategory} />
+        
+        {/* Edit Category Dialog for Mobile */}
+        {editingCategory && (
+          <EditCategoryDialog
+            category={editingCategory}
+            onUpdate={updateCategory}
+            open={!!editingCategory}
+            onOpenChange={(open) => !open && setEditingCategory(null)}
+          />
+        )}
       </div>
     </Layout>
   );
