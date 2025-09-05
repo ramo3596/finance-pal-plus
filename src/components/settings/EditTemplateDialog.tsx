@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { MultiSelectAutocomplete } from "@/components/ui/multi-select-autocomplete";
 import { Edit } from "lucide-react";
 import { Template } from "@/hooks/useSettings";
 import { PaymentMethodSelect } from "@/components/shared/PaymentMethodSelect";
@@ -167,33 +168,17 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories, t
           </div>
           <div>
             <Label htmlFor="tags">Etiquetas (opcional)</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {tags.map((tag) => (
-                <div key={tag.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                  <input
-                    type="checkbox"
-                    id={`tag-${tag.id}`}
-                    checked={formData.tag_ids.includes(tag.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setFormData({ 
-                          ...formData, 
-                          tag_ids: [...formData.tag_ids, tag.id] 
-                        });
-                      } else {
-                        setFormData({ 
-                          ...formData, 
-                          tag_ids: formData.tag_ids.filter(id => id !== tag.id) 
-                        });
-                      }
-                    }}
-                    className="rounded"
-                  />
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }}></div>
-                  <Label htmlFor={`tag-${tag.id}`} className="text-sm">{tag.name}</Label>
-                </div>
-              ))}
-            </div>
+            <MultiSelectAutocomplete
+              options={tags.map(tag => ({
+                id: tag.id,
+                name: tag.name,
+                color: tag.color
+              }))}
+              value={formData.tag_ids}
+              onValueChange={(value) => setFormData({ ...formData, tag_ids: value })}
+              placeholder="Buscar etiquetas..."
+              className="mt-2"
+            />
             {tags.length === 0 && (
               <p className="text-sm text-muted-foreground mt-2">
                 No hay etiquetas disponibles. Crea etiquetas en la sección de Etiquetas.
