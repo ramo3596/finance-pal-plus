@@ -35,7 +35,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
     type: "Gastos",
     beneficiary: "",
     note: "",
-    tag_id: ""
+    tag_ids: ""
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -47,7 +47,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
       category_id: formData.category_id || undefined,
       beneficiary: formData.beneficiary || undefined,
       note: formData.note || undefined,
-      tag_ids: formData.tag_id ? [formData.tag_id] : undefined
+      tag_ids: formData.tag_ids ? [formData.tag_ids] : undefined
     } as any);
     setFormData({ 
       name: "", 
@@ -59,7 +59,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
       type: "Gastos",
       beneficiary: "",
       note: "",
-      tag_id: ""
+      tag_ids: ""
     });
     setOpen(false);
   };
@@ -189,8 +189,8 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
                 id: tag.id,
                 name: tag.name
               }))}
-              value={formData.tag_id}
-              onValueChange={(value) => setFormData({ ...formData, tag_id: value })}
+              value={formData.tag_ids}
+              onValueChange={(value) => setFormData({ ...formData, tag_ids: value })}
               placeholder="Buscar etiqueta..."
               className="mt-2"
             />
