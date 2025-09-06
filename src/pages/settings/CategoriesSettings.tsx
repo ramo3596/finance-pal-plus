@@ -3,7 +3,7 @@ import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FolderOpen, Trash2, ArrowLeft, MoreVertical, Edit } from "lucide-react";
+import { FolderOpen, Trash2, ArrowLeft, MoreVertical, Edit, GripVertical } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSettings } from "@/hooks/useSettings";
@@ -11,6 +11,7 @@ import { AddCategoryDialog } from "@/components/settings/AddCategoryDialog";
 import { AddSubcategoryDialog } from "@/components/settings/AddSubcategoryDialog";
 import { EditCategoryDialog } from "@/components/settings/EditCategoryDialog";
 import { EditSubcategoryDialog } from "@/components/settings/EditSubcategoryDialog";
+
 import { FloatingActionButton } from "@/components/shared/FloatingActionButton";
 import {
   DropdownMenu,
@@ -18,6 +19,149 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+interface SortableCategoryItemProps {
+  category: any;
+  selectedCategoryId: string | null;
+  isMobile: boolean;
+  onSelect: (id: string) => void;
+  onUpdate: (id: string, updates: any) => void;
+  onDelete: (id: string) => void;
+  navigate: any;
+  setEditingCategory: (category: any) => void;
+}
+
+function SortableCategoryItem({
+  category,
+  selectedCategoryId,
+  isMobile,
+  onSelect,
+  onUpdate,
+  onDelete,
+  navigate,
+  setEditingCategory
+}: SortableCategoryItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+        selectedCategoryId === category.id
+          ? 'bg-primary/10 border-primary'
+          : 'hover:bg-muted/50'
+      }`}
+      onClick={() => {
+        if (isMobile) {
+          navigate('/settings/categories/subcategories', {
+            state: {
+              categoryId: category.id,
+              categoryName: category.name,
+              categoryColor: category.color,
+              categoryIcon: category.icon
+            }
+          });
+        } else {
+          onSelect(category.id);
+        }
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing"
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div 
+            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+            style={{ backgroundColor: category.color }}
+          >
+            {category.icon}
+          </div>
+          <span className="font-medium">{category.name}</span>
+          <Badge variant="secondary" className="text-xs">
+            {category.subcategories?.length || 0}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          {isMobile ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingCategory(category);
+                  }}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(category.id);
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <EditCategoryDialog
+                category={category}
+                onUpdate={onUpdate}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(category.id);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function CategoriesSettings() {
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
@@ -25,6 +169,30 @@ export default function CategoriesSettings() {
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = categories.findIndex((category) => category.id === active.id);
+      const newIndex = categories.findIndex((category) => category.id === over.id);
+      
+      const reorderedCategories = arrayMove(categories, oldIndex, newIndex);
+      // Actualizar el display_order de cada categoría
+      const updatedCategories = reorderedCategories.map((category, index) => ({
+        ...category,
+        display_order: index
+      }));
+      reorderCategories(updatedCategories);
+    }
+  };
   
   const {
     categories,
@@ -35,6 +203,7 @@ export default function CategoriesSettings() {
     createSubcategory,
     updateSubcategory,
     deleteSubcategory,
+    reorderCategories,
   } = useSettings();
 
   const handleDeleteCategory = async (id: string) => {
@@ -42,6 +211,8 @@ export default function CategoriesSettings() {
       await deleteCategory(id);
     }
   };
+
+
 
   const selectedCategory = categories.find(cat => cat.id === selectedCategoryId);
   const subcategories = selectedCategory?.subcategories || [];
@@ -89,101 +260,32 @@ export default function CategoriesSettings() {
                   No hay categorías configuradas. Agrega tu primera categoría.
                 </p>
               ) : (
-                <div className="space-y-2">
-                  {categories.map((category) => (
-                    <div
-                      key={category.id}
-                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                        selectedCategoryId === category.id
-                          ? 'bg-primary/10 border-primary'
-                          : 'hover:bg-muted/50'
-                      }`}
-                      onClick={() => {
-                        if (isMobile) {
-                          navigate('/settings/categories/subcategories', {
-                            state: {
-                              categoryId: category.id,
-                              categoryName: category.name,
-                              categoryColor: category.color,
-                              categoryIcon: category.icon
-                            }
-                          });
-                        } else {
-                          setSelectedCategoryId(category.id);
-                        }
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                            style={{ backgroundColor: category.color }}
-                          >
-                            {category.icon}
-                          </div>
-                          <span className="font-medium">{category.name}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {category.subcategories?.length || 0}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {isMobile ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingCategory(category);
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteCategory(category.id);
-                                  }}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Eliminar
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          ) : (
-                            <>
-                              <EditCategoryDialog
-                                category={category}
-                                onUpdate={updateCategory}
-                              />
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteCategory(category.id);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={categories.map(category => category.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {categories.map((category) => (
+                        <SortableCategoryItem
+                          key={category.id}
+                          category={category}
+                          selectedCategoryId={selectedCategoryId}
+                          isMobile={isMobile}
+                          onSelect={setSelectedCategoryId}
+                          onUpdate={updateCategory}
+                          onDelete={handleDeleteCategory}
+                          navigate={navigate}
+                          setEditingCategory={setEditingCategory}
+                        />
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
               )}
             </CardContent>
           </Card>
