@@ -8,6 +8,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { AddSubcategoryDialog } from "@/components/settings/AddSubcategoryDialog";
 import { EditSubcategoryDialog } from "@/components/settings/EditSubcategoryDialog";
 import { FloatingActionButton } from "@/components/shared/FloatingActionButton";
+import { DraggableSubcategoryList } from "@/components/settings/DraggableSubcategoryList";
 
 interface LocationState {
   categoryId: string;
@@ -27,6 +28,7 @@ export default function SubcategoriesSettings() {
     createSubcategory,
     updateSubcategory,
     deleteSubcategory,
+    reorderSubcategories,
   } = useSettings();
 
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -44,6 +46,10 @@ export default function SubcategoriesSettings() {
     if (confirm("¿Estás seguro de que quieres eliminar esta subcategoría?")) {
       await deleteSubcategory(id);
     }
+  };
+
+  const handleReorderSubcategories = async (newOrder: any[]) => {
+    await reorderSubcategories(state.categoryId, newOrder);
   };
 
   return (
@@ -88,41 +94,13 @@ export default function SubcategoriesSettings() {
                 <p className="text-sm mt-2">Usa el botón flotante para añadir una nueva subcategoría.</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {subcategories.map((subcategory) => (
-                  <div
-                    key={subcategory.id}
-                    className="p-4 rounded-lg border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-bold"
-                          style={{ backgroundColor: state.categoryColor }}
-                        >
-                          {subcategory.icon || '📦'}
-                        </div>
-                        <div>
-                          <span className="font-medium text-lg">{subcategory.name}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <EditSubcategoryDialog
-                          subcategory={subcategory}
-                          onUpdate={updateSubcategory}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteSubcategory(subcategory.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <DraggableSubcategoryList
+                subcategories={subcategories}
+                categoryColor={state.categoryColor}
+                onUpdate={updateSubcategory}
+                onDelete={handleDeleteSubcategory}
+                onReorder={handleReorderSubcategories}
+              />
             )}
           </CardContent>
         </Card>

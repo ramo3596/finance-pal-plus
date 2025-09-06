@@ -32,6 +32,7 @@ export interface Subcategory {
   name: string;
   category_id: string;
   icon: string;
+  display_order?: number;
   created_at?: string;
 }
 
@@ -187,13 +188,15 @@ export const useSettings = () => {
             .eq('user_id', user.id)
             .order('display_order', { ascending: true });
 
-          // Process categories to ensure subcategories have icons
+          // Process categories to ensure subcategories have icons and are ordered
           return categoriesData?.map(category => ({
             ...category,
-            subcategories: category.subcategories?.map((subcategory: any) => ({
-              ...subcategory,
-              icon: subcategory.icon || '📦' // Default icon if not present
-            })) || []
+            subcategories: category.subcategories
+              ?.map((subcategory: any) => ({
+                ...subcategory,
+                icon: subcategory.icon || '📦' // Default icon if not present
+              }))
+              ?.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)) || []
           })) || [];
         },
         forceRefresh
@@ -297,10 +300,12 @@ export const useSettings = () => {
     
     return data?.map(category => ({
       ...category,
-      subcategories: category.subcategories?.map((subcategory: any) => ({
-        ...subcategory,
-        icon: subcategory.icon || '📦'
-      })) || []
+      subcategories: category.subcategories
+        ?.map((subcategory: any) => ({
+          ...subcategory,
+          icon: subcategory.icon || '📦'
+        }))
+        ?.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)) || []
     })) || []
   }
 
@@ -1008,6 +1013,38 @@ export const useSettings = () => {
     }
   };
 
+  const reorderSubcategories = async (categoryId: string, newOrder: Subcategory[]) => {
+    try {
+      // Update display_order for each subcategory
+      const updates = newOrder.map((subcategory, index) => 
+        supabase
+          .from('subcategories')
+          .update({ display_order: index })
+          .eq('id', subcategory.id)
+      );
+      
+      await Promise.all(updates);
+      
+      // Update local state
+      setCategories(prev => prev.map(category => 
+        category.id === categoryId 
+          ? { ...category, subcategories: newOrder }
+          : category
+      ));
+      
+      toast({
+        title: "Éxito",
+        description: "Orden de subcategorías actualizado.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el orden de las subcategorías.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     // Data
     accounts,
@@ -1034,6 +1071,7 @@ export const useSettings = () => {
     createSubcategory,
     updateSubcategory,
     deleteSubcategory,
+    reorderSubcategories,
     
     // Tag operations
     createTag,
