@@ -4,6 +4,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -54,11 +55,12 @@ function SortableSubcategoryItem({ subcategory, categoryColor, onUpdate, onDelet
     >
       <div className="flex items-center gap-3">
         <div
-          className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+          className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded touch-none select-none transition-colors"
+          style={{ touchAction: 'none' }}
           {...attributes}
           {...listeners}
         >
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
+          <GripVertical className="h-5 w-5 text-muted-foreground" />
         </div>
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-bold"
@@ -103,7 +105,17 @@ export function DraggableSubcategoryList({
   onReorder,
 }: DraggableSubcategoryListProps) {
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
