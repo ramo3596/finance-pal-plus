@@ -674,6 +674,7 @@ export type Database = {
           name: string
           note: string | null
           payment_method: string | null
+          subcategory_id: string | null
           to_account_id: string | null
           type: string
           updated_at: string | null
@@ -689,6 +690,7 @@ export type Database = {
           name: string
           note?: string | null
           payment_method?: string | null
+          subcategory_id?: string | null
           to_account_id?: string | null
           type: string
           updated_at?: string | null
@@ -704,6 +706,7 @@ export type Database = {
           name?: string
           note?: string | null
           payment_method?: string | null
+          subcategory_id?: string | null
           to_account_id?: string | null
           type?: string
           updated_at?: string | null
