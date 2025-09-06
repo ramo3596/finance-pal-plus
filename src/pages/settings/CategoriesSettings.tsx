@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -89,9 +89,14 @@ function SortableCategoryItem({
           <div
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing"
+            className={`cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted/50 transition-colors ${
+              isMobile ? 'touch-none select-none' : ''
+            }`}
+            style={{ touchAction: 'none' }}
           >
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
+            <GripVertical className={`h-4 w-4 text-muted-foreground ${
+              isMobile ? 'h-5 w-5' : ''
+            }`} />
           </div>
           <div 
             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
@@ -171,7 +176,17 @@ export default function CategoriesSettings() {
   const isMobile = useIsMobile();
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })

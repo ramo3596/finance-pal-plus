@@ -27,7 +27,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
   const { contacts } = useContacts();
   const [formData, setFormData] = useState({
     name: "",
-    amount: 0,
+    amount: "",
     account_id: "",
     to_account_id: "",
     category_id: "",
@@ -43,6 +43,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
     e.preventDefault();
     onAdd({
       ...formData,
+      amount: parseFloat(formData.amount as string) || 0,
       account_id: formData.account_id || undefined,
       to_account_id: formData.to_account_id || undefined,
       category_id: formData.category_id || undefined,
@@ -53,7 +54,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
     } as any);
     setFormData({ 
       name: "", 
-      amount: 0, 
+      amount: "", 
       account_id: "", 
       to_account_id: "",
       category_id: "", 
@@ -98,7 +99,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
               type="number"
               step="0.01"
               value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
               required
             />
           </div>
