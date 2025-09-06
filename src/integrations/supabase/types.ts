@@ -670,6 +670,7 @@ export type Database = {
           beneficiary: string | null
           category_id: string | null
           created_at: string | null
+          display_order: number | null
           id: string
           name: string
           note: string | null
@@ -686,6 +687,7 @@ export type Database = {
           beneficiary?: string | null
           category_id?: string | null
           created_at?: string | null
+          display_order?: number | null
           id?: string
           name: string
           note?: string | null
@@ -702,6 +704,7 @@ export type Database = {
           beneficiary?: string | null
           category_id?: string | null
           created_at?: string | null
+          display_order?: number | null
           id?: string
           name?: string
           note?: string | null

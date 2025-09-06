@@ -55,8 +55,10 @@ export interface Template {
   type: string;
   beneficiary?: string;
   note?: string;
+  display_order?: number;
   created_at?: string;
   updated_at?: string;
+  user_id: string;
   tags?: Tag[];
   tag_ids?: string[];
 }
@@ -223,7 +225,8 @@ export const useSettings = () => {
                 tag:tags(*)
               )
             `)
-            .eq('user_id', user.id);
+            .eq('user_id', user.id)
+            .order('display_order', { ascending: true });
 
           // Process templates data to flatten tags
           return templatesData?.map(template => ({
@@ -949,6 +952,34 @@ export const useSettings = () => {
     }
   };
 
+  const reorderTemplates = async (newOrder: Template[]) => {
+    try {
+      // Update display_order for each template
+      const updates = newOrder.map((template, index) => 
+        supabase
+          .from('templates')
+          .update({ display_order: index })
+          .eq('id', template.id)
+      );
+      
+      await Promise.all(updates);
+      
+      // Update local state
+      setTemplates(newOrder);
+      
+      toast({
+        title: "Éxito",
+        description: "Orden de plantillas actualizado.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el orden de las plantillas.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const reorderTags = async (newOrder: Tag[]) => {
     try {
       // Update display_order for each tag
@@ -1014,6 +1045,7 @@ export const useSettings = () => {
     createTemplate,
     updateTemplate,
     deleteTemplate,
+    reorderTemplates,
     
     // Filter operations
     createFilter,
