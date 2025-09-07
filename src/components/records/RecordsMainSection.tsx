@@ -65,10 +65,25 @@ export function RecordsMainSection({
 
       // Tag filter
       if (filters.selectedTags.length > 0) {
-        if (!transaction.tags || !Array.isArray(transaction.tags) || transaction.tags.length === 0) {
+        if (!transaction.tags) {
           return false;
         }
-        const hasMatchingTag = transaction.tags.some(tagName => {
+        
+        // Handle both string and array formats
+        let transactionTags: string[] = [];
+        if (typeof transaction.tags === 'string') {
+          // Handle string format - cast to any to bypass TypeScript
+          transactionTags = (transaction.tags as any).split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
+        } else if (Array.isArray(transaction.tags)) {
+          // Handle array format
+          transactionTags = transaction.tags.filter(tag => tag && tag.length > 0);
+        }
+        
+        if (transactionTags.length === 0) {
+          return false;
+        }
+        
+        const hasMatchingTag = transactionTags.some(tagName => {
           const tag = tags.find(t => t.name === tagName);
           return tag && filters.selectedTags.includes(tag.id);
         });
