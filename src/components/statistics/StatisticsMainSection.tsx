@@ -58,7 +58,9 @@ export function StatisticsMainSection({
         }
         
         const hasMatchingTag = transaction.tags.some(tagName => {
-          const tag = tags.find(t => t.name === tagName);
+          if (!tagName || typeof tagName !== 'string') return false;
+          const normalizedTagName = tagName.trim();
+          const tag = tags.find(t => t.name.trim() === normalizedTagName);
           return tag && filters.selectedTags.includes(tag.id);
         });
         if (!hasMatchingTag) {
