@@ -65,6 +65,9 @@ export function RecordsMainSection({
 
       // Tag filter
       if (filters.selectedTags.length > 0) {
+        if (!transaction.tags || !Array.isArray(transaction.tags)) {
+          return false;
+        }
         const hasMatchingTag = transaction.tags.some(tagName => {
           const tag = tags.find(t => t.name === tagName);
           return tag && filters.selectedTags.includes(tag.id);
