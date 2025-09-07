@@ -751,7 +751,7 @@ export type Database = {
           payer_contact_id: string | null
           payment_method: string | null
           subcategory_id: string | null
-          tags: string | null
+          tags: string[] | null
           to_account_id: string | null
           transaction_date: string
           type: string
@@ -773,7 +773,7 @@ export type Database = {
           payer_contact_id?: string | null
           payment_method?: string | null
           subcategory_id?: string | null
-          tags?: string | null
+          tags?: string[] | null
           to_account_id?: string | null
           transaction_date?: string
           type: string
@@ -795,7 +795,7 @@ export type Database = {
           payer_contact_id?: string | null
           payment_method?: string | null
           subcategory_id?: string | null
-          tags?: string | null
+          tags?: string[] | null
           to_account_id?: string | null
           transaction_date?: string
           type?: string

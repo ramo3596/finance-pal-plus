@@ -53,7 +53,7 @@ export function StatisticsMainSection({
 
       // Tag filter
       if (filters.selectedTags.length > 0) {
-        if (!transaction.tags || !Array.isArray(transaction.tags)) {
+        if (!transaction.tags || !Array.isArray(transaction.tags) || transaction.tags.length === 0) {
           return false;
         }
         const hasMatchingTag = transaction.tags.some(tagName => {
