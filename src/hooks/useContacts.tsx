@@ -79,7 +79,7 @@ export function useContacts() {
       const data = await fetchWithCache(
         'contacts',
         async () => {
-          // Fetch contacts with their tags
+          // Fetch contacts with their tags and transaction totals in a single optimized query
           const { data: contactsData, error: contactsError } = await supabase
             .from('contacts')
             .select(`
@@ -93,48 +93,67 @@ export function useContacts() {
 
           if (contactsError) throw contactsError;
 
-          // Fetch transaction totals for each contact
-          const contactsWithTotals = await Promise.all(
-            (contactsData || []).map(async (contact) => {
-              // Get expenses (where this contact is the beneficiary - contact_id field)
-              const { data: expenseData, error: expenseError } = await supabase
-                .from('transactions')
-                .select('amount')
-                .eq('user_id', user.id)
-                .eq('contact_id', contact.id)
-                .eq('type', 'expense');
+          // Get all contact IDs for batch transaction queries
+          const contactIds = (contactsData || []).map(c => c.id);
+          
+          if (contactIds.length === 0) {
+            return [];
+          }
 
-              if (expenseError) {
-                console.error('Error fetching expense data for contact:', contact.id, expenseError);
-              }
+          // Fetch all expense totals in a single query with aggregation
+          const { data: expenseTotals, error: expenseError } = await supabase
+            .from('transactions')
+            .select('contact_id, amount')
+            .eq('user_id', user.id)
+            .in('contact_id', contactIds)
+            .eq('type', 'expense')
+            .not('contact_id', 'is', null);
 
-              // Get income (where this contact is the payer - payer_contact_id field)
-              const { data: incomeData, error: incomeError } = await supabase
-                .from('transactions')
-                .select('amount')
-                .eq('user_id', user.id)
-                .eq('payer_contact_id', contact.id)
-                .eq('type', 'income');
+          if (expenseError) {
+            console.error('Error fetching expense totals:', expenseError);
+          }
 
-              if (incomeError) {
-                console.error('Error fetching income data for contact:', contact.id, incomeError);
-              }
+          // Fetch all income totals in a single query with aggregation
+          const { data: incomeTotals, error: incomeError } = await supabase
+            .from('transactions')
+            .select('payer_contact_id, amount')
+            .eq('user_id', user.id)
+            .in('payer_contact_id', contactIds)
+            .eq('type', 'income')
+            .not('payer_contact_id', 'is', null);
 
-              // Calculate totals
-              const totalExpenses = expenseData?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0;
-              const totalIncome = incomeData?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0;
+          if (incomeError) {
+            console.error('Error fetching income totals:', incomeError);
+          }
 
-              return {
-                ...contact,
-                contact_type: contact.contact_type as 'persona' | 'empresa',
-                tags: Array.isArray(contact.contact_tags) 
-                  ? contact.contact_tags.map((ct: any) => ct.tags).filter(Boolean) 
-                  : [],
-                totalExpenses,
-                totalIncome,
-              };
-            })
-          );
+          // Create lookup maps for O(1) access
+          const expenseMap = new Map<string, number>();
+          const incomeMap = new Map<string, number>();
+
+          // Aggregate expenses by contact
+          (expenseTotals || []).forEach(transaction => {
+            const contactId = transaction.contact_id;
+            const amount = Math.abs(Number(transaction.amount));
+            expenseMap.set(contactId, (expenseMap.get(contactId) || 0) + amount);
+          });
+
+          // Aggregate income by contact
+          (incomeTotals || []).forEach(transaction => {
+            const contactId = transaction.payer_contact_id;
+            const amount = Math.abs(Number(transaction.amount));
+            incomeMap.set(contactId, (incomeMap.get(contactId) || 0) + amount);
+          });
+
+          // Map contacts with their totals
+          const contactsWithTotals = (contactsData || []).map(contact => ({
+            ...contact,
+            contact_type: contact.contact_type as 'persona' | 'empresa',
+            tags: Array.isArray(contact.contact_tags) 
+              ? contact.contact_tags.map((ct: any) => ct.tags).filter(Boolean) 
+              : [],
+            totalExpenses: expenseMap.get(contact.id) || 0,
+            totalIncome: incomeMap.get(contact.id) || 0,
+          }));
 
           return contactsWithTotals;
         },
