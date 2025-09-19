@@ -1,4 +1,5 @@
--- Add order column to accounts, categories, and tags tables
+-- Add payment_method_id and order column to accounts, categories, and tags tables
+ALTER TABLE public.accounts ADD COLUMN payment_method_id TEXT;
 ALTER TABLE public.accounts ADD COLUMN display_order INTEGER DEFAULT 0;
 ALTER TABLE public.categories ADD COLUMN display_order INTEGER DEFAULT 0;
 ALTER TABLE public.tags ADD COLUMN display_order INTEGER DEFAULT 0;
