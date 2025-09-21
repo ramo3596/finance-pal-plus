@@ -156,6 +156,12 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
 
   const handleConfirmPayment = async (occurrence: PaymentOccurrence) => {
     try {
+      // Convert tag IDs to tag names
+      const tagNames = payment.tags ? payment.tags.map(tagId => {
+        const tag = getTagById(tagId);
+        return tag ? tag.name : tagId;
+      }) : [];
+
       // Create transaction in the main records
       const transactionData = {
         type: payment.type,
@@ -164,10 +170,11 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
         account_id: payment.account_id,
         to_account_id: payment.to_account_id,
         category_id: payment.category_id,
+        subcategory_id: payment.subcategory_id,
         contact_id: payment.contact_id,
         payment_method: payment.payment_method,
         note: payment.note,
-        tags: payment.tags,
+        tags: tagNames,
         transaction_date: new Date().toISOString(),
       };
 

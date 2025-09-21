@@ -6,6 +6,7 @@ CREATE TABLE public.scheduled_payments (
   description TEXT,
   type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer')),
   category_id UUID,
+  subcategory_id UUID,
   account_id UUID,
   to_account_id UUID, -- For transfers
   amount NUMERIC NOT NULL,

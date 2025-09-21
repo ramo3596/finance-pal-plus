@@ -23,6 +23,7 @@ const formSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
   description: z.string().optional(),
   category_id: z.string().optional(),
+  subcategory_id: z.string().optional(),
   account_id: z.string().min(1, 'La cuenta es requerida'),
   amount: z.number().min(0.01, 'El importe debe ser mayor a 0'),
   payment_method: z.string().optional(),
@@ -52,6 +53,7 @@ export const ExpenseScheduledForm = ({ onClose }: ExpenseScheduledFormProps) => 
   const { contacts } = useContacts();
   const [isRecurrenceDialogOpen, setIsRecurrenceDialogOpen] = useState(false);
   const [recurrenceData, setRecurrenceData] = useState<any>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
 
 
   const form = useForm<FormData>({
@@ -184,12 +186,13 @@ export const ExpenseScheduledForm = ({ onClose }: ExpenseScheduledFormProps) => 
                         
                         // Si es una subcategoría, también establecemos la categoría padre
                         if (selectedOption && 'isSubcategory' in selectedOption && selectedOption.isSubcategory) {
-                          // Aquí podrías establecer la subcategoría en otro campo si es necesario
-                          // form.setValue('subcategory_id', value);
-                          // form.setValue('category_id', selectedOption.categoryId);
-                          field.onChange(value);
+                          form.setValue('subcategory_id', value);
+                          form.setValue('category_id', selectedOption.categoryId);
+                          setSelectedSubcategory(value);
                         } else {
                           field.onChange(value);
+                          form.setValue('subcategory_id', '');
+                          setSelectedSubcategory('');
                         }
                       }}
                       placeholder="Seleccionar categoría"
@@ -199,6 +202,45 @@ export const ExpenseScheduledForm = ({ onClose }: ExpenseScheduledFormProps) => 
                 </FormItem>
               )}
             />
+
+            {/* Subcategory Selector - Conditional */}
+            {form.watch('category_id') && expenseCategories.find(cat => cat.id === form.watch('category_id'))?.subcategories && expenseCategories.find(cat => cat.id === form.watch('category_id'))?.subcategories!.length > 0 && (
+              <FormField
+                control={form.control}
+                name="subcategory_id"
+                render={({ field }) => {
+                  const selectedCategory = expenseCategories.find(cat => cat.id === form.watch('category_id'));
+                  const subcategories = selectedCategory?.subcategories || [];
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel>Subcategoría</FormLabel>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedSubcategory(value);
+                        }} 
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar subcategoría" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {subcategories.map((subcategory) => (
+                            <SelectItem key={subcategory.id} value={subcategory.id}>
+                              {subcategory.icon && `${subcategory.icon} `}{subcategory.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+            )}
 
             {/* Account */}
             <FormField
