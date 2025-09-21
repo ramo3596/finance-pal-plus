@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mail, Phone, TrendingUp, TrendingDown } from "lucide-react";
+import { Mail, Phone, TrendingUp, TrendingDown, HandCoins, CreditCard } from "lucide-react";
 import { useState } from "react";
 import { EditContactDialog } from "./EditContactDialog";
 
@@ -15,6 +15,8 @@ interface Contact {
   tags: Array<{ id: string; name: string; color: string }>;
   totalExpenses: number;
   totalIncome: number;
+  debtAmount: number; // Lo que me deben
+  loanAmount: number; // Lo que debo
 }
 
 interface ContactCardProps {
@@ -122,6 +124,23 @@ export function ContactCard({ contact }: ContactCardProps) {
               <span>{formatCurrency(contact.totalIncome)}</span>
             </div>
           </div>
+
+          {(contact.debtAmount > 0 || contact.loanAmount > 0) && (
+            <div className="flex justify-between text-xs border-t pt-2">
+              {contact.debtAmount > 0 && (
+                <div className="flex items-center" style={{ color: 'hsl(var(--success))' }}>
+                  <HandCoins className="h-3 w-3 mr-1" />
+                  <span>{formatCurrency(contact.debtAmount)}</span>
+                </div>
+              )}
+              {contact.loanAmount > 0 && (
+                <div className="flex items-center text-destructive">
+                  <CreditCard className="h-3 w-3 mr-1" />
+                  <span>{formatCurrency(contact.loanAmount)}</span>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

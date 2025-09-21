@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+
 import { Trash2, X, ArrowLeft } from "lucide-react"
 import { type Debt } from "@/hooks/useDebts"
 import { useDebts } from "@/hooks/useDebts"
@@ -90,28 +90,14 @@ export function DebtHistoryDialog({ open, onOpenChange, debt }: DebtHistoryDialo
               )}
             </DialogTitle>
             <div className="flex items-center space-x-2">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size={isMobile ? "sm" : "default"}>
-                    <Trash2 className="h-4 w-4" />
-                    {!isMobile && <span className="ml-2">Eliminar</span>}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>¿Eliminar {isDebt ? 'deuda' : 'préstamo'}?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta acción eliminará permanentemente {isDebt ? 'la deuda' : 'el préstamo'} y todo su historial de movimientos. Esta acción no se puede deshacer.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteDebt} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      Eliminar
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <Button 
+                variant="destructive" 
+                size={isMobile ? "sm" : "default"}
+                onClick={handleDeleteDebt}
+              >
+                <Trash2 className="h-4 w-4" />
+                {!isMobile && <span className="ml-2">Eliminar</span>}
+              </Button>
               {!isMobile && (
                 <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
                   <X className="h-4 w-4" />

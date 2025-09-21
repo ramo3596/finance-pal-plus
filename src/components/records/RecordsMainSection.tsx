@@ -10,10 +10,11 @@ import { useSettings } from "@/hooks/useSettings";
 import { format, isToday, isYesterday, startOfDay, endOfDay, isAfter, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { EditTransaction } from "@/components/EditTransaction";
 import { useTransactions } from "@/hooks/useTransactions";
 import { TransactionItem } from "@/components/shared/TransactionItem";
+import { Loader } from "lucide-react";
 
 interface RecordsMainSectionProps {
   transactions: Transaction[];
@@ -33,6 +34,9 @@ export function RecordsMainSection({
   const { accounts, categories, tags } = useSettings();
   const { deleteTransaction } = useTransactions();
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [displayedTransactionsCount, setDisplayedTransactionsCount] = useState(10);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Filter and sort transactions
   const filteredAndSortedTransactions = useMemo(() => {
@@ -134,11 +138,16 @@ export function RecordsMainSection({
     return filtered;
   }, [transactions, filters, tags]);
 
-  // Group transactions by date
+  // Get displayed transactions based on pagination
+  const displayedTransactions = useMemo(() => {
+    return filteredAndSortedTransactions.slice(0, displayedTransactionsCount);
+  }, [filteredAndSortedTransactions, displayedTransactionsCount]);
+
+  // Group displayed transactions by date
   const groupedTransactions = useMemo(() => {
     const groups: { [key: string]: { transactions: Transaction[], label: string, sum: number } } = {};
     
-    filteredAndSortedTransactions.forEach((transaction) => {
+    displayedTransactions.forEach((transaction) => {
       const date = new Date(transaction.transaction_date);
       const dateKey = format(date, 'yyyy-MM-dd');
       
@@ -162,11 +171,12 @@ export function RecordsMainSection({
     });
 
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
-  }, [filteredAndSortedTransactions]);
+  }, [displayedTransactions]);
 
   const totalSum = filteredAndSortedTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const allSelected = filteredAndSortedTransactions.length > 0 && 
-    filteredAndSortedTransactions.every(t => selectedTransactions.includes(t.id));
+  const allSelected = displayedTransactions.length > 0 && 
+    displayedTransactions.every(t => selectedTransactions.includes(t.id));
+  const hasMoreTransactions = displayedTransactionsCount < filteredAndSortedTransactions.length;
 
   const getAccountName = (accountId: string) => {
     return accounts.find(a => a.id === accountId)?.name || 'Cuenta desconocida';
@@ -192,6 +202,53 @@ export function RecordsMainSection({
       console.error('Error deleting transactions:', error);
     }
   };
+
+  // Load more transactions function
+  const loadMoreTransactions = useCallback(() => {
+    if (isLoadingMore || !hasMoreTransactions) return;
+    
+    setIsLoadingMore(true);
+    
+    // Simulate loading delay for better UX
+    setTimeout(() => {
+      setDisplayedTransactionsCount(prev => 
+        Math.min(prev + 10, filteredAndSortedTransactions.length)
+      );
+      setIsLoadingMore(false);
+    }, 300);
+  }, [isLoadingMore, hasMoreTransactions, filteredAndSortedTransactions.length]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0];
+        if (target.isIntersecting && hasMoreTransactions && !isLoadingMore) {
+          loadMoreTransactions();
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '100px'
+      }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [hasMoreTransactions, isLoadingMore, loadMoreTransactions]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setDisplayedTransactionsCount(10);
+  }, [filters]);
 
   return (
     <div className="space-y-6">
@@ -227,7 +284,7 @@ export function RecordsMainSection({
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-muted-foreground">
-                {filteredAndSortedTransactions.length} registros
+                {displayedTransactions.length} de {filteredAndSortedTransactions.length} registros
               </span>
               <span className={cn(
                 "text-lg font-bold",
@@ -282,6 +339,29 @@ export function RecordsMainSection({
               </div>
             </CardContent>
           </Card>
+        )}
+        
+        {/* Load More Trigger */}
+        {hasMoreTransactions && (
+          <div ref={loadMoreRef} className="flex justify-center py-4">
+            {isLoadingMore ? (
+              <div className="flex items-center space-x-2 text-muted-foreground">
+                <Loader className="h-4 w-4 animate-spin" />
+                <span>Cargando más registros...</span>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                Desplázate para cargar más registros
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* End of results indicator */}
+        {!hasMoreTransactions && displayedTransactions.length > 0 && (
+          <div className="text-center py-4 text-sm text-muted-foreground">
+            Has visto todos los registros disponibles
+          </div>
         )}
       </div>
 

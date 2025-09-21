@@ -390,6 +390,44 @@ export const useTransactions = () => {
     }
   };
 
+  // Helper function to check if a transaction is the first record of a debt/loan
+  const isFirstDebtRecord = async (transaction: Transaction) => {
+    // Check if transaction has debt_id (linked to debts table)
+    if (transaction.debt_id) {
+      // Find all transactions for this debt_id and check if this is the oldest
+      const { data: debtTransactions } = await supabase
+        .from('transactions')
+        .select('id, transaction_date')
+        .eq('debt_id', transaction.debt_id)
+        .order('transaction_date', { ascending: true });
+      
+      return debtTransactions && debtTransactions.length > 0 && debtTransactions[0].id === transaction.id;
+    }
+    
+    // If no debt_id, check if it's the first transaction chronologically for this contact in debt subcategories
+    const DEBT_SUBCATEGORIES = {
+      LOANS_INCOME: '7b8c9d0e-1f2a-3b4c-5d6e-7f8a9b0c1d2e',
+      COMMISSION: '6450a480-9d0c-4ae1-a08a-26e5d4b158a2',
+      LOANS_EXPENSE: 'e3b4a085-a4da-4b24-b356-fd9a2b3113e5',
+    };
+    
+    const debtSubcategoryIds = Object.values(DEBT_SUBCATEGORIES);
+    
+    if (transaction.contact_id && debtSubcategoryIds.includes(transaction.subcategory_id)) {
+      // Find all transactions for this contact in debt subcategories
+      const { data: contactDebtTransactions } = await supabase
+        .from('transactions')
+        .select('id, transaction_date')
+        .eq('contact_id', transaction.contact_id)
+        .in('subcategory_id', debtSubcategoryIds)
+        .order('transaction_date', { ascending: true });
+      
+      return contactDebtTransactions && contactDebtTransactions.length > 0 && contactDebtTransactions[0].id === transaction.id;
+    }
+    
+    return false;
+  };
+
   const deleteTransaction = async (id: string) => {
     try {
       // Find the transaction to delete
@@ -405,9 +443,8 @@ export const useTransactions = () => {
         .eq('transaction_id', id)
         .single();
 
-      // Check if this is an initial debt/loan transaction (by description pattern)
-      const isInitialDebtTransaction = transactionToDelete.description?.includes('Deuda -') || 
-                                      transactionToDelete.description?.includes('Préstamo -');
+      // Check if this is the first record of a debt/loan
+      const isFirstRecord = await isFirstDebtRecord(transactionToDelete);
 
       // If it's a transfer, find and delete both transactions
       if (transactionToDelete.type === 'transfer') {
@@ -458,14 +495,28 @@ export const useTransactions = () => {
           
           // En la nueva implementación de deudas, no necesitamos recalcular balances
           // porque los saldos se calculan dinámicamente desde las transacciones
-        } else if (isInitialDebtTransaction) {
-          // This is an initial debt/loan transaction - find and delete the corresponding debt
-          const { data: correspondingDebt } = await supabase
-            .from('debts')
-            .select('id')
-            .eq('debt_date', transactionToDelete.transaction_date)
-            .or(`description.ilike.%${transactionToDelete.description?.split(' - ')[1] || ''}%`)
-            .single();
+        } else if (isFirstRecord) {
+          // This is the first record of a debt/loan - find and delete the corresponding debt
+          let correspondingDebt = null;
+          
+          if (transactionToDelete.debt_id) {
+            // If transaction has debt_id, use it directly
+            const { data: debtRecord } = await supabase
+              .from('debts')
+              .select('id')
+              .eq('id', transactionToDelete.debt_id)
+              .single();
+            correspondingDebt = debtRecord;
+          } else if (transactionToDelete.contact_id) {
+            // If no debt_id, find by contact_id and user_id
+            const { data: debtRecord } = await supabase
+              .from('debts')
+              .select('id')
+              .eq('contact_id', transactionToDelete.contact_id)
+              .eq('user_id', user?.id)
+              .single();
+            correspondingDebt = debtRecord;
+          }
           
           if (correspondingDebt) {
             // Delete all debt payments first
@@ -474,7 +525,7 @@ export const useTransactions = () => {
               .delete()
               .eq('debt_id', correspondingDebt.id);
             
-            // Delete the debt
+            // Delete the debt record
             await supabase
               .from('debts')
               .delete()

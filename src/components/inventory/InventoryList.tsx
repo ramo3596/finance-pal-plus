@@ -3,10 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useInventory } from "@/hooks/useInventory";
 import { useSettings } from "@/hooks/useSettings";
-import { Edit, Trash2, Package } from "lucide-react";
+import { Edit, Trash2, Package, Loader2 } from "lucide-react";
 import { Product } from "@/hooks/useInventory";
 import { ImageModal } from "@/components/shared/ImageModal";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 interface InventoryListProps {
   filters: {
@@ -22,6 +22,10 @@ export function InventoryList({ filters, onEditProduct, onDeleteProduct }: Inven
   const { products, loading } = useInventory();
   const { tags } = useSettings();
   const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null);
+  const [displayedCount, setDisplayedCount] = useState(12);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const observerRef = useRef<HTMLDivElement>(null);
+  const ITEMS_PER_PAGE = 12;
 
   // Función para obtener el color de una etiqueta por su nombre
   const getTagColor = (tagName: string) => {
@@ -38,6 +42,51 @@ export function InventoryList({ filters, onEditProduct, onDeleteProduct }: Inven
     
     return matchesSearch && matchesCategory;
   });
+
+  const displayedProducts = filteredProducts.slice(0, displayedCount);
+  const hasMoreProducts = displayedCount < filteredProducts.length;
+
+  // Reset displayed count when filters change
+  useEffect(() => {
+    setDisplayedCount(12);
+  }, [filters.search, filters.category, filters.tags]);
+
+  // Load more products function
+  const loadMoreProducts = useCallback(() => {
+    if (hasMoreProducts && !isLoadingMore) {
+      setIsLoadingMore(true);
+      setTimeout(() => {
+        setDisplayedCount(prev => Math.min(prev + ITEMS_PER_PAGE, filteredProducts.length));
+        setIsLoadingMore(false);
+      }, 500); // Small delay to show loading state
+    }
+  }, [hasMoreProducts, isLoadingMore, filteredProducts.length]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0];
+        if (target.isIntersecting && hasMoreProducts && !isLoadingMore) {
+          loadMoreProducts();
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '100px'
+      }
+    );
+
+    if (observerRef.current) {
+      observer.observe(observerRef.current);
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observer.unobserve(observerRef.current);
+      }
+    };
+  }, [hasMoreProducts, isLoadingMore, loadMoreProducts]);
 
   if (loading) {
     return (
@@ -75,8 +124,9 @@ export function InventoryList({ filters, onEditProduct, onDeleteProduct }: Inven
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {filteredProducts.map((product) => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {displayedProducts.map((product) => (
         <Card key={product.id} className="hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             {/* Desktop Layout */}
@@ -268,7 +318,33 @@ export function InventoryList({ filters, onEditProduct, onDeleteProduct }: Inven
             </div>
           </CardContent>
         </Card>
-      ))}
+        ))}
+      </div>
+
+      {/* Loading indicator and observer target */}
+      {hasMoreProducts && (
+        <div ref={observerRef} className="flex justify-center py-8">
+          {isLoadingMore ? (
+            <div className="flex items-center space-x-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Cargando más productos...</span>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              Mostrando {displayedProducts.length} de {filteredProducts.length} productos
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Show total when all products are loaded */}
+      {!hasMoreProducts && filteredProducts.length > 12 && (
+        <div className="flex justify-center py-4">
+          <div className="text-sm text-muted-foreground">
+            Mostrando todos los {filteredProducts.length} productos
+          </div>
+        </div>
+      )}
       
       {/* Image Modal */}
       {selectedImage && (
