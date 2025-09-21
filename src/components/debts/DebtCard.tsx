@@ -40,7 +40,7 @@ export function DebtCard({ debt, onAddPayment, onSelectTransaction, onViewHistor
   return (
     <Card 
       className={cn("cursor-pointer hover:shadow-md transition-shadow h-full", isMobile ? "w-full" : "")}
-      onClick={undefined}
+      onClick={onViewHistory}
     >
       <CardContent className="p-4 h-full flex flex-col">
         {/* Desktop Layout */}
