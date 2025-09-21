@@ -1,35 +1,92 @@
-import { useState } from 'react';
-import { Layout } from '@/components/Layout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Search, ArrowUpDown, Plus, Calendar, User, DollarSign } from 'lucide-react';
-import { useScheduledPayments, ScheduledPayment } from '@/hooks/useScheduledPayments';
-import { AddScheduledPaymentDialog } from '@/components/scheduled-payments/AddScheduledPaymentDialog';
-import { EditScheduledPaymentDialog } from '@/components/scheduled-payments/EditScheduledPaymentDialog';
-import { ScheduledPaymentDetail } from '@/components/scheduled-payments/ScheduledPaymentDetail';
-import { FloatingActionButton } from '@/components/shared/FloatingActionButton';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useState, useEffect, useRef, useCallback } from "react"
+import { useNavigate } from "react-router-dom"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
+import { Search, Plus, Calendar, User, DollarSign, ArrowUpDown, Loader2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { Layout } from "@/components/Layout"
+import { useAuth } from "@/hooks/useAuth"
+import { useScheduledPayments } from "@/hooks/useScheduledPayments"
+import { ScheduledPaymentDetail } from "@/components/scheduled-payments/ScheduledPaymentDetail"
+import { AddScheduledPaymentDialog } from "@/components/scheduled-payments/AddScheduledPaymentDialog"
+import { EditScheduledPaymentDialog } from "@/components/scheduled-payments/EditScheduledPaymentDialog"
+import { FloatingActionButton } from "@/components/shared/FloatingActionButton"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { formatAmount } from "@/lib/utils"
+import type { ScheduledPayment } from "@/hooks/useScheduledPayments"
 
 const ScheduledPayments = () => {
-  const { scheduledPayments, loading, deleteScheduledPayment } = useScheduledPayments();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<ScheduledPayment | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [displayedCount, setDisplayedCount] = useState(15);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const { scheduledPayments, loading, deleteScheduledPayment } = useScheduledPayments();
   const isMobile = useIsMobile();
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
 
   const filteredPayments = scheduledPayments.filter(payment => {
     const matchesSearch = payment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterType === 'all' || payment.type === filterType;
-    return matchesSearch && matchesFilter;
-  });
+                         (payment.description && payment.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesType = filterType === 'all' || payment.type === filterType
+    return matchesSearch && matchesType
+  })
+
+  const displayedPayments = filteredPayments.slice(0, displayedCount)
+  const hasMore = displayedCount < filteredPayments.length
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setDisplayedCount(15)
+  }, [searchTerm, filterType])
+
+  // Load more function
+  const loadMore = useCallback(() => {
+    if (hasMore && !isLoadingMore) {
+      setIsLoadingMore(true)
+      setTimeout(() => {
+        setDisplayedCount(prev => prev + 15)
+        setIsLoadingMore(false)
+      }, 500)
+    }
+  }, [hasMore, isLoadingMore])
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+          loadMore()
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    if (sentinelRef.current) {
+      observer.observe(sentinelRef.current)
+    }
+
+    return () => {
+      if (sentinelRef.current) {
+        observer.unobserve(sentinelRef.current)
+      }
+    }
+  }, [loadMore, hasMore, isLoadingMore]);
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -192,7 +249,8 @@ const ScheduledPayments = () => {
               <p className="text-muted-foreground">No se encontraron pagos programados</p>
             </div>
           ) : (
-            filteredPayments.map((payment) => (
+            <>
+              {displayedPayments.map((payment) => (
               <Card 
                 key={payment.id} 
                 className="hover:shadow-md transition-shadow cursor-pointer"
@@ -255,7 +313,20 @@ const ScheduledPayments = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))
+            ))}
+              
+              {/* Sentinel element for infinite scroll */}
+              {hasMore && (
+                <div ref={sentinelRef} className="flex justify-center py-4">
+                  {isLoadingMore && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Cargando más pagos...</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
 

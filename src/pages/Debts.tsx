@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Search, Plus } from "lucide-react"
+import { Search, Plus, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -26,6 +26,10 @@ export default function Debts() {
   const [isSelectTransactionOpen, setIsSelectTransactionOpen] = useState(false)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null)
+  const [displayedDebtsCount, setDisplayedDebtsCount] = useState(20)
+  const [displayedLoansCount, setDisplayedLoansCount] = useState(20)
+  const [isLoadingMoreDebts, setIsLoadingMoreDebts] = useState(false)
+  const [isLoadingMoreLoans, setIsLoadingMoreLoans] = useState(false)
 
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
@@ -33,6 +37,8 @@ export default function Debts() {
   const { contacts } = useContacts()
   const { accounts } = useSettings()
   const isMobile = useIsMobile()
+  const debtsSentinelRef = useRef<HTMLDivElement>(null)
+  const loansSentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -52,6 +58,18 @@ export default function Debts() {
   const myDebts = filteredDebts.filter(debt => debt.type === 'debt')
   const myLoans = filteredDebts.filter(debt => debt.type === 'loan')
 
+  // Paginated lists
+  const displayedDebts = myDebts.slice(0, displayedDebtsCount)
+  const displayedLoans = myLoans.slice(0, displayedLoansCount)
+  const hasMoreDebts = displayedDebtsCount < myDebts.length
+  const hasMoreLoans = displayedLoansCount < myLoans.length
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setDisplayedDebtsCount(20)
+    setDisplayedLoansCount(20)
+  }, [searchTerm, statusFilter])
+
   const handleAddPayment = (debt: Debt) => {
     setSelectedDebt(debt)
     setIsAddPaymentOpen(true)
@@ -66,6 +84,70 @@ export default function Debts() {
     setSelectedDebt(debt)
     setIsHistoryOpen(true)
   }
+
+  // Load more functions
+  const loadMoreDebts = useCallback(() => {
+    if (hasMoreDebts && !isLoadingMoreDebts) {
+      setIsLoadingMoreDebts(true)
+      setTimeout(() => {
+        setDisplayedDebtsCount(prev => prev + 20)
+        setIsLoadingMoreDebts(false)
+      }, 500)
+    }
+  }, [hasMoreDebts, isLoadingMoreDebts])
+
+  const loadMoreLoans = useCallback(() => {
+    if (hasMoreLoans && !isLoadingMoreLoans) {
+      setIsLoadingMoreLoans(true)
+      setTimeout(() => {
+        setDisplayedLoansCount(prev => prev + 20)
+        setIsLoadingMoreLoans(false)
+      }, 500)
+    }
+  }, [hasMoreLoans, isLoadingMoreLoans])
+
+  // Intersection Observers for infinite scroll
+  useEffect(() => {
+    const debtsObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreDebts && !isLoadingMoreDebts) {
+          loadMoreDebts()
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    if (debtsSentinelRef.current) {
+      debtsObserver.observe(debtsSentinelRef.current)
+    }
+
+    return () => {
+      if (debtsSentinelRef.current) {
+        debtsObserver.unobserve(debtsSentinelRef.current)
+      }
+    }
+  }, [loadMoreDebts, hasMoreDebts, isLoadingMoreDebts])
+
+  useEffect(() => {
+    const loansObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreLoans && !isLoadingMoreLoans) {
+          loadMoreLoans()
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    if (loansSentinelRef.current) {
+      loansObserver.observe(loansSentinelRef.current)
+    }
+
+    return () => {
+      if (loansSentinelRef.current) {
+        loansObserver.unobserve(loansSentinelRef.current)
+      }
+    }
+  }, [loadMoreLoans, hasMoreLoans, isLoadingMoreLoans])
 
   if (authLoading || loading) {
     return (
@@ -126,7 +208,7 @@ export default function Debts() {
                   </div>
                 ) : (
                   <div className={cn("space-y-3", isMobile ? "w-full" : "grid grid-cols-1 gap-3")}>
-                    {myDebts.map((debt) => (
+                    {displayedDebts.map((debt) => (
                       <DebtCard
                         key={debt.id}
                         debt={debt}
@@ -135,6 +217,16 @@ export default function Debts() {
                         onViewHistory={() => handleViewHistory(debt)}
                       />
                     ))}
+                    {hasMoreDebts && (
+                      <div ref={debtsSentinelRef} className="flex justify-center py-4">
+                        {isLoadingMoreDebts && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Cargando más deudas...</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -148,7 +240,7 @@ export default function Debts() {
                   </div>
                 ) : (
                   <div className={cn("space-y-3", isMobile ? "w-full" : "grid grid-cols-1 gap-3")}>
-                    {myLoans.map((debt) => (
+                    {displayedLoans.map((debt) => (
                       <DebtCard
                         key={debt.id}
                         debt={debt}
@@ -157,6 +249,16 @@ export default function Debts() {
                         onViewHistory={() => handleViewHistory(debt)}
                       />
                     ))}
+                    {hasMoreLoans && (
+                      <div ref={loansSentinelRef} className="flex justify-center py-4">
+                        {isLoadingMoreLoans && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Cargando más préstamos...</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
