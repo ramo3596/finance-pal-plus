@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Plus, Eye, Trash2, MoreVertical } from "lucide-react"
 import { type Debt } from "@/hooks/useDebts"
@@ -24,7 +24,7 @@ export function DebtCard({ debt, onAddPayment, onSelectTransaction, onViewHistor
   const { deleteDebt } = useDebts()
   const isDebt = debt.type === 'debt'
   const contactName = debt.contacts?.name || 'Contacto'
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -125,7 +125,7 @@ export function DebtCard({ debt, onAddPayment, onSelectTransaction, onViewHistor
                 <DropdownMenuItem 
                   onClick={(e) => {
                     e.stopPropagation()
-                    setShowDeleteDialog(true)
+                    handleDeleteDebt()
                   }}
                   className="text-destructive focus:text-destructive"
                 >
@@ -203,7 +203,7 @@ export function DebtCard({ debt, onAddPayment, onSelectTransaction, onViewHistor
               <DropdownMenuItem 
                 onClick={(e) => {
                   e.stopPropagation()
-                  setShowDeleteDialog(true)
+                  handleDeleteDebt()
                 }}
                 className="text-destructive focus:text-destructive"
               >
@@ -213,24 +213,7 @@ export function DebtCard({ debt, onAddPayment, onSelectTransaction, onViewHistor
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar {isDebt ? 'deuda' : 'préstamo'}?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción eliminará permanentemente {isDebt ? 'la deuda' : 'el préstamo'} y todo su historial de movimientos. Esta acción no se puede deshacer.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteDebt} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Eliminar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+
       </CardContent>
     </Card>
   )
