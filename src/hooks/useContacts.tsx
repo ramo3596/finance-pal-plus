@@ -18,6 +18,8 @@ export interface Contact {
   tags: Array<{ id: string; name: string; color: string }>;
   totalExpenses: number;
   totalIncome: number;
+  debtAmount: number; // Lo que me deben
+  loanAmount: number; // Lo que debo
   created_at: string;
   updated_at: string;
 }
@@ -126,9 +128,29 @@ export function useContacts() {
             console.error('Error fetching income totals:', incomeError);
           }
 
+          // Fetch debt/loan transactions using specific subcategories
+          const DEBT_SUBCATEGORIES = {
+            LOANS_INCOME: 'e9fb73a7-86d4-44f0-bb40-dee112a5560d', // Préstamos, alquileres (para cobros de préstamo - tipo income)
+            COMMISSION: '6450a480-9d0c-4ae1-a08a-26e5d4b158a2', // Comisión (para pagos de deuda - tipo expense)
+            LOANS_EXPENSE: 'e3b4a085-a4da-4b24-b356-fd9a2b3113e5', // Préstamos (para nuevas deudas - tipo expense)
+          };
+
+          const { data: debtTransactions, error: debtError } = await supabase
+            .from('transactions')
+            .select('contact_id, payer_contact_id, amount, type, subcategory_id')
+            .eq('user_id', user.id)
+            .in('subcategory_id', Object.values(DEBT_SUBCATEGORIES))
+            .or(`contact_id.in.(${contactIds.join(',')}),payer_contact_id.in.(${contactIds.join(',')})`);
+
+          if (debtError) {
+            console.error('Error fetching debt transactions:', debtError);
+          }
+
           // Create lookup maps for O(1) access
           const expenseMap = new Map<string, number>();
           const incomeMap = new Map<string, number>();
+          const debtMap = new Map<string, number>();
+          const loanMap = new Map<string, number>();
 
           // Aggregate expenses by contact
           (expenseTotals || []).forEach(transaction => {
@@ -144,6 +166,25 @@ export function useContacts() {
             incomeMap.set(contactId, (incomeMap.get(contactId) || 0) + amount);
           });
 
+          // Process debt/loan transactions
+          (debtTransactions || []).forEach(transaction => {
+            const contactId = transaction.contact_id || transaction.payer_contact_id;
+            if (!contactId) return;
+
+            const amount = Math.abs(Number(transaction.amount));
+            
+            // Determine if it's a debt (they owe me) or loan (I owe them)
+            if (transaction.type === 'income' && transaction.subcategory_id === DEBT_SUBCATEGORIES.LOANS_INCOME) {
+              // Income from loans = They owe me (debt)
+              debtMap.set(contactId, (debtMap.get(contactId) || 0) + amount);
+            } else if (transaction.type === 'expense' && 
+                      (transaction.subcategory_id === DEBT_SUBCATEGORIES.COMMISSION || 
+                       transaction.subcategory_id === DEBT_SUBCATEGORIES.LOANS_EXPENSE)) {
+              // Expense for loans/commission = I owe them (loan)
+              loanMap.set(contactId, (loanMap.get(contactId) || 0) + amount);
+            }
+          });
+
           // Map contacts with their totals
           const contactsWithTotals = (contactsData || []).map(contact => ({
             ...contact,
@@ -153,6 +194,8 @@ export function useContacts() {
               : [],
             totalExpenses: expenseMap.get(contact.id) || 0,
             totalIncome: incomeMap.get(contact.id) || 0,
+            debtAmount: debtMap.get(contact.id) || 0,
+            loanAmount: loanMap.get(contact.id) || 0,
           }));
 
           return contactsWithTotals;
