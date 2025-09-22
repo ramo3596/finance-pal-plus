@@ -179,6 +179,13 @@ const ScheduledPayments = () => {
           onEdit={handleEditPayment}
           onDelete={handleDeletePayment}
         />
+        
+        {/* Edit Scheduled Payment Dialog - Also available in detail view */}
+        <EditScheduledPaymentDialog 
+          open={isEditDialogOpen} 
+          onOpenChange={handleEditDialogClose}
+          payment={selectedPayment}
+        />
       </Layout>
     );
   }
