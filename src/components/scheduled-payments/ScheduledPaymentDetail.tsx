@@ -32,9 +32,19 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
     const stored = localStorage.getItem('confirmedPayments');
     return stored ? new Set(JSON.parse(stored)) : new Set();
   });
-  const { updateScheduledPayment } = useScheduledPayments();
+  const [dbConfirmations, setDbConfirmations] = useState<any[]>([]);
+  const { updateScheduledPayment, confirmPayment, rejectPayment, getPaymentConfirmations } = useScheduledPayments();
   const { createTransaction } = useTransactions();
   const { tags } = useSettings();
+
+  // Load confirmations from database
+  useEffect(() => {
+    const loadConfirmations = async () => {
+      const confirmations = await getPaymentConfirmations(payment.id);
+      setDbConfirmations(confirmations);
+    };
+    loadConfirmations();
+  }, [payment.id, getPaymentConfirmations]);
 
   // Generate payment occurrences based on recurrence pattern
   const generateOccurrences = () => {
@@ -50,17 +60,30 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
     while (count < maxOccurrences && (payment.end_type !== 'date' || isBefore(currentDate, endDate))) {
       const occurrenceId = `${payment.id}-${count}`;
       
-      // Determine status: manually confirmed takes priority
+      // Determine status: check database confirmations first, then local storage, then auto-confirm past dates
       let status: 'pending' | 'paid' | 'deleted' = 'pending';
       let paidDate: Date | undefined = undefined;
       
-      if (confirmedPayments.has(occurrenceId)) {
+      // Check database confirmations first (most authoritative)
+      const dbConfirmation = dbConfirmations.find(conf => 
+        new Date(conf.occurrence_date).toDateString() === currentDate.toDateString()
+      );
+      
+      if (dbConfirmation) {
+        if (dbConfirmation.status === 'confirmed') {
+          status = 'paid';
+          paidDate = new Date(dbConfirmation.created_at);
+        } else if (dbConfirmation.status === 'rejected') {
+          status = 'deleted';
+        } else if (dbConfirmation.status === 'postponed') {
+          status = 'pending';
+        }
+      } else if (confirmedPayments.has(occurrenceId)) {
+        // Fallback to local storage for backward compatibility
         status = 'paid';
         paidDate = new Date();
-      } else if (isBefore(currentDate, today)) {
-        status = 'paid';
-        paidDate = currentDate;
       }
+      // Note: Removed auto-confirmation of past dates to show accurate payment status
       
       occurrences.push({
         id: occurrenceId,
@@ -101,7 +124,7 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
 
   useEffect(() => {
     setOccurrences(generateOccurrences());
-  }, [payment, confirmedPayments]);
+  }, [payment, confirmedPayments, dbConfirmations]);
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -180,7 +203,14 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
 
       await createTransaction(transactionData);
 
-      // Add to confirmed payments set and persist to localStorage
+      // Confirm payment in database using the new function
+      await confirmPayment(payment.id, occurrence.date.toISOString());
+
+      // Refresh confirmations from database
+      const updatedConfirmations = await getPaymentConfirmations(payment.id);
+      setDbConfirmations(updatedConfirmations);
+
+      // Add to confirmed payments set and persist to localStorage (for backward compatibility)
       const newConfirmedPayments = new Set(confirmedPayments).add(occurrence.id);
       setConfirmedPayments(newConfirmedPayments);
       localStorage.setItem('confirmedPayments', JSON.stringify(Array.from(newConfirmedPayments)));
@@ -208,19 +238,27 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
     });
   };
 
-  const handleRejectPayment = (occurrence: PaymentOccurrence) => {
-    setOccurrences(prev => 
-      prev.map(occ => 
-        occ.id === occurrence.id 
-          ? { ...occ, status: 'deleted' }
-          : occ
-      )
-    );
+  const handleRejectPayment = async (occurrence: PaymentOccurrence) => {
+    try {
+      // Reject payment in database
+      await rejectPayment(payment.id, occurrence.date.toISOString());
 
-    toast({
-      title: "Pago rechazado",
-      description: "El pago ha sido marcado como eliminado",
-    });
+      // Refresh confirmations from database
+      const updatedConfirmations = await getPaymentConfirmations(payment.id);
+      setDbConfirmations(updatedConfirmations);
+
+      toast({
+        title: "Pago rechazado",
+        description: "El pago ha sido marcado como eliminado",
+      });
+    } catch (error) {
+      console.error('Error rejecting payment:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo rechazar el pago",
+        variant: "destructive",
+      });
+    }
   };
 
   const getDaysRemaining = (date: Date) => {
