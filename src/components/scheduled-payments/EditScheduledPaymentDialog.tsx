@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Autocomplete } from '@/components/ui/autocomplete';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScheduledPayment, useScheduledPayments } from '@/hooks/useScheduledPayments';
@@ -33,6 +34,7 @@ export const EditScheduledPaymentDialog = ({ open, onOpenChange, payment }: Edit
     description: '',
     type: 'expense' as 'income' | 'expense' | 'transfer',
     category_id: '',
+    subcategory_id: '',
     account_id: '',
     to_account_id: '',
     amount: '',
@@ -62,6 +64,7 @@ export const EditScheduledPaymentDialog = ({ open, onOpenChange, payment }: Edit
         description: payment.description || '',
         type: payment.type,
         category_id: payment.category_id || '',
+        subcategory_id: payment.subcategory_id || '',
         account_id: payment.account_id || '',
         to_account_id: payment.to_account_id || '',
         amount: payment.amount.toString(),
@@ -89,10 +92,28 @@ export const EditScheduledPaymentDialog = ({ open, onOpenChange, payment }: Edit
 
     try {
       const updateData = {
-        ...formData,
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        category_id: formData.category_id || null,
+        subcategory_id: formData.subcategory_id || null,
+        account_id: formData.account_id || null,
+        to_account_id: formData.to_account_id || null,
         amount: parseFloat(formData.amount),
+        payment_method: formData.payment_method || null,
+        contact_id: formData.contact_id || null,
+        frequency_type: formData.frequency_type,
         start_date: formData.start_date.toISOString(),
-        end_date: formData.end_date?.toISOString(),
+        notification_days: formData.notification_days,
+        recurrence_pattern: formData.frequency_type === 'recurring' ? formData.recurrence_pattern : null,
+        recurrence_interval: formData.frequency_type === 'recurring' ? formData.recurrence_interval : null,
+        recurrence_day_option: formData.frequency_type === 'recurring' ? formData.recurrence_day_option : null,
+        end_type: formData.frequency_type === 'recurring' ? formData.end_type : null,
+        end_date: formData.frequency_type === 'recurring' && formData.end_date ? formData.end_date.toISOString() : null,
+        end_count: formData.frequency_type === 'recurring' && formData.end_count ? formData.end_count : null,
+        note: formData.note || null,
+        tags: formData.tags,
+        is_active: formData.is_active,
       };
 
       await updateScheduledPayment(payment.id, updateData);
@@ -109,6 +130,7 @@ export const EditScheduledPaymentDialog = ({ open, onOpenChange, payment }: Edit
         description: payment.description || '',
         type: payment.type,
         category_id: payment.category_id || '',
+        subcategory_id: payment.subcategory_id || '',
         account_id: payment.account_id || '',
         to_account_id: payment.to_account_id || '',
         amount: payment.amount.toString(),
@@ -194,21 +216,66 @@ export const EditScheduledPaymentDialog = ({ open, onOpenChange, payment }: Edit
             {formData.type !== 'transfer' && (
               <div>
                 <Label htmlFor="category">Categoría</Label>
-                <Select value={formData.category_id} onValueChange={(value) => setFormData(prev => ({ ...prev, category_id: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar categoría" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{category.icon}</span>
-                          <span>{category.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Autocomplete
+                  options={[
+                    // Incluir todas las categorías
+                    ...categories.map(category => ({
+                      id: category.id,
+                      name: `${category.icon} ${category.name}`,
+                      isCategory: true
+                    })),
+                    // Incluir todas las subcategorías
+                    ...categories.flatMap(category => 
+                      category.subcategories?.map(subcategory => ({
+                        id: subcategory.id,
+                        name: `${subcategory.icon} ${subcategory.name} (${category.name})`,
+                        categoryId: category.id,
+                        isSubcategory: true
+                      })) || []
+                    )
+                  ]}
+                  value={(() => {
+                    // Si hay subcategoría seleccionada, mostrar la subcategoría
+                    if (formData.subcategory_id) {
+                      return formData.subcategory_id;
+                    }
+                    // Si no, mostrar la categoría
+                    return formData.category_id;
+                  })()}
+                  onValueChange={(value) => {
+                    // Verificar si la selección es una subcategoría
+                    const selectedOption = [
+                      ...categories.map(category => ({
+                        id: category.id,
+                        isCategory: true
+                      })),
+                      ...categories.flatMap(category => 
+                        category.subcategories?.map(subcategory => ({
+                          id: subcategory.id,
+                          categoryId: category.id,
+                          isSubcategory: true
+                        })) || []
+                      )
+                    ].find(option => option.id === value);
+                    
+                    if (selectedOption && 'isSubcategory' in selectedOption && selectedOption.isSubcategory) {
+                      // Si es subcategoría, establecer tanto la categoría como la subcategoría
+                      setFormData(prev => ({
+                        ...prev,
+                        category_id: ('categoryId' in selectedOption) ? selectedOption.categoryId : '',
+                        subcategory_id: value
+                      }));
+                    } else {
+                      // Si es categoría, establecer solo la categoría y resetear subcategoría
+                      setFormData(prev => ({
+                        ...prev,
+                        category_id: value,
+                        subcategory_id: ''
+                      }));
+                    }
+                  }}
+                  placeholder="Buscar categoría o subcategoría..."
+                />
               </div>
             )}
 

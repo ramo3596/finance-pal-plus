@@ -11,6 +11,7 @@ export interface ScheduledPayment {
   description?: string;
   type: 'income' | 'expense' | 'transfer';
   category_id?: string;
+  subcategory_id?: string;
   account_id?: string;
   to_account_id?: string;
   amount: number;
