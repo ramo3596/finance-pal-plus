@@ -9,13 +9,13 @@ import { es } from 'date-fns/locale';
 import { ScheduledPayment, useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useSettings } from '@/hooks/useSettings';
+import { EditScheduledPaymentDialog } from './EditScheduledPaymentDialog';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ScheduledPaymentDetailProps {
   payment: ScheduledPayment;
   onBack: () => void;
-  onEdit: () => void;
   onDelete: () => void;
 }
 
@@ -27,9 +27,10 @@ interface PaymentOccurrence {
   amount: number;
 }
 
-export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: ScheduledPaymentDetailProps) => {
+export const ScheduledPaymentDetail = ({ payment, onBack, onDelete }: ScheduledPaymentDetailProps) => {
   const [occurrences, setOccurrences] = useState<PaymentOccurrence[]>([]);
   const [confirmedPayments, setConfirmedPayments] = useState<Map<string, Date>>(new Map());
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const { updateScheduledPayment } = useScheduledPayments();
   const { createTransaction } = useTransactions();
@@ -184,6 +185,12 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
 
   const handleConfirmPayment = async (occurrence: PaymentOccurrence) => {
     try {
+      // Convert tag IDs to tag names
+      const tagNames = payment.tags ? payment.tags.map(tagId => {
+        const tag = getTagById(tagId);
+        return tag ? tag.name : tagId; // Fallback to ID if tag not found
+      }) : [];
+
       // Create transaction in the main records with scheduled payment tracking
       const transactionData = {
         type: payment.type,
@@ -196,7 +203,7 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
         contact_id: payment.contact_id,
         payment_method: payment.payment_method,
         note: payment.note,
-        tags: payment.tags,
+        tags: tagNames,
         transaction_date: new Date().toISOString(),
         scheduled_payment_id: payment.id,
         scheduled_occurrence_date: occurrence.date.toISOString(),
@@ -264,7 +271,7 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
           <h1 className="text-3xl font-bold text-foreground">Detalle del Pago Programado</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onEdit}>
+          <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
             <Edit className="h-4 w-4 mr-2" />
             Editar
           </Button>
@@ -465,6 +472,13 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Scheduled Payment Dialog */}
+      <EditScheduledPaymentDialog 
+        open={isEditDialogOpen} 
+        onOpenChange={setIsEditDialogOpen}
+        payment={payment}
+      />
     </div>
   );
 };

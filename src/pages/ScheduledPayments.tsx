@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useScheduledPayments } from "@/hooks/useScheduledPayments"
 import { ScheduledPaymentDetail } from "@/components/scheduled-payments/ScheduledPaymentDetail"
 import { AddScheduledPaymentDialog } from "@/components/scheduled-payments/AddScheduledPaymentDialog"
-import { EditScheduledPaymentDialog } from "@/components/scheduled-payments/EditScheduledPaymentDialog"
+
 import { FloatingActionButton } from "@/components/shared/FloatingActionButton"
 import { useIsMobile } from "@/hooks/use-mobile"
 import type { ScheduledPayment } from "@/hooks/useScheduledPayments"
@@ -23,7 +23,6 @@ const ScheduledPayments = () => {
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
   const [selectedPayment, setSelectedPayment] = useState<ScheduledPayment | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [displayedCount, setDisplayedCount] = useState(15);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
@@ -142,20 +141,7 @@ const ScheduledPayments = () => {
     setSelectedPayment(null);
   };
 
-  const handleEditPayment = () => {
-    setIsEditDialogOpen(true);
-  };
 
-  const handleEditDialogClose = (open: boolean) => {
-    setIsEditDialogOpen(open);
-    if (!open) {
-      // Refresh the current payment data when closing edit dialog
-      const updatedPayment = scheduledPayments.find(p => p.id === selectedPayment?.id);
-      if (updatedPayment) {
-        setSelectedPayment(updatedPayment);
-      }
-    }
-  };
 
   const handleDeletePayment = async () => {
     if (selectedPayment) {
@@ -175,7 +161,6 @@ const ScheduledPayments = () => {
         <ScheduledPaymentDetail
           payment={selectedPayment}
           onBack={handleBackToList}
-          onEdit={handleEditPayment}
           onDelete={handleDeletePayment}
         />
       </Layout>
@@ -333,13 +318,6 @@ const ScheduledPayments = () => {
         <AddScheduledPaymentDialog 
           open={isAddDialogOpen} 
           onOpenChange={setIsAddDialogOpen}
-        />
-
-        {/* Edit Scheduled Payment Dialog */}
-        <EditScheduledPaymentDialog 
-          open={isEditDialogOpen} 
-          onOpenChange={handleEditDialogClose}
-          payment={selectedPayment}
         />
 
         <FloatingActionButton 
