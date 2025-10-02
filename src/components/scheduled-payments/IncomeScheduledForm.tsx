@@ -23,6 +23,7 @@ const formSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
   description: z.string().optional(),
   category_id: z.string().optional(),
+  subcategory_id: z.string().optional(),
   account_id: z.string().min(1, 'La cuenta es requerida'),
   amount: z.number().min(0.01, 'El importe debe ser mayor a 0'),
   payment_method: z.string().optional(),
@@ -181,14 +182,14 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
                           ...allSubcategories.map(s => ({ id: s.id, isSubcategory: true, categoryId: s.parentCategory.id }))
                         ].find(option => option.id === value);
                         
-                        // Si es una subcategoría, también establecemos la categoría padre
+                        // Si es una subcategoría, establecer tanto la categoría como la subcategoría
                         if (selectedOption && 'isSubcategory' in selectedOption && selectedOption.isSubcategory) {
-                          // Aquí podrías establecer la subcategoría en otro campo si es necesario
-                          // form.setValue('subcategory_id', value);
-                          // form.setValue('category_id', selectedOption.categoryId);
-                          field.onChange(value);
+                          form.setValue('category_id', selectedOption.categoryId);
+                          form.setValue('subcategory_id', value);
                         } else {
+                          // Si es categoría, establecer solo la categoría y resetear subcategoría
                           field.onChange(value);
+                          form.setValue('subcategory_id', '');
                         }
                       }}
                       placeholder="Seleccionar categoría"
@@ -198,6 +199,40 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
                 </FormItem>
               )}
             />
+
+            {/* Subcategory selector - solo mostrar si hay categoría seleccionada y tiene subcategorías */}
+            {form.watch('category_id') && (() => {
+              const selectedCat = categories.find(c => c.id === form.watch('category_id'));
+              return selectedCat?.subcategories && selectedCat.subcategories.length > 0 ? (
+                <FormField
+                  control={form.control}
+                  name="subcategory_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subcategoría</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar subcategoría" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {selectedCat.subcategories.map((subcategory) => (
+                            <SelectItem key={subcategory.id} value={subcategory.id}>
+                              <div className="flex items-center gap-2">
+                                <span>{subcategory.icon}</span>
+                                <span>{subcategory.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : null;
+            })()}
 
             {/* Account */}
             <FormField
