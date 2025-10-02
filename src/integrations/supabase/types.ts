@@ -507,6 +507,7 @@ export type Database = {
           recurrence_interval: number | null
           recurrence_pattern: string | null
           start_date: string
+          subcategory_id: string | null
           tags: string[] | null
           to_account_id: string | null
           type: string
@@ -535,6 +536,7 @@ export type Database = {
           recurrence_interval?: number | null
           recurrence_pattern?: string | null
           start_date: string
+          subcategory_id?: string | null
           tags?: string[] | null
           to_account_id?: string | null
           type: string
@@ -563,6 +565,7 @@ export type Database = {
           recurrence_interval?: number | null
           recurrence_pattern?: string | null
           start_date?: string
+          subcategory_id?: string | null
           tags?: string[] | null
           to_account_id?: string | null
           type?: string
@@ -750,6 +753,8 @@ export type Database = {
           note: string | null
           payer_contact_id: string | null
           payment_method: string | null
+          scheduled_occurrence_date: string | null
+          scheduled_payment_id: string | null
           subcategory_id: string | null
           tags: string[] | null
           to_account_id: string | null
@@ -772,6 +777,8 @@ export type Database = {
           note?: string | null
           payer_contact_id?: string | null
           payment_method?: string | null
+          scheduled_occurrence_date?: string | null
+          scheduled_payment_id?: string | null
           subcategory_id?: string | null
           tags?: string[] | null
           to_account_id?: string | null
@@ -794,6 +801,8 @@ export type Database = {
           note?: string | null
           payer_contact_id?: string | null
           payment_method?: string | null
+          scheduled_occurrence_date?: string | null
+          scheduled_payment_id?: string | null
           subcategory_id?: string | null
           tags?: string[] | null
           to_account_id?: string | null
@@ -822,6 +831,13 @@ export type Database = {
             columns: ["debt_id"]
             isOneToOne: false
             referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_scheduled_payment_id_fkey"
+            columns: ["scheduled_payment_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_payments"
             referencedColumns: ["id"]
           },
           {

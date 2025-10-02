@@ -10,6 +10,7 @@ import { ScheduledPayment, useScheduledPayments } from '@/hooks/useScheduledPaym
 import { useTransactions } from '@/hooks/useTransactions';
 import { useSettings } from '@/hooks/useSettings';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ScheduledPaymentDetailProps {
   payment: ScheduledPayment;
@@ -28,13 +29,43 @@ interface PaymentOccurrence {
 
 export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: ScheduledPaymentDetailProps) => {
   const [occurrences, setOccurrences] = useState<PaymentOccurrence[]>([]);
-  const [confirmedPayments, setConfirmedPayments] = useState<Set<string>>(() => {
-    const stored = localStorage.getItem('confirmedPayments');
-    return stored ? new Set(JSON.parse(stored)) : new Set();
-  });
+  const [confirmedPayments, setConfirmedPayments] = useState<Map<string, Date>>(new Map());
+  const [loading, setLoading] = useState(true);
   const { updateScheduledPayment } = useScheduledPayments();
   const { createTransaction } = useTransactions();
   const { tags } = useSettings();
+
+  // Load confirmed payments from database
+  useEffect(() => {
+    const loadConfirmedPayments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('scheduled_occurrence_date')
+          .eq('scheduled_payment_id', payment.id)
+          .not('scheduled_occurrence_date', 'is', null);
+
+        if (error) throw error;
+
+        const paymentsMap = new Map<string, Date>();
+        data?.forEach((transaction) => {
+          if (transaction.scheduled_occurrence_date) {
+            const occurrenceDate = new Date(transaction.scheduled_occurrence_date);
+            const occurrenceId = `${payment.id}-${format(occurrenceDate, 'yyyy-MM-dd')}`;
+            paymentsMap.set(occurrenceId, occurrenceDate);
+          }
+        });
+
+        setConfirmedPayments(paymentsMap);
+      } catch (error) {
+        console.error('Error loading confirmed payments:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadConfirmedPayments();
+  }, [payment.id]);
 
   // Generate payment occurrences based on recurrence pattern
   const generateOccurrences = () => {
@@ -48,18 +79,15 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
 
     // Generate past and future occurrences
     while (count < maxOccurrences && (payment.end_type !== 'date' || isBefore(currentDate, endDate))) {
-      const occurrenceId = `${payment.id}-${count}`;
+      const occurrenceId = `${payment.id}-${format(currentDate, 'yyyy-MM-dd')}`;
       
-      // Determine status: manually confirmed takes priority
+      // Determine status based on confirmed payments from database
       let status: 'pending' | 'paid' | 'deleted' = 'pending';
       let paidDate: Date | undefined = undefined;
       
       if (confirmedPayments.has(occurrenceId)) {
         status = 'paid';
-        paidDate = new Date();
-      } else if (isBefore(currentDate, today)) {
-        status = 'paid';
-        paidDate = currentDate;
+        paidDate = confirmedPayments.get(occurrenceId);
       }
       
       occurrences.push({
@@ -156,7 +184,7 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
 
   const handleConfirmPayment = async (occurrence: PaymentOccurrence) => {
     try {
-      // Create transaction in the main records
+      // Create transaction in the main records with scheduled payment tracking
       const transactionData = {
         type: payment.type,
         description: payment.name,
@@ -164,19 +192,22 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
         account_id: payment.account_id,
         to_account_id: payment.to_account_id,
         category_id: payment.category_id,
+        subcategory_id: payment.subcategory_id,
         contact_id: payment.contact_id,
         payment_method: payment.payment_method,
         note: payment.note,
         tags: payment.tags,
         transaction_date: new Date().toISOString(),
+        scheduled_payment_id: payment.id,
+        scheduled_occurrence_date: occurrence.date.toISOString(),
       };
 
       await createTransaction(transactionData);
 
-      // Add to confirmed payments set and persist to localStorage
-      const newConfirmedPayments = new Set(confirmedPayments).add(occurrence.id);
+      // Update confirmed payments map
+      const newConfirmedPayments = new Map(confirmedPayments);
+      newConfirmedPayments.set(occurrence.id, new Date());
       setConfirmedPayments(newConfirmedPayments);
-      localStorage.setItem('confirmedPayments', JSON.stringify(Array.from(newConfirmedPayments)));
 
       toast({
         title: "Pago confirmado",
