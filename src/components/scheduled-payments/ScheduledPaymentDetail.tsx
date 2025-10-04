@@ -185,10 +185,20 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onDelete }: ScheduledP
 
   const handleConfirmPayment = async (occurrence: PaymentOccurrence) => {
     try {
-      // Convert tag IDs to tag names
-      const tagNames = payment.tags ? payment.tags.map(tagId => {
-        const tag = getTagById(tagId);
-        return tag ? tag.name : tagId; // Fallback to ID if tag not found
+      // Handle both tag names and tag IDs, convert to names for consistency
+      const tagNames = payment.tags ? payment.tags.map(tagIdentifier => {
+        // First try to find by ID
+        let tag = getTagById(tagIdentifier);
+        if (tag) {
+          return tag.name;
+        }
+        // If not found by ID, try to find by name
+        tag = tags.find(t => t.name === tagIdentifier);
+        if (tag) {
+          return tag.name;
+        }
+        // Fallback to the identifier itself
+        return tagIdentifier;
       }) : [];
 
       // Create transaction in the main records with scheduled payment tracking
@@ -374,15 +384,19 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onDelete }: ScheduledP
           {payment.tags && payment.tags.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-medium text-sm">Etiquetas:</span>
-              {payment.tags.map((tagId, index) => {
-                const tag = getTagById(tagId);
+              {payment.tags.map((tagIdentifier, index) => {
+                // Handle both tag names and tag IDs
+                let tag = getTagById(tagIdentifier);
+                if (!tag) {
+                  tag = tags.find(t => t.name === tagIdentifier);
+                }
                 return (
                   <Badge 
                     key={index} 
                     variant="secondary"
-                    style={tag?.color ? { backgroundColor: tag.color, color: 'white' } : {}}
+                    style={tag?.color ? { backgroundColor: tag.color, color: 'white' } : { backgroundColor: '#6b7280', color: 'white' }}
                   >
-                    {tag?.name || tagId}
+                    {tag?.name || tagIdentifier}
                   </Badge>
                 );
               })}
