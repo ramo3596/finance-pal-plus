@@ -88,8 +88,18 @@ export const TransferScheduledForm = ({ onClose }: TransferScheduledFormProps) =
 
   const onSubmit = async (data: FormData) => {
     try {
+      // Convert tag IDs to tag names
+      let tagNames: string[] = [];
+      if (data.tags && Array.isArray(data.tags)) {
+        tagNames = data.tags.map(tagId => {
+          const tag = tags.find(t => t.id === tagId);
+          return tag ? tag.name : tagId; // Fallback to ID if tag not found
+        });
+      }
+
       const scheduledPayment = {
         ...data,
+        tags: tagNames, // Use tag names instead of IDs
         type: 'transfer' as const,
         start_date: data.start_date.toISOString(),
         next_payment_date: data.start_date.toISOString(),

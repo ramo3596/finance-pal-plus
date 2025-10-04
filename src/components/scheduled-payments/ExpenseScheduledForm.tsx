@@ -53,7 +53,6 @@ export const ExpenseScheduledForm = ({ onClose }: ExpenseScheduledFormProps) => 
   const { contacts } = useContacts();
   const [isRecurrenceDialogOpen, setIsRecurrenceDialogOpen] = useState(false);
   const [recurrenceData, setRecurrenceData] = useState<any>(null);
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
 
 
   const form = useForm<FormData>({
@@ -98,8 +97,18 @@ export const ExpenseScheduledForm = ({ onClose }: ExpenseScheduledFormProps) => 
 
   const onSubmit = async (data: FormData) => {
     try {
+      // Convert tag IDs to tag names
+      let tagNames: string[] = [];
+      if (data.tags && Array.isArray(data.tags)) {
+        tagNames = data.tags.map(tagId => {
+          const tag = tags.find(t => t.id === tagId);
+          return tag ? tag.name : tagId; // Fallback to ID if tag not found
+        });
+      }
+
       const scheduledPayment = {
         ...data,
+        tags: tagNames, // Use tag names instead of IDs
         type: 'expense' as const,
         start_date: data.start_date.toISOString(),
         next_payment_date: data.start_date.toISOString(),
@@ -184,15 +193,14 @@ export const ExpenseScheduledForm = ({ onClose }: ExpenseScheduledFormProps) => 
                           ...expenseSubcategories.map(s => ({ id: s.id, isSubcategory: true, categoryId: s.parentCategory.id }))
                         ].find(option => option.id === value);
                         
-                        // Si es una subcategoría, también establecemos la categoría padre
+                        // Si es una subcategoría, establecer tanto la categoría como la subcategoría
                         if (selectedOption && 'isSubcategory' in selectedOption && selectedOption.isSubcategory) {
-                          form.setValue('subcategory_id', value);
                           form.setValue('category_id', selectedOption.categoryId);
-                          setSelectedSubcategory(value);
+                          form.setValue('subcategory_id', value);
                         } else {
+                          // Si es categoría, establecer solo la categoría y resetear subcategoría
                           field.onChange(value);
                           form.setValue('subcategory_id', '');
-                          setSelectedSubcategory('');
                         }
                       }}
                       placeholder="Seleccionar categoría"
@@ -203,44 +211,39 @@ export const ExpenseScheduledForm = ({ onClose }: ExpenseScheduledFormProps) => 
               )}
             />
 
-            {/* Subcategory Selector - Conditional */}
-            {form.watch('category_id') && expenseCategories.find(cat => cat.id === form.watch('category_id'))?.subcategories && expenseCategories.find(cat => cat.id === form.watch('category_id'))?.subcategories!.length > 0 && (
-              <FormField
-                control={form.control}
-                name="subcategory_id"
-                render={({ field }) => {
-                  const selectedCategory = expenseCategories.find(cat => cat.id === form.watch('category_id'));
-                  const subcategories = selectedCategory?.subcategories || [];
-                  
-                  return (
+            {/* Subcategory selector - solo mostrar si hay categoría seleccionada y tiene subcategorías */}
+            {form.watch('category_id') && (() => {
+              const selectedCat = categories.find(c => c.id === form.watch('category_id'));
+              return selectedCat?.subcategories && selectedCat.subcategories.length > 0 ? (
+                <FormField
+                  control={form.control}
+                  name="subcategory_id"
+                  render={({ field }) => (
                     <FormItem>
                       <FormLabel>Subcategoría</FormLabel>
-                      <Select 
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setSelectedSubcategory(value);
-                        }} 
-                        value={field.value}
-                      >
+                      <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar subcategoría" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {subcategories.map((subcategory) => (
+                          {selectedCat.subcategories.map((subcategory) => (
                             <SelectItem key={subcategory.id} value={subcategory.id}>
-                              {subcategory.icon && `${subcategory.icon} `}{subcategory.name}
+                              <div className="flex items-center gap-2">
+                                <span>{subcategory.icon}</span>
+                                <span>{subcategory.name}</span>
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
-                  );
-                }}
-              />
-            )}
+                  )}
+                />
+              ) : null;
+            })()}
 
             {/* Account */}
             <FormField

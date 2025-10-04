@@ -3,18 +3,21 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Edit, Trash2, Check, Calendar, User, DollarSign, Clock, AlertCircle } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ArrowLeft, Edit, Trash2, Check, Calendar, User, DollarSign, Clock, AlertCircle, MoreVertical } from 'lucide-react';
 import { format, addDays, addWeeks, addMonths, addYears, differenceInDays, isBefore, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScheduledPayment, useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useSettings } from '@/hooks/useSettings';
+import { EditScheduledPaymentDialog } from './EditScheduledPaymentDialog';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ScheduledPaymentDetailProps {
   payment: ScheduledPayment;
   onBack: () => void;
-  onEdit: () => void;
   onDelete: () => void;
 }
 
@@ -26,25 +29,47 @@ interface PaymentOccurrence {
   amount: number;
 }
 
-export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: ScheduledPaymentDetailProps) => {
+export const ScheduledPaymentDetail = ({ payment, onBack, onDelete }: ScheduledPaymentDetailProps) => {
   const [occurrences, setOccurrences] = useState<PaymentOccurrence[]>([]);
-  const [confirmedPayments, setConfirmedPayments] = useState<Set<string>>(() => {
-    const stored = localStorage.getItem('confirmedPayments');
-    return stored ? new Set(JSON.parse(stored)) : new Set();
-  });
-  const [dbConfirmations, setDbConfirmations] = useState<any[]>([]);
-  const { updateScheduledPayment, confirmPayment, rejectPayment, getPaymentConfirmations } = useScheduledPayments();
+  const [confirmedPayments, setConfirmedPayments] = useState<Map<string, Date>>(new Map());
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { updateScheduledPayment } = useScheduledPayments();
   const { createTransaction } = useTransactions();
   const { tags } = useSettings();
+  const isMobile = useIsMobile();
 
-  // Load confirmations from database
+  // Load confirmed payments from database
   useEffect(() => {
-    const loadConfirmations = async () => {
-      const confirmations = await getPaymentConfirmations(payment.id);
-      setDbConfirmations(confirmations);
+    const loadConfirmedPayments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('scheduled_occurrence_date')
+          .eq('scheduled_payment_id', payment.id)
+          .not('scheduled_occurrence_date', 'is', null);
+
+        if (error) throw error;
+
+        const paymentsMap = new Map<string, Date>();
+        data?.forEach((transaction) => {
+          if (transaction.scheduled_occurrence_date) {
+            const occurrenceDate = new Date(transaction.scheduled_occurrence_date);
+            const occurrenceId = `${payment.id}-${format(occurrenceDate, 'yyyy-MM-dd')}`;
+            paymentsMap.set(occurrenceId, occurrenceDate);
+          }
+        });
+
+        setConfirmedPayments(paymentsMap);
+      } catch (error) {
+        console.error('Error loading confirmed payments:', error);
+      } finally {
+        setLoading(false);
+      }
     };
-    loadConfirmations();
-  }, [payment.id, getPaymentConfirmations]);
+
+    loadConfirmedPayments();
+  }, [payment.id]);
 
   // Generate payment occurrences based on recurrence pattern
   const generateOccurrences = () => {
@@ -58,32 +83,16 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
 
     // Generate past and future occurrences
     while (count < maxOccurrences && (payment.end_type !== 'date' || isBefore(currentDate, endDate))) {
-      const occurrenceId = `${payment.id}-${count}`;
+      const occurrenceId = `${payment.id}-${format(currentDate, 'yyyy-MM-dd')}`;
       
-      // Determine status: check database confirmations first, then local storage, then auto-confirm past dates
+      // Determine status based on confirmed payments from database
       let status: 'pending' | 'paid' | 'deleted' = 'pending';
       let paidDate: Date | undefined = undefined;
       
-      // Check database confirmations first (most authoritative)
-      const dbConfirmation = dbConfirmations.find(conf => 
-        new Date(conf.occurrence_date).toDateString() === currentDate.toDateString()
-      );
-      
-      if (dbConfirmation) {
-        if (dbConfirmation.status === 'confirmed') {
-          status = 'paid';
-          paidDate = new Date(dbConfirmation.created_at);
-        } else if (dbConfirmation.status === 'rejected') {
-          status = 'deleted';
-        } else if (dbConfirmation.status === 'postponed') {
-          status = 'pending';
-        }
-      } else if (confirmedPayments.has(occurrenceId)) {
-        // Fallback to local storage for backward compatibility
+      if (confirmedPayments.has(occurrenceId)) {
         status = 'paid';
-        paidDate = new Date();
+        paidDate = confirmedPayments.get(occurrenceId);
       }
-      // Note: Removed auto-confirmation of past dates to show accurate payment status
       
       occurrences.push({
         id: occurrenceId,
@@ -124,7 +133,7 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
 
   useEffect(() => {
     setOccurrences(generateOccurrences());
-  }, [payment, confirmedPayments, dbConfirmations]);
+  }, [payment, confirmedPayments]);
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -179,13 +188,23 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
 
   const handleConfirmPayment = async (occurrence: PaymentOccurrence) => {
     try {
-      // Convert tag IDs to tag names
-      const tagNames = payment.tags ? payment.tags.map(tagId => {
-        const tag = getTagById(tagId);
-        return tag ? tag.name : tagId;
+      // Handle both tag names and tag IDs, convert to names for consistency
+      const tagNames = payment.tags ? payment.tags.map(tagIdentifier => {
+        // First try to find by ID
+        let tag = getTagById(tagIdentifier);
+        if (tag) {
+          return tag.name;
+        }
+        // If not found by ID, try to find by name
+        tag = tags.find(t => t.name === tagIdentifier);
+        if (tag) {
+          return tag.name;
+        }
+        // Fallback to the identifier itself
+        return tagIdentifier;
       }) : [];
 
-      // Create transaction in the main records
+      // Create transaction in the main records with scheduled payment tracking
       const transactionData = {
         type: payment.type,
         description: payment.name,
@@ -199,21 +218,16 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
         note: payment.note,
         tags: tagNames,
         transaction_date: new Date().toISOString(),
+        scheduled_payment_id: payment.id,
+        scheduled_occurrence_date: occurrence.date.toISOString(),
       };
 
       await createTransaction(transactionData);
 
-      // Confirm payment in database using the new function
-      await confirmPayment(payment.id, occurrence.date.toISOString());
-
-      // Refresh confirmations from database
-      const updatedConfirmations = await getPaymentConfirmations(payment.id);
-      setDbConfirmations(updatedConfirmations);
-
-      // Add to confirmed payments set and persist to localStorage (for backward compatibility)
-      const newConfirmedPayments = new Set(confirmedPayments).add(occurrence.id);
+      // Update confirmed payments map
+      const newConfirmedPayments = new Map(confirmedPayments);
+      newConfirmedPayments.set(occurrence.id, new Date());
       setConfirmedPayments(newConfirmedPayments);
-      localStorage.setItem('confirmedPayments', JSON.stringify(Array.from(newConfirmedPayments)));
 
       toast({
         title: "Pago confirmado",
@@ -238,27 +252,19 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
     });
   };
 
-  const handleRejectPayment = async (occurrence: PaymentOccurrence) => {
-    try {
-      // Reject payment in database
-      await rejectPayment(payment.id, occurrence.date.toISOString());
+  const handleRejectPayment = (occurrence: PaymentOccurrence) => {
+    setOccurrences(prev => 
+      prev.map(occ => 
+        occ.id === occurrence.id 
+          ? { ...occ, status: 'deleted' }
+          : occ
+      )
+    );
 
-      // Refresh confirmations from database
-      const updatedConfirmations = await getPaymentConfirmations(payment.id);
-      setDbConfirmations(updatedConfirmations);
-
-      toast({
-        title: "Pago rechazado",
-        description: "El pago ha sido marcado como eliminado",
-      });
-    } catch (error) {
-      console.error('Error rejecting payment:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo rechazar el pago",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Pago rechazado",
+      description: "El pago ha sido marcado como eliminado",
+    });
   };
 
   const getDaysRemaining = (date: Date) => {
@@ -278,14 +284,36 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
           <h1 className="text-3xl font-bold text-foreground">Detalle del Pago Programado</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            <Edit className="h-4 w-4 mr-2" />
-            Editar
-          </Button>
-          <Button variant="outline" size="sm" onClick={onDelete}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Eliminar
-          </Button>
+          {isMobile ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDelete} className="text-red-600">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+              <Button variant="outline" size="sm" onClick={onDelete}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Eliminar
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -381,15 +409,19 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
           {payment.tags && payment.tags.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-medium text-sm">Etiquetas:</span>
-              {payment.tags.map((tagId, index) => {
-                const tag = getTagById(tagId);
+              {payment.tags.map((tagIdentifier, index) => {
+                // Handle both tag names and tag IDs
+                let tag = getTagById(tagIdentifier);
+                if (!tag) {
+                  tag = tags.find(t => t.name === tagIdentifier);
+                }
                 return (
                   <Badge 
                     key={index} 
                     variant="secondary"
-                    style={tag?.color ? { backgroundColor: tag.color, color: 'white' } : {}}
+                    style={tag?.color ? { backgroundColor: tag.color, color: 'white' } : { backgroundColor: '#6b7280', color: 'white' }}
                   >
-                    {tag?.name || tagId}
+                    {tag?.name || tagIdentifier}
                   </Badge>
                 );
               })}
@@ -461,15 +493,41 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
                     
                     {(isPending || isOverdue) && (
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={() => handleConfirmPayment(occurrence)}>
-                          CONFIRMAR
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handlePostponePayment(occurrence)}>
-                          Posponer
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleRejectPayment(occurrence)}>
-                          Rechazar
-                        </Button>
+                        {isMobile ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleConfirmPayment(occurrence)}>
+                                <Check className="mr-2 h-4 w-4" />
+                                CONFIRMAR
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handlePostponePayment(occurrence)}>
+                                <Clock className="mr-2 h-4 w-4" />
+                                Posponer
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleRejectPayment(occurrence)}>
+                                <AlertCircle className="mr-2 h-4 w-4" />
+                                Rechazar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <>
+                            <Button size="sm" onClick={() => handleConfirmPayment(occurrence)}>
+                              CONFIRMAR
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handlePostponePayment(occurrence)}>
+                              Posponer
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleRejectPayment(occurrence)}>
+                              Rechazar
+                            </Button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -479,6 +537,13 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onEdit, onDelete }: Sc
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Scheduled Payment Dialog */}
+      <EditScheduledPaymentDialog 
+        open={isEditDialogOpen} 
+        onOpenChange={setIsEditDialogOpen}
+        payment={payment}
+      />
     </div>
   );
 };

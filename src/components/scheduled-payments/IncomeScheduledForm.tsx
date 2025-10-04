@@ -53,7 +53,6 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
   const { contacts } = useContacts();
   const [isRecurrenceDialogOpen, setIsRecurrenceDialogOpen] = useState(false);
   const [recurrenceData, setRecurrenceData] = useState<any>(null);
-  const [selectedSubcategory, setSelectedSubcategory] = useState("");
 
 
   const form = useForm<FormData>({
@@ -97,8 +96,18 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
 
   const onSubmit = async (data: FormData) => {
     try {
+      // Convert tag IDs to tag names
+      let tagNames: string[] = [];
+      if (data.tags && Array.isArray(data.tags)) {
+        tagNames = data.tags.map(tagId => {
+          const tag = tags.find(t => t.id === tagId);
+          return tag ? tag.name : tagId; // Fallback to ID if tag not found
+        });
+      }
+
       const scheduledPayment = {
         ...data,
+        tags: tagNames, // Use tag names instead of IDs
         type: 'income' as const,
         start_date: data.start_date.toISOString(),
         next_payment_date: data.start_date.toISOString(),
@@ -183,20 +192,17 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
                           ...allSubcategories.map(s => ({ id: s.id, isSubcategory: true, categoryId: s.parentCategory.id }))
                         ].find(option => option.id === value);
                         
-                        // Si es una subcategoría, también establecemos la categoría padre
+                        // Si es una subcategoría, establecer tanto la categoría como la subcategoría
                         if (selectedOption && 'isSubcategory' in selectedOption && selectedOption.isSubcategory) {
-                          // Establecer la categoría padre y la subcategoría
-                          setSelectedSubcategory(value);
-                          field.onChange(selectedOption.categoryId);
+                          form.setValue('category_id', selectedOption.categoryId);
                           form.setValue('subcategory_id', value);
                         } else {
-                          // Si es categoría, resetear subcategoría
-                          setSelectedSubcategory("");
+                          // Si es categoría, establecer solo la categoría y resetear subcategoría
                           field.onChange(value);
-                          form.setValue('subcategory_id', "");
+                          form.setValue('subcategory_id', '');
                         }
                       }}
-                      placeholder="Buscar categoría o subcategoría..."
+                      placeholder="Seleccionar categoría"
                     />
                   </FormControl>
                   <FormMessage />
@@ -214,10 +220,7 @@ export const IncomeScheduledForm = ({ onClose }: IncomeScheduledFormProps) => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Subcategoría</FormLabel>
-                      <Select value={selectedSubcategory} onValueChange={(value) => {
-                        setSelectedSubcategory(value);
-                        field.onChange(value);
-                      }}>
+                      <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar subcategoría" />

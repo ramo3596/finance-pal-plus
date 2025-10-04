@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Autocomplete } from '@/components/ui/autocomplete';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Autocomplete } from '@/components/ui/autocomplete';
+import { X } from 'lucide-react';
 import { ScheduledPayment, useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { useSettings } from '@/hooks/useSettings';
 import { useContacts } from '@/hooks/useContacts';
@@ -57,6 +58,27 @@ export const EditScheduledPaymentDialog = ({ open, onOpenChange, payment }: Edit
   const [isStartDateOpen, setIsStartDateOpen] = useState(false);
   const [isEndDateOpen, setIsEndDateOpen] = useState(false);
 
+  // Filter categories and subcategories based on transaction type
+  const filteredCategories = categories.filter(category => {
+    if (formData.type === 'income') {
+      // For income, include all categories (income can be from any nature)
+      return ['Necesitar', 'Deseos', 'Deber'].includes(category.nature);
+    } else if (formData.type === 'expense') {
+      return category.nature === 'Necesitar' || category.nature === 'Deseos' || category.nature === 'Deber';
+    }
+    return false;
+  });
+
+  // Get all subcategories for the filtered categories
+  const allSubcategories = filteredCategories.flatMap(category => 
+    category.subcategories?.map(subcategory => ({
+      ...subcategory,
+      parentCategory: category
+    })) || []
+  );
+
+
+
   useEffect(() => {
     if (payment) {
       setFormData({
@@ -92,28 +114,23 @@ export const EditScheduledPaymentDialog = ({ open, onOpenChange, payment }: Edit
 
     try {
       const updateData = {
-        name: formData.name,
-        description: formData.description,
-        type: formData.type,
+        ...formData,
+        amount: parseFloat(formData.amount),
+        start_date: formData.start_date.toISOString(),
+        end_date: formData.end_date?.toISOString(),
+        // Convert empty strings to null for UUID fields
         category_id: formData.category_id || null,
         subcategory_id: formData.subcategory_id || null,
         account_id: formData.account_id || null,
         to_account_id: formData.to_account_id || null,
-        amount: parseFloat(formData.amount),
-        payment_method: formData.payment_method || null,
         contact_id: formData.contact_id || null,
-        frequency_type: formData.frequency_type,
-        start_date: formData.start_date.toISOString(),
-        notification_days: formData.notification_days,
-        recurrence_pattern: formData.frequency_type === 'recurring' ? formData.recurrence_pattern : null,
-        recurrence_interval: formData.frequency_type === 'recurring' ? formData.recurrence_interval : null,
-        recurrence_day_option: formData.frequency_type === 'recurring' ? formData.recurrence_day_option : null,
-        end_type: formData.frequency_type === 'recurring' ? formData.end_type : null,
-        end_date: formData.frequency_type === 'recurring' && formData.end_date ? formData.end_date.toISOString() : null,
-        end_count: formData.frequency_type === 'recurring' && formData.end_count ? formData.end_count : null,
+        // Convert empty strings to null for optional fields
+        payment_method: formData.payment_method || null,
+        recurrence_pattern: formData.recurrence_pattern || null,
+        recurrence_day_option: formData.recurrence_day_option || null,
+        end_type: formData.end_type || null,
+        end_count: formData.end_count || null,
         note: formData.note || null,
-        tags: formData.tags,
-        is_active: formData.is_active,
       };
 
       await updateScheduledPayment(payment.id, updateData);
@@ -212,70 +229,79 @@ export const EditScheduledPaymentDialog = ({ open, onOpenChange, payment }: Edit
               </div>
             </div>
 
-            {/* Category */}
+            {/* Category and Subcategory */}
             {formData.type !== 'transfer' && (
               <div>
                 <Label htmlFor="category">Categoría</Label>
                 <Autocomplete
                   options={[
                     // Incluir todas las categorías
-                    ...categories.map(category => ({
+                    ...filteredCategories.map(category => ({
                       id: category.id,
                       name: `${category.icon} ${category.name}`,
+                      icon: category.icon,
                       isCategory: true
                     })),
                     // Incluir todas las subcategorías
-                    ...categories.flatMap(category => 
-                      category.subcategories?.map(subcategory => ({
-                        id: subcategory.id,
-                        name: `${subcategory.icon} ${subcategory.name} (${category.name})`,
-                        categoryId: category.id,
-                        isSubcategory: true
-                      })) || []
-                    )
+                    ...allSubcategories.map(subcategory => ({
+                      id: subcategory.id,
+                      name: `${subcategory.icon || subcategory.parentCategory.icon} ${subcategory.name} (${subcategory.parentCategory.name})`,
+                      icon: subcategory.icon || subcategory.parentCategory.icon,
+                      isSubcategory: true,
+                      categoryId: subcategory.parentCategory.id
+                    }))
                   ]}
-                  value={(() => {
-                    // Si hay subcategoría seleccionada, mostrar la subcategoría
-                    if (formData.subcategory_id) {
-                      return formData.subcategory_id;
-                    }
-                    // Si no, mostrar la categoría
-                    return formData.category_id;
-                  })()}
+                  value={formData.subcategory_id || formData.category_id}
                   onValueChange={(value) => {
-                    // Verificar si la selección es una subcategoría
+                    // Buscar si la opción seleccionada es una subcategoría
                     const selectedOption = [
-                      ...categories.map(category => ({
-                        id: category.id,
-                        isCategory: true
-                      })),
-                      ...categories.flatMap(category => 
-                        category.subcategories?.map(subcategory => ({
-                          id: subcategory.id,
-                          categoryId: category.id,
-                          isSubcategory: true
-                        })) || []
-                      )
+                      ...filteredCategories.map(c => ({ id: c.id, isCategory: true })),
+                      ...allSubcategories.map(s => ({ id: s.id, isSubcategory: true, categoryId: s.parentCategory.id }))
                     ].find(option => option.id === value);
                     
+                    // Si es una subcategoría, establecer tanto la categoría como la subcategoría
                     if (selectedOption && 'isSubcategory' in selectedOption && selectedOption.isSubcategory) {
-                      // Si es subcategoría, establecer tanto la categoría como la subcategoría
-                      setFormData(prev => ({
-                        ...prev,
-                        category_id: ('categoryId' in selectedOption) ? selectedOption.categoryId : '',
-                        subcategory_id: value
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        category_id: selectedOption.categoryId,
+                        subcategory_id: value 
                       }));
                     } else {
                       // Si es categoría, establecer solo la categoría y resetear subcategoría
-                      setFormData(prev => ({
-                        ...prev,
+                      setFormData(prev => ({ 
+                        ...prev, 
                         category_id: value,
-                        subcategory_id: ''
+                        subcategory_id: '' 
                       }));
                     }
                   }}
-                  placeholder="Buscar categoría o subcategoría..."
+                  placeholder="Seleccionar categoría"
                 />
+
+                {/* Subcategory selector - solo mostrar si hay categoría seleccionada y tiene subcategorías */}
+                {formData.category_id && (() => {
+                  const selectedCat = categories.find(c => c.id === formData.category_id);
+                  return selectedCat?.subcategories && selectedCat.subcategories.length > 0 ? (
+                    <div className="mt-4">
+                      <Label htmlFor="subcategory">Subcategoría</Label>
+                      <Select value={formData.subcategory_id} onValueChange={(value) => setFormData(prev => ({ ...prev, subcategory_id: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar subcategoría" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedCat.subcategories.map((subcategory) => (
+                            <SelectItem key={subcategory.id} value={subcategory.id}>
+                              <div className="flex items-center gap-2">
+                                <span>{subcategory.icon}</span>
+                                <span>{subcategory.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null;
+                })()}
               </div>
             )}
 
@@ -500,6 +526,71 @@ export const EditScheduledPaymentDialog = ({ open, onOpenChange, payment }: Edit
                 value={formData.notification_days}
                 onChange={(e) => setFormData(prev => ({ ...prev, notification_days: parseInt(e.target.value) }))}
               />
+            </div>
+
+            {/* Tags */}
+            <div>
+              <Label htmlFor="tags">Etiquetas</Label>
+              <Select 
+                value="" 
+                onValueChange={(value) => {
+                  if (value) {
+                    const selectedTag = tags.find(tag => tag.id === value);
+                    if (selectedTag && !formData.tags.includes(selectedTag.name)) {
+                      setFormData(prev => ({ ...prev, tags: [...prev.tags, selectedTag.name] }));
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar etiquetas" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tags.map((tag) => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        <span>{tag.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {formData.tags.map((tagIdentifier, index) => {
+                  // Handle both tag names and tag IDs
+                  let tag = tags.find(t => t.name === tagIdentifier);
+                  if (!tag) {
+                    tag = tags.find(t => t.id === tagIdentifier);
+                  }
+                  
+                  return tag ? (
+                    <span 
+                      key={index}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-xs"
+                    >
+                      <div 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: tag.color }}
+                      />
+                      {tag.name}
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ 
+                          ...prev, 
+                          tags: prev.tags.filter((_, i) => i !== index) 
+                        }))}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ) : null;
+                })}
+              </div>
             </div>
 
             {/* Note */}
