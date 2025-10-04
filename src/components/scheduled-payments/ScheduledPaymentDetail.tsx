@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Edit, Trash2, Check, Calendar, User, DollarSign, Clock, AlertCircle } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ArrowLeft, Edit, Trash2, Check, Calendar, User, DollarSign, Clock, AlertCircle, MoreVertical } from 'lucide-react';
 import { format, addDays, addWeeks, addMonths, addYears, differenceInDays, isBefore, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScheduledPayment, useScheduledPayments } from '@/hooks/useScheduledPayments';
@@ -35,6 +37,7 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onDelete }: ScheduledP
   const { updateScheduledPayment } = useScheduledPayments();
   const { createTransaction } = useTransactions();
   const { tags } = useSettings();
+  const isMobile = useIsMobile();
 
   // Load confirmed payments from database
   useEffect(() => {
@@ -281,14 +284,36 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onDelete }: ScheduledP
           <h1 className="text-3xl font-bold text-foreground">Detalle del Pago Programado</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Editar
-          </Button>
-          <Button variant="outline" size="sm" onClick={onDelete}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Eliminar
-          </Button>
+          {isMobile ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDelete} className="text-red-600">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+              <Button variant="outline" size="sm" onClick={onDelete}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Eliminar
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -468,15 +493,41 @@ export const ScheduledPaymentDetail = ({ payment, onBack, onDelete }: ScheduledP
                     
                     {(isPending || isOverdue) && (
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={() => handleConfirmPayment(occurrence)}>
-                          CONFIRMAR
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handlePostponePayment(occurrence)}>
-                          Posponer
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleRejectPayment(occurrence)}>
-                          Rechazar
-                        </Button>
+                        {isMobile ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleConfirmPayment(occurrence)}>
+                                <Check className="mr-2 h-4 w-4" />
+                                CONFIRMAR
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handlePostponePayment(occurrence)}>
+                                <Clock className="mr-2 h-4 w-4" />
+                                Posponer
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleRejectPayment(occurrence)}>
+                                <AlertCircle className="mr-2 h-4 w-4" />
+                                Rechazar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <>
+                            <Button size="sm" onClick={() => handleConfirmPayment(occurrence)}>
+                              CONFIRMAR
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handlePostponePayment(occurrence)}>
+                              Posponer
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleRejectPayment(occurrence)}>
+                              Rechazar
+                            </Button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
