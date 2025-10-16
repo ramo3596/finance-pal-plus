@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Autocomplete } from "@/components/ui/autocomplete";
+import { MultiSelectAutocomplete } from "@/components/ui/multi-select-autocomplete";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Edit } from "lucide-react";
@@ -33,7 +34,7 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories, t
     type: template.type,
     beneficiary: template.beneficiary || "",
     note: template.note || "",
-    tag_ids: template.tags?.length ? template.tags[0].id : ""
+    tag_ids: (template.tags?.map(t => t.id) || []) as string[]
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -46,7 +47,7 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories, t
       subcategory_id: formData.subcategory_id || undefined,
       beneficiary: formData.beneficiary || undefined,
       note: formData.note || undefined,
-      tag_ids: formData.tag_ids ? [formData.tag_ids] : undefined
+      tag_ids: formData.tag_ids && formData.tag_ids.length > 0 ? formData.tag_ids : undefined
     } as any);
     setOpen(false);
   };
@@ -211,16 +212,14 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories, t
             />
           </div>
           <div>
-            <Label htmlFor="tags">Etiqueta (opcional)</Label>
-            <Autocomplete
-              options={tags.map(tag => ({
-                id: tag.id,
-                name: tag.name
-              }))}
+            <Label htmlFor="tags">Etiquetas (opcional)</Label>
+            <MultiSelectAutocomplete
+              options={tags.map(tag => ({ id: tag.id, name: tag.name, color: tag.color }))}
               value={formData.tag_ids}
               onValueChange={(value) => setFormData({ ...formData, tag_ids: value })}
-              placeholder="Buscar etiqueta..."
+              placeholder="Buscar etiquetas..."
               className="mt-2"
+              disabled={tags.length === 0}
             />
             {tags.length === 0 && (
               <p className="text-sm text-muted-foreground mt-2">

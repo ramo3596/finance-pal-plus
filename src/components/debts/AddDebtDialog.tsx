@@ -303,7 +303,7 @@ export function AddDebtDialog({ open, onOpenChange, contacts, accounts }: AddDeb
                 <Autocomplete
                   options={tags
                     .filter(tag => !selectedTags.includes(tag.name))
-                    .map(tag => ({ id: tag.name, name: tag.name }))
+                    .map(tag => ({ id: tag.name, name: tag.name, color: tag.color }))
                   }
                   value=""
                   onValueChange={(value) => {
@@ -321,14 +321,17 @@ export function AddDebtDialog({ open, onOpenChange, contacts, accounts }: AddDeb
                       return (
                         <span
                           key={tagName}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full text-white"
-                          style={{ backgroundColor: tag?.color || '#6b7280' }}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-xs"
                         >
+                          <div 
+                            className="w-2 h-2 rounded-full" 
+                            style={{ backgroundColor: tag?.color || '#6b7280' }}
+                          />
                           {tagName}
                           <button
                             type="button"
                             onClick={() => setSelectedTags(selectedTags.filter(t => t !== tagName))}
-                            className="ml-1 hover:bg-black/20 rounded-full p-0.5"
+                            className="ml-1 hover:text-destructive"
                           >
                             ×
                           </button>

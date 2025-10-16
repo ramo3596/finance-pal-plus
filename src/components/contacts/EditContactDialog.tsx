@@ -19,9 +19,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { MultiSelectAutocomplete } from "@/components/ui/multi-select-autocomplete";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, User, Building, X, Trash2 } from "lucide-react";
+import { Upload, User, Building, Trash2 } from "lucide-react";
 import { useContacts } from "@/hooks/useContacts";
 import { useSettings } from "@/hooks/useSettings";
 import { toast } from "sonner";
@@ -354,22 +354,16 @@ export function EditContactDialog({ contact, open, onOpenChange }: EditContactDi
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Etiquetas</label>
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    variant={selectedTags.includes(tag.id) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    style={selectedTags.includes(tag.id) ? { backgroundColor: tag.color, color: 'white' } : {}}
-                    onClick={() => toggleTag(tag.id)}
-                  >
-                    {tag.name}
-                    {selectedTags.includes(tag.id) && (
-                      <X className="h-3 w-3 ml-1" />
-                    )}
-                  </Badge>
-                ))}
-              </div>
+              <MultiSelectAutocomplete
+                options={tags.map(tag => ({
+                  id: tag.id,
+                  name: tag.name,
+                  color: tag.color,
+                }))}
+                value={selectedTags}
+                onValueChange={setSelectedTags}
+                placeholder="Buscar etiquetas..."
+              />
             </div>
 
             <FormField
