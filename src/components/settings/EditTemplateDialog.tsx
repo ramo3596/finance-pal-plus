@@ -128,59 +128,35 @@ export function EditTemplateDialog({ template, onUpdate, accounts, categories, t
           <div>
             <Label htmlFor="category_id">Categoría</Label>
             <Autocomplete
-              options={[
-                // Incluir todas las categorías
-                ...categories.map(category => ({
-                  id: category.id,
-                  name: `${category.icon} ${category.name}`,
-                  isCategory: true
-                })),
-                // Incluir todas las subcategorías
-                ...categories.flatMap(category => 
-                  category.subcategories?.map(subcategory => ({
-                    id: subcategory.id,
-                    name: `${subcategory.icon} ${subcategory.name} (${category.name})`,
-                    categoryId: category.id,
-                    isSubcategory: true
-                  })) || []
-                )
-              ]}
-              value={formData.subcategory_id || formData.category_id}
+              options={categories.map(category => ({
+                id: category.id,
+                name: `${category.icon} ${category.name}`
+              }))}
+              value={formData.category_id}
               onValueChange={(value) => {
-                // Verificar si la selección es una subcategoría
-                const selectedOption = [
-                  ...categories.map(category => ({
-                    id: category.id,
-                    isCategory: true
-                  })),
-                  ...categories.flatMap(category => 
-                    category.subcategories?.map(subcategory => ({
-                      id: subcategory.id,
-                      categoryId: category.id,
-                      isSubcategory: true
-                    })) || []
-                  )
-                ].find(option => option.id === value);
-                
-                if (selectedOption && 'isSubcategory' in selectedOption && selectedOption.isSubcategory) {
-                  // Si es subcategoría, establecer tanto la categoría como la subcategoría
-                  setFormData({ 
-                    ...formData, 
-                    category_id: ('categoryId' in selectedOption) ? selectedOption.categoryId : '',
-                    subcategory_id: value
-                  });
-                } else {
-                  // Si es categoría, establecer solo la categoría y resetear subcategoría
-                  setFormData({ 
-                    ...formData, 
-                    category_id: value,
-                    subcategory_id: ''
-                  });
-                }
+                setFormData({
+                  ...formData,
+                  category_id: value,
+                  // Al cambiar de categoría, resetear la subcategoría
+                  subcategory_id: ''
+                });
               }}
-              placeholder="Buscar categoría o subcategoría..."
+              placeholder="Buscar categoría..."
               className="mt-2"
             />
+            <div className="mt-4">
+              <Label htmlFor="subcategory_id">Subcategoría (opcional)</Label>
+              <Autocomplete
+                options={(categories.find(c => c.id === formData.category_id)?.subcategories || []).map(sub => ({
+                  id: sub.id,
+                  name: `${sub.icon} ${sub.name}`
+                }))}
+                value={formData.subcategory_id}
+                onValueChange={(value) => setFormData({ ...formData, subcategory_id: value })}
+                placeholder={formData.category_id ? "Buscar subcategoría..." : "Selecciona una categoría primero"}
+                className="mt-2"
+              />
+            </div>
           </div>
           <div>
             <Label htmlFor="payment_method">Método de pago</Label>

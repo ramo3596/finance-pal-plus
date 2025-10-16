@@ -65,8 +65,11 @@ export function AddTransaction({
     if (template) {
       setAmount(template.amount.toString());
       setSelectedAccount(template.account_id || "");
+      // Precargar cuenta destino para transferencias
+      setToAccount(template.to_account_id || "");
       setSelectedCategory(template.category_id || "");
-      setSelectedSubcategory(""); // Reset subcategory when template is applied
+      // Aplicar subcategoría de la plantilla si existe
+      setSelectedSubcategory(template.subcategory_id || "");
       
       // Map payment method from template to Select values
       const paymentMethodMapping: { [key: string]: string } = {
