@@ -340,11 +340,10 @@ export default function Settings() {
         setProfileData(prev => ({ ...prev, newPassword: "" }));
       }
 
-      // Persist webhook to local storage and user settings
+      // Persist webhook to local storage
       try {
         localStorage.setItem('ai_webhook_url', profileData.webhookUrl || '');
       } catch {}
-      await updateUserSettings({ webhook_url: profileData.webhookUrl || null });
 
       toast({
         title: "Perfil actualizado",
