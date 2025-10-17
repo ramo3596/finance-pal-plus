@@ -55,7 +55,7 @@ export function EditProductDialog({ open, onOpenChange, product }: EditProductDi
   });
 
   useEffect(() => {
-    if (product) {
+    if (open && product) {
       form.reset({
         name: product.name,
         description: product.description || "",
@@ -69,7 +69,7 @@ export function EditProductDialog({ open, onOpenChange, product }: EditProductDi
         tags: product.tags || [],
       });
     }
-  }, [product, form]);
+  }, [open, product, form]);
 
   const onSubmit = async (data: FormData) => {
     try {
