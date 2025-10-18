@@ -111,12 +111,7 @@ export function MultiSelectAutocomplete({
             <Badge
               key={option.id}
               variant="secondary"
-              className="flex items-center gap-1 pr-1"
-              style={option.color ? { 
-                backgroundColor: `${option.color}20`, 
-                color: option.color,
-                borderColor: `${option.color}40`
-              } : {}}
+              className="flex items-center gap-1 pr-1 text-xs"
             >
               {option.color && (
                 <div 
@@ -124,11 +119,11 @@ export function MultiSelectAutocomplete({
                   style={{ backgroundColor: option.color }}
                 />
               )}
-              <span className="text-xs">{option.name}</span>
+              <span>{option.name}</span>
               <button
                 type="button"
                 onClick={() => handleRemoveOption(option.id)}
-                className="ml-1 hover:bg-black/20 rounded-full p-0.5"
+                className="ml-1 hover:text-destructive"
                 disabled={disabled}
               >
                 <X className="h-3 w-3" />

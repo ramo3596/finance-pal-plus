@@ -10,6 +10,7 @@ import { Template, Category } from "@/hooks/useSettings";
 import { PaymentMethodSelect } from "@/components/shared/PaymentMethodSelect";
 import { useContacts } from "@/hooks/useContacts";
 import { Autocomplete } from "@/components/ui/autocomplete";
+import { MultiSelectAutocomplete } from "@/components/ui/multi-select-autocomplete";
 
 interface AddTemplateDialogProps {
   onAdd: (template: Omit<Template, 'id' | 'created_at' | 'updated_at'>) => void;
@@ -36,7 +37,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
     type: "Gastos",
     beneficiary: "",
     note: "",
-    tag_ids: ""
+    tag_ids: [] as string[]
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -50,7 +51,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
       subcategory_id: formData.subcategory_id || undefined,
       beneficiary: formData.beneficiary || undefined,
       note: formData.note || undefined,
-      tag_ids: formData.tag_ids ? [formData.tag_ids] : undefined
+      tag_ids: formData.tag_ids && formData.tag_ids.length > 0 ? formData.tag_ids : undefined
     } as any);
     setFormData({ 
       name: "", 
@@ -63,7 +64,7 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
       type: "Gastos",
       beneficiary: "",
       note: "",
-      tag_ids: ""
+      tag_ids: []
     });
     setOpen(false);
   };
@@ -231,16 +232,14 @@ export function AddTemplateDialog({ onAdd, accounts, categories, tags, open: ext
             />
           </div>
           <div>
-            <Label htmlFor="tags">Etiqueta (opcional)</Label>
-            <Autocomplete
-              options={tags.map(tag => ({
-                id: tag.id,
-                name: tag.name
-              }))}
+            <Label htmlFor="tags">Etiquetas (opcional)</Label>
+            <MultiSelectAutocomplete
+              options={tags.map(tag => ({ id: tag.id, name: tag.name, color: tag.color }))}
               value={formData.tag_ids}
               onValueChange={(value) => setFormData({ ...formData, tag_ids: value })}
-              placeholder="Buscar etiqueta..."
+              placeholder="Buscar etiquetas..."
               className="mt-2"
+              disabled={tags.length === 0}
             />
             {tags.length === 0 && (
               <p className="text-sm text-muted-foreground mt-2">

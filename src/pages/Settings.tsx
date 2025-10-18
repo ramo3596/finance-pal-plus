@@ -82,7 +82,8 @@ export default function Settings() {
   const [profileData, setProfileData] = useState({
     username: "",
     email: "",
-    newPassword: ""
+    newPassword: "",
+    webhookUrl: ""
   });
 
   // Handle URL parameters
@@ -214,7 +215,8 @@ export default function Settings() {
       setProfileData({
         username: user.email?.split('@')[0] || "",
         email: user.email || "",
-        newPassword: ""
+        newPassword: "",
+        webhookUrl: ""
       });
       // Cargar imagen de perfil si existe
       const avatarUrl = user.user_metadata?.avatar_url;
@@ -238,7 +240,8 @@ export default function Settings() {
       if (profile) {
         setProfileData(prev => ({
           ...prev,
-          username: profile.username || prev.username
+          username: profile.username || prev.username,
+          webhookUrl: profile.webhook_url || "https://n8n1.avfservicios.site/webhook/b49538ed-b1bd-4be4-be13-4d9e7da516a4"
         }));
       }
     } catch (error) {
@@ -320,6 +323,7 @@ export default function Settings() {
         .upsert({
           id: user.id,
           username: profileData.username,
+          webhook_url: profileData.webhookUrl,
           updated_at: new Date().toISOString()
         });
 
@@ -335,6 +339,11 @@ export default function Settings() {
         
         setProfileData(prev => ({ ...prev, newPassword: "" }));
       }
+
+      // Persist webhook to local storage
+      try {
+        localStorage.setItem('ai_webhook_url', profileData.webhookUrl || '');
+      } catch {}
 
       toast({
         title: "Perfil actualizado",
@@ -622,6 +631,17 @@ export default function Settings() {
               placeholder="Nueva contraseña"
               value={profileData.newPassword}
               onChange={(e) => setProfileData(prev => ({ ...prev, newPassword: e.target.value }))}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="webhook">Webhook</Label>
+            <Input 
+              id="webhook" 
+              type="url"
+              placeholder="https://n8n1.avfservicios.site/webhook/..."
+              value={profileData.webhookUrl}
+              onChange={(e) => setProfileData(prev => ({ ...prev, webhookUrl: e.target.value }))}
             />
           </div>
           

@@ -79,13 +79,12 @@ export function AddPaymentDialog({ open, onOpenChange, debt, accounts }: AddPaym
   const contactName = debt.contacts?.name || 'Contacto'
 
   const onSubmit = async (data: PaymentFormData) => {
-    // En la nueva implementación, simplemente enviamos el monto positivo
-    // La lógica de determinar el tipo correcto de transacción está en addDebtPayment
     const result = await addDebtPayment(debt.id, {
-      amount: data.amount, // Siempre positivo
+      amount: data.amount,
       account_id: data.account_id,
       payment_date: data.payment_date.toISOString(),
       description: data.description,
+      action: data.action, // Pasar la acción (payment o increase)
     }, selectedTags)
 
     if (result) {

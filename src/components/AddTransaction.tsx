@@ -65,8 +65,11 @@ export function AddTransaction({
     if (template) {
       setAmount(template.amount.toString());
       setSelectedAccount(template.account_id || "");
+      // Precargar cuenta destino para transferencias
+      setToAccount(template.to_account_id || "");
       setSelectedCategory(template.category_id || "");
-      setSelectedSubcategory(""); // Reset subcategory when template is applied
+      // Aplicar subcategoría de la plantilla si existe
+      setSelectedSubcategory(template.subcategory_id || "");
       
       // Map payment method from template to Select values
       const paymentMethodMapping: { [key: string]: string } = {
@@ -396,7 +399,8 @@ export function AddTransaction({
               <Autocomplete
                 options={tags.filter(tag => tag.id && tag.id.trim() !== '').map(tag => ({
                   id: tag.id,
-                  name: tag.name
+                  name: tag.name,
+                  color: tag.color
                 }))}
                 value={""}
                 onValueChange={(value) => {
@@ -416,14 +420,17 @@ export function AddTransaction({
                     return tag ? (
                       <span
                         key={index}
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded"
-                        style={{ backgroundColor: tag.color, color: 'white' }}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-xs"
                       >
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: tag.color }}
+                        />
                         {tag.name}
                         <button
                           type="button"
                           onClick={() => setSelectedTags(selectedTags.filter((_, i) => i !== index))}
-                          className="ml-1 hover:bg-black/20 rounded-full w-4 h-4 flex items-center justify-center"
+                          className="ml-1 hover:text-destructive"
                         >
                           ×
                         </button>

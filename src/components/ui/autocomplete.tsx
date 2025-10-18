@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 interface AutocompleteOption {
   id: string;
   name: string;
+  color?: string;
 }
 
 interface AutocompleteProps {
@@ -152,10 +153,16 @@ export function Autocomplete({
             filteredOptions.map((option) => (
               <div
                 key={option.id}
-                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                className="relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
                 onClick={() => handleOptionSelect(option)}
               >
-                {option.name}
+                {option.color && (
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: option.color }}
+                  />
+                )}
+                <span>{option.name}</span>
               </div>
             ))
           )}

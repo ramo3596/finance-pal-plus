@@ -318,6 +318,7 @@ export function useDebts() {
       account_id: string
       payment_date: string
       description?: string
+      action?: 'payment' | 'increase'
     },
     selectedTags: string[] = []
   ) => {
@@ -352,18 +353,38 @@ export function useDebts() {
       let transactionType: 'income' | 'expense'
       let description: string
 
+      const action = paymentData.action || 'payment'
+
       if (debt.type === 'debt') {
-        // Es una deuda (me prestaron), agregar pago = gasto (reduce la deuda)
-        categoryId = DEBT_CATEGORIES.FINANCIAL_EXPENSES
-        subcategoryId = DEBT_SUBCATEGORIES.COMMISSION // Comisión
-        transactionType = 'expense'
-        description = `Pago de deuda a ${debt.contacts?.name}`
+        // Es una deuda (me prestaron)
+        if (action === 'increase') {
+          // Aumento de deuda = me prestaron más dinero = ingreso
+          categoryId = DEBT_CATEGORIES.INCOME
+          subcategoryId = DEBT_SUBCATEGORIES.LOANS_INCOME // Préstamos, alquileres
+          transactionType = 'income'
+          description = `Aumento de deuda de ${debt.contacts?.name}`
+        } else {
+          // Pago de deuda = yo pagué = gasto (reduce la deuda)
+          categoryId = DEBT_CATEGORIES.FINANCIAL_EXPENSES
+          subcategoryId = DEBT_SUBCATEGORIES.COMMISSION // Comisión
+          transactionType = 'expense'
+          description = `Pago de deuda a ${debt.contacts?.name}`
+        }
       } else {
-        // Es un préstamo (presté), agregar cobro = ingreso (reduce lo que me deben)
-        categoryId = DEBT_CATEGORIES.INCOME
-        subcategoryId = DEBT_SUBCATEGORIES.LOANS_INCOME // Préstamos, alquileres
-        transactionType = 'income'
-        description = `Cobro de préstamo de ${debt.contacts?.name}`
+        // Es un préstamo (presté)
+        if (action === 'increase') {
+          // Aumento de préstamo = presté más dinero = gasto
+          categoryId = DEBT_CATEGORIES.FINANCIAL_EXPENSES
+          subcategoryId = DEBT_SUBCATEGORIES.LOANS_EXPENSE // Préstamos
+          transactionType = 'expense'
+          description = `Aumento de préstamo a ${debt.contacts?.name}`
+        } else {
+          // Cobro de préstamo = me pagaron = ingreso (reduce lo que me deben)
+          categoryId = DEBT_CATEGORIES.INCOME
+          subcategoryId = DEBT_SUBCATEGORIES.LOANS_INCOME // Préstamos, alquileres
+          transactionType = 'income'
+          description = `Cobro de préstamo de ${debt.contacts?.name}`
+        }
       }
 
       const transactionData = {

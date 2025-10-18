@@ -34,7 +34,8 @@ export default function ProfileSettings() {
   const [profileData, setProfileData] = useState({
     username: "",
     email: "",
-    newPassword: ""
+    newPassword: "",
+    webhookUrl: ""
   });
 
   const {
@@ -53,7 +54,8 @@ export default function ProfileSettings() {
       setProfileData({
         username: user.email?.split('@')[0] || "",
         email: user.email || "",
-        newPassword: ""
+        newPassword: "",
+        webhookUrl: ""
       });
       // Cargar imagen de perfil si existe
       const avatarUrl = user.user_metadata?.avatar_url;
@@ -77,7 +79,8 @@ export default function ProfileSettings() {
       if (profile) {
         setProfileData(prev => ({
           ...prev,
-          username: profile.username || prev.username
+          username: profile.username || prev.username,
+          webhookUrl: profile.webhook_url || "https://n8n1.avfservicios.site/webhook/b49538ed-b1bd-4be4-be13-4d9e7da516a4"
         }));
       }
     } catch (error) {
@@ -96,6 +99,7 @@ export default function ProfileSettings() {
         .upsert({
           id: user.id,
           username: profileData.username,
+          webhook_url: profileData.webhookUrl,
           updated_at: new Date().toISOString()
         });
 
@@ -408,7 +412,16 @@ export default function ProfileSettings() {
               />
             </div>
 
-
+            <div>
+              <Label htmlFor="webhook">Webhook</Label>
+              <Input 
+                id="webhook" 
+                type="url"
+                placeholder="https://n8n1.avfservicios.site/webhook/..."
+                value={profileData.webhookUrl}
+                onChange={(e) => setProfileData(prev => ({ ...prev, webhookUrl: e.target.value }))}
+              />
+            </div>
             
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="hidden md:block">

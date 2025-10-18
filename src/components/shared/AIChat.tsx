@@ -8,6 +8,7 @@ import { MessageCircle, Send, X, Bot, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -33,6 +34,7 @@ export function AIChat({ isDashboard = false }: AIChatProps) {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState<string>('https://n8n1.avfservicios.site/webhook/b49538ed-b1bd-4be4-be13-4d9e7da516a4');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -43,6 +45,24 @@ export function AIChat({ isDashboard = false }: AIChatProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    const fetchWebhookUrl = async () => {
+      if (!user) return;
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('webhook_url')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile?.webhook_url) {
+        setWebhookUrl(profile.webhook_url);
+      }
+    };
+
+    fetchWebhookUrl();
+  }, [user]);
 
   const sendMessage = async (content: string) => {
     if (!content.trim()) return;
@@ -61,7 +81,7 @@ export function AIChat({ isDashboard = false }: AIChatProps) {
 
     try {
       // Send to webhook
-      const response = await fetch('https://n8n1.avfservicios.site/webhook/b49538ed-b1bd-4be4-be13-4d9e7da516a4', {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

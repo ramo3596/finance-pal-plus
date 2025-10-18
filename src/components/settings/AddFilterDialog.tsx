@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Autocomplete } from "@/components/ui/autocomplete";
+import { MultiSelectAutocomplete } from "@/components/ui/multi-select-autocomplete";
 import { Plus } from "lucide-react";
 import { Filter } from "@/hooks/useSettings";
 
@@ -30,7 +31,7 @@ export function AddFilterDialog({ open: externalOpen, onOpenChange, onAdd, accou
     debts: "Excluir",
     account_id: "",
     category_id: "",
-    tag_id: ""
+    tag_ids: [] as string[]
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -40,7 +41,7 @@ export function AddFilterDialog({ open: externalOpen, onOpenChange, onAdd, accou
       payment_method: formData.payment_method !== "Todos" ? formData.payment_method : undefined,
       account_ids: formData.account_id ? [formData.account_id] : undefined,
       category_ids: formData.category_id ? [formData.category_id] : undefined,
-      tag_ids: formData.tag_id ? [formData.tag_id] : undefined
+      tag_ids: formData.tag_ids.length > 0 ? formData.tag_ids : undefined
     } as any);
     setFormData({ 
       name: "", 
@@ -50,7 +51,7 @@ export function AddFilterDialog({ open: externalOpen, onOpenChange, onAdd, accou
       debts: "Excluir",
       account_id: "",
       category_id: "",
-      tag_id: ""
+      tag_ids: []
     });
     setOpen(false);
   };
@@ -172,16 +173,14 @@ export function AddFilterDialog({ open: externalOpen, onOpenChange, onAdd, accou
               )}
             </div>
             <div>
-              <Label htmlFor="tags">Etiqueta (opcional)</Label>
-              <Autocomplete
-                options={tags.map(tag => ({
-                  id: tag.id,
-                  name: tag.name
-                }))}
-                value={formData.tag_id}
-                onValueChange={(value) => setFormData({ ...formData, tag_id: value })}
-                placeholder="Buscar etiqueta..."
+              <Label htmlFor="tags">Etiquetas (opcional)</Label>
+              <MultiSelectAutocomplete
+                options={tags.map(tag => ({ id: tag.id, name: tag.name, color: tag.color }))}
+                value={formData.tag_ids}
+                onValueChange={(value) => setFormData({ ...formData, tag_ids: value })}
+                placeholder="Buscar etiquetas..."
                 className="mt-2"
+                disabled={tags.length === 0}
               />
               {tags.length === 0 && (
                 <p className="text-sm text-muted-foreground mt-2">
