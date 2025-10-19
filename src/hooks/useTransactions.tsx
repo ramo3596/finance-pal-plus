@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 import { useSettings } from './useSettings';
-import { useLocalCache } from './useLocalCache';
 
 export interface Transaction {
   id: string;
@@ -54,92 +53,9 @@ const defaultCards: DashboardCard[] = [
 export const useTransactions = () => {
   const { user } = useAuth();
   const { refetch: refetchSettings } = useSettings();
-  const { fetchWithCache } = useLocalCache();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [cards, setCards] = useState<DashboardCard[]>(defaultCards);
   const [loading, setLoading] = useState(false);
-
-  // Listen to cache updates
-  useEffect(() => {
-    const handleCacheUpdate = (event: CustomEvent) => {
-      setTransactions(event.detail.data);
-    };
-
-    window.addEventListener('cache_updated_transactions', handleCacheUpdate as EventListener);
-    
-    return () => {
-      window.removeEventListener('cache_updated_transactions', handleCacheUpdate as EventListener);
-    };
-  }, []);
-
-  // Fetch dashboard card preferences
-  const fetchCardPreferences = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('dashboard_card_preferences')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        const savedCards = data.map(pref => ({
-          id: pref.card_id,
-          type: pref.card_type as DashboardCard['type'],
-          title: pref.title,
-          position: pref.position,
-          visible: pref.visible
-        }));
-        
-        const mergedCards = defaultCards.map(defaultCard => {
-          const savedCard = savedCards.find(sc => sc.id === defaultCard.id);
-          if (savedCard) {
-            return {
-              ...defaultCard,
-              position: savedCard.position,
-              visible: savedCard.visible,
-            };
-          }
-          return defaultCard;
-        });
-        
-        setCards(mergedCards);
-      }
-    } catch (error) {
-      console.error('Error fetching card preferences:', error);
-    }
-  };
-
-  const fetchTransactions = async (forceRefresh = false) => {
-    if (!user) return;
-    
-    setLoading(true);
-    try {
-      const data = await fetchWithCache(
-        'transactions',
-        async () => {
-          const { data, error } = await supabase
-            .from('transactions' as any)
-            .select('*')
-            .eq('user_id', user.id)
-            .order('transaction_date', { ascending: false });
-
-          if (error) throw error;
-          return (data as unknown as Transaction[]) || [];
-        },
-        forceRefresh
-      );
-      
-      setTransactions(data);
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      toast.error('Error al cargar las transacciones');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const createTransaction = async (transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
@@ -617,11 +533,103 @@ export const useTransactions = () => {
     }
   };
 
+  // Fetch dashboard card preferences for current user
+  const fetchCardPreferences = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('dashboard_card_preferences')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('position', { ascending: true });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        // No preferences saved yet; use defaults
+        setCards(defaultCards);
+        return;
+      }
+
+      const merged = defaultCards.map(card => {
+        const pref = (data as any[]).find(p => p.card_id === card.id);
+        return pref
+          ? {
+              id: card.id,
+              type: card.type,
+              title: pref.title ?? card.title,
+              position: pref.position ?? card.position,
+              visible: pref.visible ?? card.visible,
+            }
+          : card;
+      });
+
+      const sorted = merged
+        .slice()
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map((c, idx) => ({ ...c, position: idx }));
+
+      setCards(sorted);
+    } catch (error) {
+      console.error('Error fetching card preferences:', error);
+      toast.error('Error al cargar preferencias de tarjetas');
+    }
+  };
+
+  // Fetch transactions for current user
+  const fetchTransactions = async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('transactions' as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .order('transaction_date', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const normalized = ((data as any[]) || []).map(t => ({
+        ...t,
+        tags: Array.isArray(t.tags) ? t.tags : [],
+      })) as Transaction[];
+
+      setTransactions(normalized);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      toast.error('Error al cargar transacciones');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchTransactions();
       fetchCardPreferences();
     }
+  }, [user]);
+
+  // Suscripción en tiempo real a cambios en transacciones
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`rt-transactions-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
+        () => {
+          // Re-fetch to keep ordering and derived data consistent
+          fetchTransactions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   return {
@@ -637,6 +645,6 @@ export const useTransactions = () => {
     updateCardPosition,
     toggleCardVisibility,
     saveCardPreferences,
-    refetch: () => fetchTransactions(true),
+    refetch: () => fetchTransactions(),
   };
 };
