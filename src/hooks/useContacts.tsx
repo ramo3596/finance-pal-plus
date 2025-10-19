@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
-import { useLocalCache } from "./useLocalCache";
 
 export interface Contact {
   id: string;
@@ -56,21 +55,6 @@ export function useContacts() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { fetchWithCache } = useLocalCache();
-
-  // Listen to cache updates
-  useEffect(() => {
-    const handleCacheUpdate = (event: CustomEvent) => {
-      // For contacts, we need to recalculate totals when cache updates
-      fetchContacts(true);
-    };
-
-    window.addEventListener('cache_updated_contacts', handleCacheUpdate as EventListener);
-    
-    return () => {
-      window.removeEventListener('cache_updated_contacts', handleCacheUpdate as EventListener);
-    };
-  }, []);
 
   const fetchContacts = async (forceRefresh = false) => {
     if (!user) return;
@@ -78,132 +62,126 @@ export function useContacts() {
     try {
       setLoading(true);
 
-      const data = await fetchWithCache(
-        'contacts',
-        async () => {
-          // Fetch contacts with their tags and transaction totals in a single optimized query
-          const { data: contactsData, error: contactsError } = await supabase
-            .from('contacts')
-            .select(`
-              *,
-              contact_tags(
-                tags(id, name, color)
-              )
-            `)
-            .eq('user_id', user.id)
-            .order('name');
+      // Fetch contacts with their tags and transaction totals in a single optimized query
+      const { data: contactsData, error: contactsError } = await supabase
+        .from('contacts')
+        .select(`
+          *,
+          contact_tags(
+            tags(id, name, color)
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('name');
 
-          if (contactsError) throw contactsError;
+      if (contactsError) throw contactsError;
 
-          // Get all contact IDs for batch transaction queries
-          const contactIds = (contactsData || []).map(c => c.id);
-          
-          if (contactIds.length === 0) {
-            return [];
-          }
+      // Get all contact IDs for batch transaction queries
+      const contactIds = (contactsData || []).map(c => c.id);
+      
+      if (contactIds.length === 0) {
+        setContacts([]);
+        setLoading(false);
+        return;
+      }
 
-          // Fetch all expense totals in a single query with aggregation
-          const { data: expenseTotals, error: expenseError } = await supabase
-            .from('transactions')
-            .select('contact_id, amount')
-            .eq('user_id', user.id)
-            .in('contact_id', contactIds)
-            .eq('type', 'expense')
-            .not('contact_id', 'is', null);
+      // Fetch all expense totals in a single query with aggregation
+      const { data: expenseTotals, error: expenseError } = await supabase
+        .from('transactions')
+        .select('contact_id, amount')
+        .eq('user_id', user.id)
+        .in('contact_id', contactIds)
+        .eq('type', 'expense')
+        .not('contact_id', 'is', null);
 
-          if (expenseError) {
-            console.error('Error fetching expense totals:', expenseError);
-          }
+      if (expenseError) {
+        console.error('Error fetching expense totals:', expenseError);
+      }
 
-          // Fetch all income totals in a single query with aggregation
-          const { data: incomeTotals, error: incomeError } = await supabase
-            .from('transactions')
-            .select('payer_contact_id, amount')
-            .eq('user_id', user.id)
-            .in('payer_contact_id', contactIds)
-            .eq('type', 'income')
-            .not('payer_contact_id', 'is', null);
+      // Fetch all income totals in a single query with aggregation
+      const { data: incomeTotals, error: incomeError } = await supabase
+        .from('transactions')
+        .select('payer_contact_id, amount')
+        .eq('user_id', user.id)
+        .in('payer_contact_id', contactIds)
+        .eq('type', 'income')
+        .not('payer_contact_id', 'is', null);
 
-          if (incomeError) {
-            console.error('Error fetching income totals:', incomeError);
-          }
+      if (incomeError) {
+        console.error('Error fetching income totals:', incomeError);
+      }
 
-          // Fetch debt/loan transactions using specific subcategories
-          const DEBT_SUBCATEGORIES = {
-            LOANS_INCOME: 'e9fb73a7-86d4-44f0-bb40-dee112a5560d', // Préstamos, alquileres (para cobros de préstamo - tipo income)
-            COMMISSION: '6450a480-9d0c-4ae1-a08a-26e5d4b158a2', // Comisión (para pagos de deuda - tipo expense)
-            LOANS_EXPENSE: 'e3b4a085-a4da-4b24-b356-fd9a2b3113e5', // Préstamos (para nuevas deudas - tipo expense)
-          };
+      // Fetch debt/loan transactions using specific subcategories
+      const DEBT_SUBCATEGORIES = {
+        LOANS_INCOME: 'e9fb73a7-86d4-44f0-bb40-dee112a5560d',
+        COMMISSION: '6450a480-9d0c-4ae1-a08a-26e5d4b158a2',
+        LOANS_EXPENSE: 'e3b4a085-a4da-4b24-b356-fd9a2b3113e5',
+      };
 
-          const { data: debtTransactions, error: debtError } = await supabase
-            .from('transactions')
-            .select('contact_id, payer_contact_id, amount, type, subcategory_id')
-            .eq('user_id', user.id)
-            .in('subcategory_id', Object.values(DEBT_SUBCATEGORIES))
-            .or(`contact_id.in.(${contactIds.join(',')}),payer_contact_id.in.(${contactIds.join(',')})`);
+      const { data: debtTransactions, error: debtError } = await supabase
+        .from('transactions')
+        .select('contact_id, payer_contact_id, amount, type, subcategory_id')
+        .eq('user_id', user.id)
+        .in('subcategory_id', Object.values(DEBT_SUBCATEGORIES))
+        .or(`contact_id.in.(${contactIds.join(',')}),payer_contact_id.in.(${contactIds.join(',')})`);
 
-          if (debtError) {
-            console.error('Error fetching debt transactions:', debtError);
-          }
+      if (debtError) {
+        console.error('Error fetching debt transactions:', debtError);
+      }
 
-          // Create lookup maps for O(1) access
-          const expenseMap = new Map<string, number>();
-          const incomeMap = new Map<string, number>();
-          const debtMap = new Map<string, number>();
-          const loanMap = new Map<string, number>();
+      // Create lookup maps for O(1) access
+      const expenseMap = new Map<string, number>();
+      const incomeMap = new Map<string, number>();
+      const debtMap = new Map<string, number>();
+      const loanMap = new Map<string, number>();
 
-          // Aggregate expenses by contact
-          (expenseTotals || []).forEach(transaction => {
-            const contactId = transaction.contact_id;
-            const amount = Math.abs(Number(transaction.amount));
-            expenseMap.set(contactId, (expenseMap.get(contactId) || 0) + amount);
-          });
+      // Aggregate expenses by contact
+      (expenseTotals || []).forEach(transaction => {
+        const contactId = transaction.contact_id;
+        const amount = Math.abs(Number(transaction.amount));
+        expenseMap.set(contactId, (expenseMap.get(contactId) || 0) + amount);
+      });
 
-          // Aggregate income by contact
-          (incomeTotals || []).forEach(transaction => {
-            const contactId = transaction.payer_contact_id;
-            const amount = Math.abs(Number(transaction.amount));
-            incomeMap.set(contactId, (incomeMap.get(contactId) || 0) + amount);
-          });
+      // Aggregate income by contact
+      (incomeTotals || []).forEach(transaction => {
+        const contactId = transaction.payer_contact_id;
+        const amount = Math.abs(Number(transaction.amount));
+        incomeMap.set(contactId, (incomeMap.get(contactId) || 0) + amount);
+      });
 
-          // Process debt/loan transactions
-          (debtTransactions || []).forEach(transaction => {
-            const contactId = transaction.contact_id || transaction.payer_contact_id;
-            if (!contactId) return;
+      // Process debt/loan transactions
+      (debtTransactions || []).forEach(transaction => {
+        const contactId = transaction.contact_id || transaction.payer_contact_id;
+        if (!contactId) return;
 
-            const amount = Math.abs(Number(transaction.amount));
-            
-            // Determine if it's a debt (they owe me) or loan (I owe them)
-            if (transaction.type === 'income' && transaction.subcategory_id === DEBT_SUBCATEGORIES.LOANS_INCOME) {
-              // Income from loans = They owe me (debt)
-              debtMap.set(contactId, (debtMap.get(contactId) || 0) + amount);
-            } else if (transaction.type === 'expense' && 
-                      (transaction.subcategory_id === DEBT_SUBCATEGORIES.COMMISSION || 
-                       transaction.subcategory_id === DEBT_SUBCATEGORIES.LOANS_EXPENSE)) {
-              // Expense for loans/commission = I owe them (loan)
-              loanMap.set(contactId, (loanMap.get(contactId) || 0) + amount);
-            }
-          });
+        const amount = Math.abs(Number(transaction.amount));
+        
+        // Determine if it's a debt (they owe me) or loan (I owe them)
+        if (transaction.type === 'income' && transaction.subcategory_id === DEBT_SUBCATEGORIES.LOANS_INCOME) {
+          // Income from loans = They owe me (debt)
+          debtMap.set(contactId, (debtMap.get(contactId) || 0) + amount);
+        } else if (transaction.type === 'expense' && 
+                  (transaction.subcategory_id === DEBT_SUBCATEGORIES.COMMISSION || 
+                   transaction.subcategory_id === DEBT_SUBCATEGORIES.LOANS_EXPENSE)) {
+          // Expense for loans/commission = I owe them (loan)
+          loanMap.set(contactId, (loanMap.get(contactId) || 0) + amount);
+        }
+      });
 
-          // Map contacts with their totals
-          const contactsWithTotals = (contactsData || []).map(contact => ({
-            ...contact,
-            contact_type: contact.contact_type as 'persona' | 'empresa',
-            tags: Array.isArray(contact.contact_tags) 
-              ? contact.contact_tags.map((ct: any) => ct.tags).filter(Boolean) 
-              : [],
-            totalExpenses: expenseMap.get(contact.id) || 0,
-            totalIncome: incomeMap.get(contact.id) || 0,
-            debtAmount: debtMap.get(contact.id) || 0,
-            loanAmount: loanMap.get(contact.id) || 0,
-          }));
+      // Map contacts with their totals
+      const contactsWithTotals = (contactsData || []).map(contact => ({
+        ...contact,
+        contact_type: contact.contact_type as 'persona' | 'empresa',
+        tags: Array.isArray(contact.contact_tags) 
+          ? contact.contact_tags.map((ct: any) => ct.tags).filter(Boolean) 
+          : [],
+        totalExpenses: expenseMap.get(contact.id) || 0,
+        totalIncome: incomeMap.get(contact.id) || 0,
+        debtAmount: debtMap.get(contact.id) || 0,
+        loanAmount: loanMap.get(contact.id) || 0,
+      }));
 
-          return contactsWithTotals;
-        },
-        forceRefresh
-      );
-
-      setContacts(data);
+      setContacts(contactsWithTotals);
     } catch (error) {
       console.error('Error fetching contacts:', error);
     } finally {
@@ -300,10 +278,55 @@ export function useContacts() {
     await fetchContacts();
   };
 
+  // Setup realtime subscriptions
   useEffect(() => {
-    if (user) {
-      fetchContacts();
-    }
+    if (!user) return;
+
+    fetchContacts();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('contacts_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'contacts',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchContacts(true);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'contact_tags'
+        },
+        () => {
+          fetchContacts(true);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchContacts(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   return {

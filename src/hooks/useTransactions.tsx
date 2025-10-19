@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 import { useSettings } from './useSettings';
-import { useLocalCache } from './useLocalCache';
 
 export interface Transaction {
   id: string;
@@ -54,23 +53,9 @@ const defaultCards: DashboardCard[] = [
 export const useTransactions = () => {
   const { user } = useAuth();
   const { refetch: refetchSettings } = useSettings();
-  const { fetchWithCache } = useLocalCache();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [cards, setCards] = useState<DashboardCard[]>(defaultCards);
   const [loading, setLoading] = useState(false);
-
-  // Listen to cache updates
-  useEffect(() => {
-    const handleCacheUpdate = (event: CustomEvent) => {
-      setTransactions(event.detail.data);
-    };
-
-    window.addEventListener('cache_updated_transactions', handleCacheUpdate as EventListener);
-    
-    return () => {
-      window.removeEventListener('cache_updated_transactions', handleCacheUpdate as EventListener);
-    };
-  }, []);
 
   // Fetch dashboard card preferences
   const fetchCardPreferences = async () => {
@@ -117,22 +102,14 @@ export const useTransactions = () => {
     
     setLoading(true);
     try {
-      const data = await fetchWithCache(
-        'transactions',
-        async () => {
-          const { data, error } = await supabase
-            .from('transactions' as any)
-            .select('*')
-            .eq('user_id', user.id)
-            .order('transaction_date', { ascending: false });
+      const { data, error } = await supabase
+        .from('transactions' as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .order('transaction_date', { ascending: false });
 
-          if (error) throw error;
-          return (data as unknown as Transaction[]) || [];
-        },
-        forceRefresh
-      );
-      
-      setTransactions(data);
+      if (error) throw error;
+      setTransactions((data as unknown as Transaction[]) || []);
     } catch (error) {
       console.error('Error fetching transactions:', error);
       toast.error('Error al cargar las transacciones');
@@ -617,11 +594,33 @@ export const useTransactions = () => {
     }
   };
 
+  // Setup realtime subscriptions
   useEffect(() => {
-    if (user) {
-      fetchTransactions();
-      fetchCardPreferences();
-    }
+    if (!user) return;
+
+    fetchTransactions();
+    fetchCardPreferences();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('transactions_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchTransactions(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   return {

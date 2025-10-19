@@ -6,7 +6,6 @@ import { useInventory } from './useInventory';
 import { useScheduledPayments } from './useScheduledPayments';
 import { useDebts } from './useDebts';
 import { useSettings } from './useSettings';
-import { useLocalCache } from './useLocalCache';
 
 export const useSync = () => {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -17,26 +16,22 @@ export const useSync = () => {
   const { fetchScheduledPayments } = useScheduledPayments();
   const { refetch: refetchDebts } = useDebts();
   const { refetch: refetchSettings } = useSettings();
-  const { clearCache } = useLocalCache();
 
   const syncAll = async () => {
     if (isSyncing) return;
     
     setIsSyncing(true);
-    toast.info('Limpiando caché y sincronizando datos...');
+    toast.info('Sincronizando datos...');
     
     try {
-      // Primero limpiar todo el cache local para forzar la carga desde el servidor
-      clearCache();
-      
-      // Ejecutar todas las sincronizaciones en paralelo forzando el refresh
+      // Ejecutar todas las sincronizaciones en paralelo
       await Promise.all([
         refetchTransactions(),
-        refetchContacts(), // Ya fuerza refresh internamente
-        fetchProducts(true), // Forzar refresh
-        fetchScheduledPayments(true), // Forzar refresh
+        refetchContacts(),
+        fetchProducts(true),
+        fetchScheduledPayments(true),
         refetchDebts(),
-        refetchSettings(true), // Forzar refresh pasando true a fetchData
+        refetchSettings(true),
       ]);
       
       toast.success('Sincronización completada');
