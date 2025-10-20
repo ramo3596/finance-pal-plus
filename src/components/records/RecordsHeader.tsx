@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search } from "lucide-react";
-import { AddTransaction } from "@/components/AddTransaction";
 import { useState } from "react";
 import { RecordsFilters } from "@/pages/Records";
 import { EnhancedDateSelector } from "./EnhancedDateSelector";
@@ -10,10 +9,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface RecordsHeaderProps {
   filters: RecordsFilters;
   onFilterChange: (filters: Partial<RecordsFilters>) => void;
+  onAddTransaction: () => void;
 }
 
-export function RecordsHeader({ filters, onFilterChange }: RecordsHeaderProps) {
-  const [showAddTransaction, setShowAddTransaction] = useState(false);
+export function RecordsHeader({ filters, onFilterChange, onAddTransaction }: RecordsHeaderProps) {
   const [showSearchInput, setShowSearchInput] = useState(false);
   const isMobile = useIsMobile();
 
@@ -39,7 +38,7 @@ export function RecordsHeader({ filters, onFilterChange }: RecordsHeaderProps) {
         <div className="flex items-center gap-4">
           {!isMobile && (
             <Button 
-              onClick={() => setShowAddTransaction(true)}
+              onClick={onAddTransaction}
               className="bg-primary hover:bg-primary/90"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -84,13 +83,6 @@ export function RecordsHeader({ filters, onFilterChange }: RecordsHeaderProps) {
             autoFocus
           />
         </div>
-      )}
-
-      {showAddTransaction && (
-        <AddTransaction 
-          open={showAddTransaction}
-          onOpenChange={setShowAddTransaction}
-        />
       )}
     </>
   );

@@ -98,6 +98,7 @@ const Records = () => {
         <RecordsHeader 
           filters={filters}
           onFilterChange={handleFilterChange}
+          onAddTransaction={() => setShowAddTransaction(true)}
         />
         
         <div className={isMobile ? "space-y-4" : "flex gap-6"}>
