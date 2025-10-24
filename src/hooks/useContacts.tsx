@@ -295,7 +295,8 @@ export function useContacts() {
           table: 'contacts',
           filter: `user_id=eq.${user.id}`
         },
-        () => {
+        (payload) => {
+          console.log('Contact change detected:', payload);
           fetchContacts(true);
         }
       )
@@ -306,7 +307,8 @@ export function useContacts() {
           schema: 'public',
           table: 'contact_tags'
         },
-        () => {
+        (payload) => {
+          console.log('Contact tags change detected:', payload);
           fetchContacts(true);
         }
       )
@@ -318,11 +320,14 @@ export function useContacts() {
           table: 'transactions',
           filter: `user_id=eq.${user.id}`
         },
-        () => {
+        (payload) => {
+          console.log('Transaction change detected (contacts):', payload);
           fetchContacts(true);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Contacts subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);

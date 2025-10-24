@@ -612,11 +612,14 @@ export const useTransactions = () => {
           table: 'transactions',
           filter: `user_id=eq.${user.id}`
         },
-        () => {
+        (payload) => {
+          console.log('Transaction change detected:', payload);
           fetchTransactions(true);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Transactions subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);

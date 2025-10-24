@@ -152,9 +152,59 @@ export const useNotifications = () => {
   };
 
   useEffect(() => {
-    if (user) {
-      generateNotifications();
-    }
+    if (!user) return;
+
+    generateNotifications();
+
+    // Subscribe to realtime changes for debts, scheduled_payments, and contacts
+    const channel = supabase
+      .channel('notifications_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'debts',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          console.log('Debts changed - regenerating notifications');
+          generateNotifications();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'scheduled_payments',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          console.log('Scheduled payments changed - regenerating notifications');
+          generateNotifications();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'contacts',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          console.log('Contacts changed - regenerating notifications');
+          generateNotifications();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Notifications subscription status:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   return {

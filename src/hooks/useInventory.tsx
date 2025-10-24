@@ -190,11 +190,14 @@ export function useInventory() {
           table: 'products',
           filter: `user_id=eq.${user.id}`
         },
-        () => {
+        (payload) => {
+          console.log('Product change detected:', payload);
           fetchProducts(true);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Products subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);

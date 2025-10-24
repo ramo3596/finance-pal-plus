@@ -273,11 +273,14 @@ export const useScheduledPayments = () => {
           table: 'scheduled_payments',
           filter: `user_id=eq.${user.id}`
         },
-        () => {
+        (payload) => {
+          console.log('Scheduled payment change detected:', payload);
           fetchScheduledPayments(true);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Scheduled payments subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);

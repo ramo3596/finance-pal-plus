@@ -238,7 +238,10 @@ export const useSettings = () => {
           table: 'accounts',
           filter: `user_id=eq.${user.id}`
         },
-        () => fetchData(true)
+        (payload) => {
+          console.log('Account change detected:', payload);
+          fetchData(true);
+        }
       )
       .on(
         'postgres_changes',
@@ -248,7 +251,10 @@ export const useSettings = () => {
           table: 'categories',
           filter: `user_id=eq.${user.id}`
         },
-        () => fetchData(true)
+        (payload) => {
+          console.log('Category change detected:', payload);
+          fetchData(true);
+        }
       )
       .on(
         'postgres_changes',
@@ -257,7 +263,10 @@ export const useSettings = () => {
           schema: 'public',
           table: 'subcategories'
         },
-        () => fetchData(true)
+        (payload) => {
+          console.log('Subcategory change detected:', payload);
+          fetchData(true);
+        }
       )
       .on(
         'postgres_changes',
@@ -267,7 +276,10 @@ export const useSettings = () => {
           table: 'tags',
           filter: `user_id=eq.${user.id}`
         },
-        () => fetchData(true)
+        (payload) => {
+          console.log('Tag change detected:', payload);
+          fetchData(true);
+        }
       )
       .on(
         'postgres_changes',
@@ -277,7 +289,10 @@ export const useSettings = () => {
           table: 'templates',
           filter: `user_id=eq.${user.id}`
         },
-        () => fetchData(true)
+        (payload) => {
+          console.log('Template change detected:', payload);
+          fetchData(true);
+        }
       )
       .on(
         'postgres_changes',
@@ -286,7 +301,10 @@ export const useSettings = () => {
           schema: 'public',
           table: 'template_tags'
         },
-        () => fetchData(true)
+        (payload) => {
+          console.log('Template tag change detected:', payload);
+          fetchData(true);
+        }
       )
       .on(
         'postgres_changes',
@@ -296,7 +314,10 @@ export const useSettings = () => {
           table: 'filters',
           filter: `user_id=eq.${user.id}`
         },
-        () => fetchData(true)
+        (payload) => {
+          console.log('Filter change detected:', payload);
+          fetchData(true);
+        }
       )
       .on(
         'postgres_changes',
@@ -306,9 +327,14 @@ export const useSettings = () => {
           table: 'user_settings',
           filter: `user_id=eq.${user.id}`
         },
-        () => fetchData(true)
+        (payload) => {
+          console.log('User settings change detected:', payload);
+          fetchData(true);
+        }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Settings subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
